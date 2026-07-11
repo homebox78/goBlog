@@ -107,6 +107,18 @@ articlesRouter.get(
   }),
 );
 
+/** 글 삭제 — 버전·미디어·스키마·발행작업은 FK cascade로 함께 삭제 */
+articlesRouter.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) throw new HttpError(400, "잘못된 글 ID입니다.");
+    const deleted = await prisma.article.delete({ where: { id } }).catch(() => null);
+    if (!deleted) throw new HttpError(404, "글을 찾을 수 없습니다.");
+    res.json({ ok: true });
+  }),
+);
+
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
   metaTitle: z.string().optional(),

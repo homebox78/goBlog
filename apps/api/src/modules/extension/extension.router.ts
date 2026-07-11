@@ -26,12 +26,19 @@ extensionRouter.get(
   }),
 );
 
-/** 발행 가능한 글 목록 (검수 완료·승인 상태) — 글마다 추천 네이버 카테고리 포함 */
+/**
+ * 발행 가능한 글 목록 — 글마다 추천 네이버 카테고리 포함.
+ * 워드프레스/블로거(서버 발행)로 이미 발행돼 status=PUBLISHED가 된 글도, 아직 네이버에 안 올렸다면
+ * 확장 목록에 계속 보여야 한다(한 글을 여러 플랫폼에 발행). → 네이버 발행 성공 이력이 있는 글만 제외.
+ */
 extensionRouter.get(
   "/articles",
   asyncHandler(async (req, res) => {
     const rows = await prisma.article.findMany({
-      where: { status: { in: ["REVIEW", "APPROVED"] } },
+      where: {
+        status: { in: ["REVIEW", "APPROVED", "PUBLISHED"] },
+        NOT: { publishJobs: { some: { platform: "NAVER_BLOG", status: "SUCCEEDED" } } },
+      },
       orderBy: { updatedAt: "desc" },
       take: 30,
       select: {

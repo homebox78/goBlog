@@ -6,22 +6,22 @@ import { prisma } from "../../common/prisma.js";
 import { createCoupangDeeplink, getCoupangGoldbox, searchCoupangProducts } from "./coupang.js";
 import { analyzeProductInput } from "./analyze.js";
 import { bestKeywordForProduct } from "./product-match.js";
-import { kstToday } from "../keywords/engine.js";
 
 export const productsRouter = Router();
 
 productsRouter.use(requireAuth);
 
-/** 오늘 추천된 키워드 목록 (상품 매칭용) */
-async function todayKeywords() {
-  const { date } = kstToday();
-  const recs = await prisma.dailyKeywordRecommendation.findMany({
-    where: { date },
-    orderBy: { finalScore: "desc" },
-    take: 60,
-    include: { keyword: { select: { id: true, text: true } } },
+/**
+ * 상품 매칭용 키워드 풀 — 활성(추천·저장) 키워드 최근순.
+ * '오늘 날짜' 추천만 보면 날짜가 바뀐 직후(수집 전)엔 비어 매칭이 안 되므로, 활성 키워드 전체를 본다.
+ */
+async function matchableKeywords() {
+  return prisma.keyword.findMany({
+    where: { status: { in: ["RECOMMENDED", "SAVED"] } },
+    orderBy: { updatedAt: "desc" },
+    take: 120,
+    select: { id: true, text: true },
   });
-  return recs.map((r) => r.keyword);
 }
 
 const saveProductSchema = z.object({
@@ -53,7 +53,7 @@ productsRouter.post(
   "/",
   asyncHandler(async (req, res) => {
     const input = parseBody(saveProductSchema, req.body);
-    const keywords = await todayKeywords();
+    const keywords = await matchableKeywords();
     const match = bestKeywordForProduct(input, keywords);
 
     const product = await prisma.product.create({

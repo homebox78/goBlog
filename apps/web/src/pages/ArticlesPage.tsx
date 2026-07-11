@@ -1,9 +1,23 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Loader2, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -35,9 +49,19 @@ const STATUS_BADGE: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function ArticlesPage() {
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["articles"],
     queryFn: () => api.get<{ articles: ArticleListItem[] }>("/api/articles"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/api/articles/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      toast.success("글을 삭제했습니다.");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "삭제 실패"),
   });
 
   return (
@@ -72,6 +96,7 @@ export default function ArticlesPage() {
                   <TableHead className="text-center">상태</TableHead>
                   <TableHead className="text-right">품질</TableHead>
                   <TableHead className="text-center">생성일</TableHead>
+                  <TableHead className="text-center">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -117,6 +142,36 @@ export default function ArticlesPage() {
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">
                         {new Date(article.createdAt).toLocaleDateString("ko-KR")}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" aria-label="글 삭제">
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>글을 삭제할까요?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                "{article.title}" 글과 관련 이미지·발행 기록이 모두 삭제됩니다. 되돌릴 수 없습니다.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>취소</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteMutation.mutate(article.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {deleteMutation.isPending ? (
+                                  <Loader2 className="size-4 animate-spin" />
+                                ) : (
+                                  "삭제"
+                                )}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   );
