@@ -30,17 +30,29 @@ async function generateOneImage(prompt: string, fileBase: string): Promise<{
   const model = values["gemini.imageModel"] || "gemini-2.5-flash-image";
   if (!apiKey) throw new HttpError(400, "Gemini API Key가 설정되지 않았습니다.");
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const requestBody = (withAspect: boolean) => ({
+    contents: [{ parts: [{ text: `${prompt}\n\nWide 4:3 landscape composition.` }] }],
+    generationConfig: {
+      responseModalities: ["IMAGE"],
+      ...(withAspect ? { imageConfig: { aspectRatio: "4:3" } } : {}),
+    },
+  });
+
+  let res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody(true)),
+  });
+
+  // 일부 모델은 imageConfig를 지원하지 않음 — 프롬프트+서버 크롭으로 폴백
+  if (res.status === 400) {
+    res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ["IMAGE"] },
-      }),
-    },
-  );
+      body: JSON.stringify(requestBody(false)),
+    });
+  }
 
   const data = (await res.json().catch(() => null)) as {
     candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { mimeType: string; data: string } }> } }>;
@@ -64,7 +76,19 @@ async function generateOneImage(prompt: string, fileBase: string): Promise<{
   const webpName = `${fileBase}.webp`;
   await fs.writeFile(path.join(dir, pngName), raw);
 
-  const webp = await sharp(raw).resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+  // 4:3 가로형 보장 — 비율이 다르면 중앙 크롭 (세로 짧고 가로 길게)
+  const source = sharp(raw);
+  const srcMeta = await source.metadata();
+  const srcWidth = srcMeta.width ?? 1024;
+  const srcHeight = srcMeta.height ?? 1024;
+  const is43 = Math.abs(srcWidth / srcHeight - 4 / 3) < 0.02;
+
+  const width = Math.min(1600, srcWidth);
+  const pipeline = is43
+    ? source.resize({ width, withoutEnlargement: true })
+    : source.resize({ width, height: Math.round(width * 0.75), fit: "cover", position: "centre" });
+
+  const webp = await pipeline.webp({ quality: 82 }).toBuffer();
   await fs.writeFile(path.join(dir, webpName), webp);
   const meta = await sharp(webp).metadata();
 
