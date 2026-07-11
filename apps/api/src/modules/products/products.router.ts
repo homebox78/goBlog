@@ -19,7 +19,7 @@ async function matchableKeywords() {
   return prisma.keyword.findMany({
     where: { status: { in: ["RECOMMENDED", "SAVED"] } },
     orderBy: { updatedAt: "desc" },
-    take: 120,
+    take: 500,
     select: { id: true, text: true },
   });
 }
