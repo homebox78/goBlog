@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Link2, Loader2, PenLine, Sparkles } from "lucide-react";
+import { Link2, Loader2, PenLine, Sparkles, Save, Trash2, Tag } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,16 @@ import { GenerateDialog, type ProductPayload } from "@/components/articles/Gener
 
 const won = (value: number) => new Intl.NumberFormat("ko-KR").format(value);
 
+interface RegisteredProduct {
+  id: number;
+  source: string;
+  name: string;
+  price: number | null;
+  imageUrl: string | null;
+  status: string;
+  matchedKeyword: { id: number; text: string } | null;
+}
+
 export default function ProductsPage() {
   const [target, setTarget] = useState<ProductPayload | null>(null);
 
@@ -22,8 +32,8 @@ export default function ProductsPage() {
       <div>
         <h1 className="text-2xl font-bold">상품 홍보</h1>
         <p className="text-sm text-muted-foreground">
-          쿠팡 파트너스·네이버 쇼핑 커넥트 상품 링크를 붙여넣으면 상품 정보를 자동으로 분석해
-          제휴 링크·배너·대가성 문구가 포함된 홍보 글을 작성합니다.
+          상품 링크를 등록하면 상품을 분석해 <b>오늘의 키워드와 매칭</b>합니다. 매칭된 키워드의 자동 글에는
+          제휴 배너·링크·대가성 문구가 자동으로 삽입됩니다. 바로 홍보 글을 생성할 수도 있습니다.
         </p>
       </div>
 
@@ -54,6 +64,8 @@ export default function ProductsPage() {
         </TabsContent>
       </Tabs>
 
+      <RegisteredProducts />
+
       <GenerateDialog
         keyword=""
         product={target}
@@ -61,6 +73,77 @@ export default function ProductsPage() {
         onOpenChange={(open) => !open && setTarget(null)}
       />
     </div>
+  );
+}
+
+function RegisteredProducts() {
+  const queryClient = useQueryClient();
+  const { data, isPending } = useQuery({
+    queryKey: ["products"],
+    queryFn: () => api.get<{ products: RegisteredProduct[] }>("/api/products"),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/api/products/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success("상품을 삭제했습니다.");
+    },
+  });
+
+  const products = data?.products ?? [];
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <h2 className="mb-3 text-base font-semibold">등록된 상품 ({products.length})</h2>
+        {isPending ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">불러오는 중...</p>
+        ) : products.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            아직 등록된 상품이 없습니다. 위에서 상품을 분석하고 <b>상품 등록</b>을 누르면 오늘의 키워드와 매칭됩니다.
+          </p>
+        ) : (
+          <ul className="divide-y">
+            {products.map((product) => (
+              <li key={product.id} className="flex items-center gap-3 py-3">
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={product.name} className="size-12 shrink-0 rounded border object-contain" />
+                ) : (
+                  <div className="size-12 shrink-0 rounded border bg-muted" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{product.name}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary" className="text-[10px]">
+                      {product.source === "COUPANG" ? "쿠팡" : "네이버"}
+                    </Badge>
+                    {product.status === "USED" && (
+                      <Badge variant="outline" className="text-[10px]">발행에 사용됨</Badge>
+                    )}
+                    {product.matchedKeyword ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
+                        <Tag className="size-3" /> {product.matchedKeyword.text}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">매칭된 키워드 없음</span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeMutation.mutate(product.id)}
+                  disabled={removeMutation.isPending}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -78,6 +161,21 @@ function UrlAnalyzer({
   type FormState = Omit<ProductPayload, "price"> & { price?: number | string };
   const [url, setUrl] = useState("");
   const [form, setForm] = useState<FormState | null>(null);
+  const queryClient = useQueryClient();
+
+  const registerMutation = useMutation({
+    mutationFn: (payload: ProductPayload) =>
+      api.post<{ matched: { keyword: string; score: number } | null }>("/api/products", payload),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success(
+        result.matched
+          ? `상품을 등록했습니다. 오늘의 키워드 "${result.matched.keyword}"에 매칭됐습니다.`
+          : "상품을 등록했습니다. 오늘 매칭되는 키워드가 없어 매칭 없이 보관합니다(추후 매칭 가능).",
+      );
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "상품 등록 실패"),
+  });
 
   const analyzeMutation = useMutation({
     mutationFn: (link: string) =>
@@ -99,16 +197,26 @@ function UrlAnalyzer({
   const set = (key: keyof FormState) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => (prev ? { ...prev, [key]: event.target.value } : prev));
 
-  const submit = () => {
+  const buildPayload = (): ProductPayload | null => {
     if (!form?.name.trim() || !form.productUrl.trim()) {
       toast.error("상품명과 링크는 필수입니다.");
-      return;
+      return null;
     }
-    onSelect({
+    return {
       ...form,
       name: form.name.trim(),
       price: form.price ? Number(String(form.price).replace(/[^\d]/g, "")) : undefined,
-    });
+    };
+  };
+
+  const submit = () => {
+    const payload = buildPayload();
+    if (payload) onSelect(payload);
+  };
+
+  const register = () => {
+    const payload = buildPayload();
+    if (payload) registerMutation.mutate(payload);
   };
 
   return (
@@ -183,14 +291,20 @@ function UrlAnalyzer({
               <Textarea rows={2} value={form.description ?? ""} onChange={set("description")} />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Badge variant="secondary">
                 <Link2 className="mr-1 size-3" />
                 {source === "COUPANG" ? "쿠팡 파트너스" : "네이버 쇼핑 커넥트"}
               </Badge>
-              <Button onClick={submit}>
-                <PenLine className="size-4" /> 이 상품으로 홍보 글 생성
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={register} disabled={registerMutation.isPending}>
+                  {registerMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  상품 등록 (키워드 매칭)
+                </Button>
+                <Button onClick={submit}>
+                  <PenLine className="size-4" /> 지금 홍보 글 생성
+                </Button>
+              </div>
             </div>
           </div>
         )}

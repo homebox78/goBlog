@@ -3,15 +3,63 @@ import { prisma } from "../../common/prisma.js";
 import { runDailyDiscovery, kstToday } from "../keywords/engine.js";
 import { generateArticle, type ProductInput } from "../articles/generator.js";
 import { searchCoupangProducts } from "../products/coupang.js";
+import { overlapScore } from "../products/product-match.js";
 
 let keywordJob: Cron | null = null;
 
+function toProductInput(p: {
+  source: string;
+  name: string;
+  brand: string | null;
+  price: number | null;
+  imageUrl: string | null;
+  productUrl: string;
+  description: string | null;
+  isRocket: boolean;
+}): ProductInput {
+  return {
+    source: p.source === "BRANDCONNECT" ? "BRANDCONNECT" : "COUPANG",
+    name: p.name,
+    brand: p.brand ?? undefined,
+    price: p.price ?? undefined,
+    imageUrl: p.imageUrl ?? undefined,
+    productUrl: p.productUrl,
+    description: p.description ?? undefined,
+    isRocket: p.isRocket,
+  };
+}
+
 /**
- * 키워드에 어울리는 쿠팡 상품을 찾아 홍보 배너용 product로 변환한다.
- * goBlog의 목적이 제휴 수익이므로 자동 생성 글에도 관련 상품 배너를 붙인다.
- * 상품을 못 찾거나 쿠팡 API가 안 되면 null → 광고 없는 정보성 글로 폴백(도배·정책 위험 방지).
+ * 키워드에 어울리는 제휴 상품을 찾아 홍보 배너용 product로 변환한다.
+ * ① 사용자가 /products에 등록한 상품 중 이 키워드에 매칭된 것 우선(쿠팡 검색 API가 없어 수동 등록).
+ * ② 없으면 쿠팡 상품검색 API(키 있을 때만).
+ * 둘 다 없으면 null → 광고 없는 정보성 글로 폴백(도배·정책 위험 방지).
  */
-async function findProductForKeyword(text: string): Promise<ProductInput | null> {
+async function findProductForKeyword(keywordId: number, text: string): Promise<ProductInput | null> {
+  // ① 등록 상품: 명시 매칭 우선 → 없으면 활성 상품 중 토큰 겹침 최고
+  const explicit = await prisma.product.findFirst({
+    where: { status: "ACTIVE", matchedKeywordId: keywordId },
+    orderBy: { createdAt: "asc" },
+  });
+  let chosen = explicit;
+  if (!chosen) {
+    const actives = await prisma.product.findMany({ where: { status: "ACTIVE" }, take: 200 });
+    let bestScore = 0;
+    for (const p of actives) {
+      const score = overlapScore(`${p.name} ${p.brand ?? ""}`, text);
+      if (score >= 1 && score > bestScore) {
+        bestScore = score;
+        chosen = p;
+      }
+    }
+  }
+  if (chosen) {
+    // 한 상품이 여러 글에 도배되지 않게 사용 후 USED 처리
+    await prisma.product.update({ where: { id: chosen.id }, data: { status: "USED" } }).catch(() => undefined);
+    return toProductInput(chosen);
+  }
+
+  // ② 폴백: 쿠팡 상품검색 API (키 설정 시)
   try {
     const products = await searchCoupangProducts(text, 5);
     const best = products.find((p) => p.productUrl && p.productName);
@@ -69,8 +117,8 @@ async function autoGenerateTopArticles(count: number): Promise<number> {
   for (const rec of recommendations) {
     if (made >= count) break;
     try {
-      // 제휴 수익화: 키워드에 어울리는 쿠팡 상품을 찾아 붙이면 배너·딥링크·대가성 문구가 자동 삽입된다.
-      const product = await findProductForKeyword(rec.keyword.text);
+      // 제휴 수익화: 키워드에 어울리는 상품(등록 상품 우선)을 붙이면 배너·딥링크·대가성 문구가 자동 삽입된다.
+      const product = await findProductForKeyword(rec.keywordId, rec.keyword.text);
       await generateArticle({
         keywordId: rec.keywordId,
         articleType: suggestArticleType(rec.keyword.text, rec.keyword.sourceType, rec.keyword.searchIntent),

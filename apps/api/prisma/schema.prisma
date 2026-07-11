@@ -109,9 +109,35 @@ model Keyword {
   metrics         KeywordMetric[]
   recommendations DailyKeywordRecommendation[]
   articles        Article[]
+  products        Product[]
 
   @@unique([text])
   @@map("keywords")
+}
+
+/**
+ * 사용자가 직접 등록하는 제휴 상품 풀 (쿠팡 파트너스 검색 API가 없어 수동 등록).
+ * 등록 시 오늘의 키워드와 매칭해 두면, 그 키워드의 자동 글에 상품 배너가 삽입된다.
+ */
+model Product {
+  id               Int      @id @default(autoincrement())
+  source           String // COUPANG | BRANDCONNECT
+  name             String
+  brand            String?
+  price            Int?
+  imageUrl         String?  @db.Text
+  productUrl       String   @db.Text
+  description      String?  @db.Text
+  isRocket         Boolean  @default(false)
+  status           String   @default("ACTIVE") // ACTIVE | USED | DISABLED
+  matchedKeywordId Int?
+  matchedKeyword   Keyword? @relation(fields: [matchedKeywordId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status])
+  @@index([matchedKeywordId])
+  @@map("products")
 }
 
 model KeywordMetric {
