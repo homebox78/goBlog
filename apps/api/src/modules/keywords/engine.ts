@@ -247,7 +247,8 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
     const top = scored.slice(0, dailyCount);
 
     // 6) 저장 — 하루 4회 수집을 누적한다 (같은 키워드가 여러 회차에 나오면 중복 신호)
-    const { date } = kstToday();
+    const { date, ymd } = kstToday();
+    const [ty, tm, td] = ymd.split("-").map(Number);
     let rank = 0;
     for (const row of top) {
       rank += 1;
@@ -328,6 +329,33 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
           },
         },
       });
+
+      // 빅데이터 시계열 스냅샷 — 수집마다 append (덮어쓰지 않음). 년/월/일 단위 분석용.
+      await prisma.keywordTrend
+        .create({
+          data: {
+            keywordId: keyword.id,
+            keywordText: keyword.text,
+            category: row.candidate.category,
+            sourceType: row.candidate.type,
+            date,
+            year: ty,
+            month: tm,
+            day: td,
+            trigger,
+            naverSearches: row.naver?.avgMonthlySearches ?? null,
+            googleSearches: row.google?.avgMonthlySearches ?? null,
+            searchVolume: row.naver?.avgMonthlySearches ?? row.google?.avgMonthlySearches ?? null,
+            competitionScore: row.competitionScore ?? null,
+            totalDocs: row.totalDocs ?? null,
+            revenueScore: row.revenueScore,
+            valueScore: row.valueScore,
+            opportunityScore: row.opportunityScore,
+            finalScore: row.finalScore,
+            rank,
+          },
+        })
+        .catch(() => undefined);
     }
 
     return {

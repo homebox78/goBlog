@@ -117,6 +117,33 @@ keywordsRouter.get(
   }),
 );
 
+/** 키워드 수집 시계열 (빅데이터) — 년/월/일·키워드로 필터해 누적 스냅샷 조회 */
+keywordsRouter.get(
+  "/trends",
+  asyncHandler(async (req, res) => {
+    const num = (v: unknown) => (v !== undefined && v !== "" ? Number(v) : undefined);
+    const year = num(req.query.year);
+    const month = num(req.query.month);
+    const day = num(req.query.day);
+    const text = req.query.keyword ? String(req.query.keyword).trim() : undefined;
+    const where = {
+      ...(year ? { year } : {}),
+      ...(month ? { month } : {}),
+      ...(day ? { day } : {}),
+      ...(text ? { keywordText: { contains: text } } : {}),
+    };
+    const [total, items] = await Promise.all([
+      prisma.keywordTrend.count({ where }),
+      prisma.keywordTrend.findMany({
+        where,
+        orderBy: [{ collectedAt: "desc" }, { rank: "asc" }],
+        take: 500,
+      }),
+    ]);
+    res.json({ total, items });
+  }),
+);
+
 /** 수동 수집 실행 (수집만) */
 keywordsRouter.post(
   "/discover",
