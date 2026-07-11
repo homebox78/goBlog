@@ -196,6 +196,15 @@ export async function testWordpress(): Promise<TestResult> {
   }
 
   const baseUrl = values["wordpress.url"]!.replace(/\/+$/, "");
+
+  if (/(^|\.)wordpress\.com$/i.test(new URL(baseUrl).hostname)) {
+    return {
+      ok: false,
+      message: "WordPress.com 호스팅 블로그는 이 방식(Application Password)을 지원하지 않습니다.",
+      detail:
+        "자체설치형 워드프레스 주소를 입력하세요. 무료 WordPress.com은 애드센스 광고도 게재할 수 없습니다.",
+    };
+  }
   const credentials = Buffer.from(
     `${values["wordpress.username"]}:${values["wordpress.appPassword"]}`,
   ).toString("base64");
