@@ -13,6 +13,8 @@ async function init() {
   $("#apiBase").value = config.apiBase;
   $("#token").value = config.token;
 
+  $("#version").textContent = "v" + chrome.runtime.getManifest().version;
+
   $("#saveSetup").addEventListener("click", saveSetup);
   $("#openSetup").addEventListener("click", () => $("#setup").classList.toggle("hidden"));
   $("#refresh").addEventListener("click", loadArticles);
