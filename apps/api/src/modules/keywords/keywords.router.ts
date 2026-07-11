@@ -17,7 +17,8 @@ keywordsRouter.get(
 
     const recommendations = await prisma.dailyKeywordRecommendation.findMany({
       where: { date },
-      orderBy: { rank: "asc" },
+      orderBy: { finalScore: "desc" },
+      take: 60,
       include: {
         keyword: {
           include: {
@@ -30,12 +31,12 @@ keywordsRouter.get(
     res.json({
       date: ymd,
       running: isDiscoveryRunning(),
-      items: recommendations.map((row) => {
+      items: recommendations.map((row, index) => {
         const google = row.keyword.metrics.find((metric) => metric.source === "GOOGLE_ADS");
         const naver = row.keyword.metrics.find((metric) => metric.source === "NAVER_SEARCHAD");
         return {
           id: row.keyword.id,
-          rank: row.rank,
+          rank: index + 1,
           keyword: row.keyword.text,
           category: row.keyword.category,
           type: (row.data as { type?: string } | null)?.type ?? row.keyword.sourceType,
@@ -64,7 +65,7 @@ keywordsRouter.get(
   }),
 );
 
-/** 수동 수집 실행 */
+/** 수동 수집 실행 (수집만) */
 keywordsRouter.post(
   "/discover",
   asyncHandler(async (req, res) => {

@@ -223,9 +223,8 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
     scored.sort((a, b) => b.finalScore - a.finalScore);
     const top = scored.slice(0, dailyCount);
 
-    // 6) 저장 — 오늘 추천은 최신 실행 결과로 교체한다
+    // 6) 저장 — 하루 4회 수집을 누적한다 (같은 키워드가 여러 회차에 나오면 중복 신호)
     const { date } = kstToday();
-    await prisma.dailyKeywordRecommendation.deleteMany({ where: { date } });
     let rank = 0;
     for (const row of top) {
       rank += 1;
