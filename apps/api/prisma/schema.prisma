@@ -204,6 +204,8 @@ model Article {
   contentHtml     String?           @db.LongText
   qualityScore    Int?
   qualityReport   Json?
+  adSource        String? // 삽입된 제휴 광고 플랫폼: COUPANG | BRANDCONNECT (없으면 null)
+  adProduct       String? // 삽입된 제휴 상품명 (글 목록에서 어떤 광고인지 표시용)
   publishAt       DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt

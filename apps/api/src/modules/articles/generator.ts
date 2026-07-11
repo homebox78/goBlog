@@ -298,7 +298,7 @@ export async function generateArticle(
         excerpt: "글 요약 2~3문장",
         contentMarkdown: "마크다운 본문 (H2/H3, 표/목록, 이미지 자리 [IMAGE:n], 상품 배너 자리 [PRODUCT_BANNER])",
         faq: [{ question: "질문", answer: "답변" }],
-        tags: ["SEO 태그 7~10개 — 핵심 키워드·연관 검색어·카테고리 (해시(#) 없이, 각 1~4단어)"],
+        tags: ["SEO 태그 20~30개 — 핵심 키워드·연관 검색어·롱테일·카테고리 (해시(#) 없이, 각 1~4단어, 본문 끝 해시태그로 사용됨)"],
         productReview: wantsProduct
           ? { name: "상품명", brand: "브랜드", description: "객관적 설명", pros: ["장점"], cons: ["단점"], actuallyUsed: false }
           : null,
@@ -412,8 +412,24 @@ export async function generateArticle(
       contentMarkdown += "\n\n" + banner;
     }
 
-    // 대가성 표기 — 글 최상단 (공정위 지침: 소비자가 쉽게 인식할 수 있는 위치)
-    contentMarkdown = `> ${disclosureText(product)}\n\n${contentMarkdown}`;
+    // 대가성 표기 — 글 최상단 (공정위 지침: 소비자가 쉽게 인식할 수 있는 위치). 폰트 11px로 작게.
+    contentMarkdown = `<p style="font-size:11px;color:#8a8a8a;margin:0 0 16px;line-height:1.5;">${disclosureText(product)}</p>\n\n${contentMarkdown}`;
+  }
+
+  // 삽입된 광고(상품) 요약 — 글 목록에서 어떤 광고가 들어갔는지 표시용
+  const adSource = product ? product.source : null;
+  const adProduct = product ? product.name : null;
+
+  // SEO 태그 = 본문 최하단 해시태그 20~30개 (검색·발견성). 중복 제거 후 붙인다.
+  const tags = [
+    ...new Set(
+      (generated.tags ?? [])
+        .map((tag) => tag.replace(/^#/, "").trim())
+        .filter((tag) => tag.length > 0 && tag.length <= 30),
+    ),
+  ].slice(0, 30);
+  if (tags.length > 0) {
+    contentMarkdown += `\n\n${tags.map((tag) => `#${tag.replace(/\s+/g, "")}`).join(" ")}`;
   }
 
   const faq = wantsFaq ? (generated.faq ?? []).filter((entry) => entry.question && entry.answer) : [];
@@ -449,6 +465,8 @@ export async function generateArticle(
       contentHtml,
       qualityScore: quality.score,
       qualityReport: JSON.parse(JSON.stringify(quality)),
+      adSource,
+      adProduct,
       versions: {
         create: {
           version: 1,
@@ -519,11 +537,7 @@ export async function generateArticle(
     });
   }
 
-  // SEO 태그 저장 (Blogger 라벨·인스타 해시태그·네이버/티스토리 태그로 사용)
-  const tags = (generated.tags ?? [])
-    .map((tag) => tag.replace(/^#/, "").trim())
-    .filter((tag) => tag.length > 0 && tag.length <= 30)
-    .slice(0, 10);
+  // SEO 태그 저장 (Blogger 라벨·인스타 해시태그·네이버/티스토리 태그로 사용) — 위에서 계산한 tags 재사용
   for (const name of tags) {
     try {
       const tag = await prisma.tag.upsert({

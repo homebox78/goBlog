@@ -93,6 +93,24 @@ export function runQualityCheck(input: {
     `${occurrences}회`,
   );
 
+  // SEO: 키워드가 소제목(H2)에 들어갔는지 — 키워드 토큰 중 하나라도 포함
+  const kwTokens = input.keyword.toLowerCase().split(/\s+/).filter((token) => token.length >= 2);
+  const h2Texts = (content.match(/^##\s+(.+)$/gm) ?? []).map((line) => line.toLowerCase());
+  const keywordInSubhead = kwTokens.length > 0 && h2Texts.some((h) => kwTokens.some((token) => h.includes(token)));
+  add("소제목(H2)에 키워드 포함 (SEO)", keywordInSubhead, 5);
+
+  // SEO: 키워드가 본문 앞·뒤 절반에 고르게 분포 (도입부에만 몰리지 않도록)
+  const half = Math.floor(normalizedPlain.length / 2);
+  const inFirstHalf = normalizedPlain.slice(0, half).includes(keyword);
+  const inSecondHalf = normalizedPlain.slice(half).includes(keyword);
+  add("키워드 본문 전반 분포 (SEO)", inFirstHalf && inSecondHalf, 5);
+
+  // 해시태그 20개 이상 (본문 끝) — 배너의 hex 색상(#e52528 등)은 제외하고 센다
+  const hashtags = (content.match(/#[0-9A-Za-z가-힣_]{1,30}/g) ?? []).filter(
+    (h) => !/^#[0-9a-fA-F]{3,8}$/.test(h),
+  );
+  add("해시태그 20개 이상 (본문 끝, SEO)", hashtags.length >= 20, 10, `${hashtags.length}개`);
+
   add("요약(excerpt) 작성", input.excerpt.length >= 30, 5);
   add("이미지 프롬프트 준비", input.imagePromptCount >= 1, 5);
   add(

@@ -25,6 +25,8 @@ articlesRouter.get(
         articleType: true,
         status: true,
         qualityScore: true,
+        adSource: true,
+        adProduct: true,
         createdAt: true,
         updatedAt: true,
         keyword: { select: { id: true, text: true } },

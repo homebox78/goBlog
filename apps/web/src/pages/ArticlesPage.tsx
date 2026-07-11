@@ -34,6 +34,8 @@ interface ArticleListItem {
   articleType: string;
   status: string;
   qualityScore: number | null;
+  adSource: string | null;
+  adProduct: string | null;
   createdAt: string;
   keyword: { id: number; text: string } | null;
   thumbnailUrl: string | null;
@@ -92,6 +94,7 @@ export default function ArticlesPage() {
                   <TableHead className="w-16">이미지</TableHead>
                   <TableHead>제목</TableHead>
                   <TableHead className="text-center">키워드</TableHead>
+                  <TableHead className="text-center">광고</TableHead>
                   <TableHead className="text-center">언어</TableHead>
                   <TableHead className="text-center">상태</TableHead>
                   <TableHead className="text-right">품질</TableHead>
@@ -132,6 +135,22 @@ export default function ArticlesPage() {
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">
                         {article.keyword?.text ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {article.adProduct ? (
+                          <span
+                            className="inline-flex max-w-40 items-center gap-1 truncate rounded px-1.5 py-0.5 text-xs font-medium"
+                            style={{
+                              background: article.adSource === "COUPANG" ? "#fdeaea" : "#e9f9ef",
+                              color: article.adSource === "COUPANG" ? "#c41f22" : "#03a44e",
+                            }}
+                            title={`${article.adSource === "COUPANG" ? "쿠팡" : "네이버"} · ${article.adProduct}`}
+                          >
+                            {article.adSource === "COUPANG" ? "쿠팡" : "네이버"} · {article.adProduct}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">없음</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center text-sm">{article.language}</TableCell>
                       <TableCell className="text-center">
