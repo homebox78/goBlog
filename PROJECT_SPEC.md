@@ -23,7 +23,7 @@
 | 백엔드 | Node.js + TypeScript + Express + Prisma + MySQL 8 + Redis + BullMQ |
 | AI | Anthropic Claude(글·키워드·검수, 기본 `claude-sonnet-5`, 설정에서 변경) / Gemini(이미지) |
 | 키워드 데이터 | Google Ads Keyword Planner · Google Trends · Google News RSS · 네이버 데이터랩·검색·검색광고 |
-| 발행 | WordPress REST API · Blogger API (서버 자동) / 네이버·티스토리 (Chrome 확장 반자동) |
+| 발행 | WordPress REST API · Blogger API · Instagram Graph API (서버 자동) / 네이버·티스토리 (Chrome 확장 반자동) |
 | 분석 | Search Console · GA4 · AdSense Management API |
 | 확장 | Chrome MV3 + Side Panel(웹뷰 iframe) + Content Script 어댑터 |
 
@@ -57,8 +57,8 @@ goblog/
 2. **키워드**: 뉴스·트렌드 수집 + Google Ads 검색량·CPC + 점수화 + 오늘의 키워드 화면
 3. **콘텐츠**: Claude 글 생성(5개 언어) + 스키마 + 품질 검사 + 버전 히스토리
 4. **이미지**: Gemini 생성 + Sharp 최적화 + 본문 자동 삽입
-5. **게시**: WordPress·Blogger 발행 + 예약 + 재시도
-6. **확장**: Side Panel 웹뷰 + 네이버·티스토리 어댑터
+5. **게시**: WordPress·Blogger 발행 + Instagram(Graph API — Gemini 이미지+캡션 카드뉴스, 일 25회 제한) + 예약 + 재시도
+6. **확장**: Side Panel 웹뷰 + 네이버·티스토리 어댑터 + 네이버 브랜드커넥트(공개 API 없음 — 브라우저 세션 반자동: 캠페인 조회·지원 보조)
 7. **분석**: Search Console·GA4·AdSense + 콘텐츠 개선 추천
 
 ## 7. 빠른 시작

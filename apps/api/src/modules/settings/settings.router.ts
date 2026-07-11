@@ -32,6 +32,13 @@ settingsRouter.put(
   asyncHandler(async (req, res) => {
     const { values } = parseBody(updateSchema, req.body);
     await updateSettings(values);
+
+    // 수집 시간이 바뀌면 스케줄을 다시 잡는다
+    if ("keywords.collectTime" in values) {
+      const { scheduleFromSettings } = await import("../schedules/scheduler.js");
+      await scheduleFromSettings();
+    }
+
     res.json({ settings: await listSettings() });
   }),
 );

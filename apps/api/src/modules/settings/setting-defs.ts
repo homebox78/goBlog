@@ -56,7 +56,12 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "wordpress.appPassword", group: "platforms", label: "WordPress Application Password", secret: true },
   { key: "blogger.blogId", group: "platforms", label: "Blogger Blog ID", secret: false },
   { key: "naverBlog.writeUrl", group: "platforms", label: "네이버 블로그 작성 URL", secret: false },
+  // 브랜드커넥트는 공개 API가 없어 Chrome 확장(6단계)에서 브라우저 세션으로 연동한다.
+  { key: "naverBrandConnect.url", group: "platforms", label: "네이버 브랜드커넥트 크리에이터 URL", secret: false },
   { key: "tistory.writeUrl", group: "platforms", label: "티스토리 작성 URL", secret: false },
+  // Instagram Graph API — 비즈니스/크리에이터 계정 + Facebook 앱 필요. 이미지·캡션 자동 발행 가능.
+  { key: "instagram.businessAccountId", group: "platforms", label: "Instagram 비즈니스 계정 ID", secret: false },
+  { key: "instagram.accessToken", group: "platforms", label: "Instagram 액세스 토큰", secret: true },
 ];
 
 export const SETTING_DEF_MAP = new Map(SETTING_DEFS.map((def) => [def.key, def]));

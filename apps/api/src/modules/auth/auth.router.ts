@@ -143,24 +143,49 @@ authRouter.get(
   }),
 );
 
-/** 최초 기동 시 관리자 계정이 없으면 환경변수 값으로 생성한다. */
+/**
+ * .env(ADMIN_EMAIL/ADMIN_PASSWORD)가 관리자 계정의 단일 소스다.
+ * 기동 시 계정이 없으면 생성하고, 있으면 .env 값과 다를 때 이메일·비밀번호를 동기화한다.
+ */
 export async function ensureAdminUser() {
   try {
-    const count = await prisma.user.count();
-    if (count > 0) return;
-
     if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) {
-      console.warn("[auth] 사용자가 없고 ADMIN_EMAIL/ADMIN_PASSWORD도 없어 관리자 계정을 만들지 못했습니다.");
+      console.warn("[auth] ADMIN_EMAIL/ADMIN_PASSWORD가 없어 관리자 계정을 관리하지 못합니다.");
       return;
     }
 
-    await prisma.user.create({
-      data: {
-        email: env.ADMIN_EMAIL,
-        passwordHash: await argon2.hash(env.ADMIN_PASSWORD),
-      },
-    });
-    console.log(`[auth] 관리자 계정 생성: ${env.ADMIN_EMAIL}`);
+    const admin = await prisma.user.findFirst({ orderBy: { id: "asc" } });
+
+    if (!admin) {
+      await prisma.user.create({
+        data: {
+          email: env.ADMIN_EMAIL,
+          passwordHash: await argon2.hash(env.ADMIN_PASSWORD),
+        },
+      });
+      console.log(`[auth] 관리자 계정 생성: ${env.ADMIN_EMAIL}`);
+      return;
+    }
+
+    const emailChanged = admin.email !== env.ADMIN_EMAIL;
+    const passwordChanged = !(await argon2
+      .verify(admin.passwordHash, env.ADMIN_PASSWORD)
+      .catch(() => false));
+
+    if (emailChanged || passwordChanged) {
+      await prisma.user.update({
+        where: { id: admin.id },
+        data: {
+          email: env.ADMIN_EMAIL,
+          passwordHash: passwordChanged
+            ? await argon2.hash(env.ADMIN_PASSWORD)
+            : admin.passwordHash,
+          failedLoginCount: 0,
+          lockedUntil: null,
+        },
+      });
+      console.log(`[auth] 관리자 계정을 .env 값으로 동기화: ${env.ADMIN_EMAIL}`);
+    }
   } catch (error) {
     console.warn("[auth] 관리자 계정 확인 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }

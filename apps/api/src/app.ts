@@ -6,6 +6,7 @@ import { checkDatabase } from "./common/prisma.js";
 import { authRouter } from "./modules/auth/auth.router.js";
 import { settingsRouter } from "./modules/settings/settings.router.js";
 import { dashboardRouter } from "./modules/analytics/dashboard.router.js";
+import { keywordsRouter } from "./modules/keywords/keywords.router.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 export function createApp() {
@@ -32,6 +33,7 @@ export function createApp() {
   app.use("/api/auth", authRouter);
   app.use("/api/settings", settingsRouter);
   app.use("/api/analytics", dashboardRouter);
+  app.use("/api/keywords", keywordsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
