@@ -7,6 +7,8 @@ import { authRouter } from "./modules/auth/auth.router.js";
 import { settingsRouter } from "./modules/settings/settings.router.js";
 import { dashboardRouter } from "./modules/analytics/dashboard.router.js";
 import { keywordsRouter } from "./modules/keywords/keywords.router.js";
+import { articlesRouter } from "./modules/articles/articles.router.js";
+import { productsRouter } from "./modules/products/products.router.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 export function createApp() {
@@ -34,6 +36,8 @@ export function createApp() {
   app.use("/api/settings", settingsRouter);
   app.use("/api/analytics", dashboardRouter);
   app.use("/api/keywords", keywordsRouter);
+  app.use("/api/articles", articlesRouter);
+  app.use("/api/products", productsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import type { ZodSchema } from "zod";
+import type { z } from "zod";
 
 export class HttpError extends Error {
   status: number;
@@ -19,7 +19,7 @@ export function asyncHandler(
   };
 }
 
-export function parseBody<T>(schema: ZodSchema<T>, body: unknown): T {
+export function parseBody<S extends z.ZodTypeAny>(schema: S, body: unknown): z.output<S> {
   const result = schema.safeParse(body);
   if (!result.success) {
     const detail = result.error.issues

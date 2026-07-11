@@ -75,6 +75,12 @@ const GROUPS: Array<{ id: string; label: string; description: string; testEndpoi
     description: "데이터랩 트렌드와 검색광고 지표 조회에 사용됩니다.",
   },
   {
+    id: "coupang",
+    label: "쿠팡 파트너스",
+    description: "상품 검색·골드박스·딥링크(제휴 링크) 발급에 사용됩니다.",
+    testEndpoint: "/api/settings/test/coupang",
+  },
+  {
     id: "platforms",
     label: "게시 플랫폼",
     description: "WordPress·Blogger 발행 및 네이버·티스토리 작성 URL을 설정합니다.",

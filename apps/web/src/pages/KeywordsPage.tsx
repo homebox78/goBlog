@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bookmark, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { Bookmark, Loader2, PenLine, RefreshCw, Trash2 } from "lucide-react";
+import { GenerateDialog } from "@/components/articles/GenerateDialog";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,6 +62,7 @@ const numberFormat = (value: number | null) =>
 
 export default function KeywordsPage() {
   const queryClient = useQueryClient();
+  const [generateTarget, setGenerateTarget] = useState<{ id: number; keyword: string } | null>(null);
 
   const query = useQuery({
     queryKey: ["keywords", "today"],
@@ -209,6 +212,21 @@ export default function KeywordsPage() {
                                 size="icon"
                                 className="size-7"
                                 onClick={() =>
+                                  setGenerateTarget({ id: item.id, keyword: item.keyword })
+                                }
+                              >
+                                <PenLine className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>글 생성</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                onClick={() =>
                                   statusMutation.mutate({
                                     id: item.id,
                                     status: item.status === "SAVED" ? "RECOMMENDED" : "SAVED",
@@ -254,6 +272,13 @@ export default function KeywordsPage() {
           </CardContent>
         </Card>
       )}
+
+      <GenerateDialog
+        keywordId={generateTarget?.id ?? null}
+        keyword={generateTarget?.keyword ?? ""}
+        open={generateTarget !== null}
+        onOpenChange={(open) => !open && setGenerateTarget(null)}
+      />
     </div>
   );
 }

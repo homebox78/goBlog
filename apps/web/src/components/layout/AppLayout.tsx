@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   Loader2,
+  ShoppingBag,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ interface MeResponse {
 const NAV_ITEMS = [
   { to: "/", label: "대시보드", icon: LayoutDashboard },
   { to: "/keywords", label: "오늘의 키워드", icon: Lightbulb },
+  { to: "/products", label: "상품 홍보", icon: ShoppingBag },
   { to: "/articles", label: "글 관리", icon: FileText },
   { to: "/schedule", label: "스케줄", icon: CalendarClock },
   { to: "/settings", label: "설정", icon: Settings },

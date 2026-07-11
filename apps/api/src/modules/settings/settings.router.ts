@@ -72,3 +72,11 @@ settingsRouter.post(
   "/test/wordpress",
   asyncHandler(async (req, res) => res.json(await testWordpress())),
 );
+
+settingsRouter.post(
+  "/test/coupang",
+  asyncHandler(async (req, res) => {
+    const { testCoupang } = await import("../products/coupang.js");
+    res.json(await testCoupang());
+  }),
+);

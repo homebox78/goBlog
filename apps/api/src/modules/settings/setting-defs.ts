@@ -50,6 +50,11 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "naver.searchAdSecret", group: "naver", label: "검색광고 Secret", secret: true },
   { key: "naver.searchAdCustomerId", group: "naver", label: "검색광고 Customer ID", secret: false },
 
+  // 쿠팡 파트너스 (Open API — 상품 검색·골드박스·딥링크)
+  { key: "coupang.accessKey", group: "coupang", label: "쿠팡 파트너스 Access Key", secret: false },
+  { key: "coupang.secretKey", group: "coupang", label: "쿠팡 파트너스 Secret Key", secret: true },
+  { key: "coupang.subId", group: "coupang", label: "채널 ID (subId, 선택)", secret: false },
+
   // 게시 플랫폼
   { key: "wordpress.url", group: "platforms", label: "WordPress URL", secret: false },
   { key: "wordpress.username", group: "platforms", label: "WordPress Username", secret: false },
