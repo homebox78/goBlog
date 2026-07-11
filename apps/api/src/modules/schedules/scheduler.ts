@@ -46,7 +46,7 @@ async function findProductForKeyword(keywordId: number, text: string): Promise<P
     const actives = await prisma.product.findMany({ where: { status: "ACTIVE" }, take: 200 });
     let bestScore = 0;
     for (const p of actives) {
-      const score = overlapScore(`${p.name} ${p.brand ?? ""}`, text);
+      const score = overlapScore({ name: p.name, brand: p.brand }, text);
       if (score >= 1 && score > bestScore) {
         bestScore = score;
         chosen = p;
