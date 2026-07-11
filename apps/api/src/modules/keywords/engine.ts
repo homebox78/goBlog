@@ -9,6 +9,7 @@ import {
   normalizeKeyword,
   type KeywordMetricData,
 } from "./metrics.js";
+import { fetchNaverBlogCompetition, lowCompetitionScore } from "./competition.js";
 
 interface Candidate {
   keyword: string;
@@ -168,9 +169,10 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
 
     // 4) 실측 지표 (설정된 소스만 — 없으면 null 유지)
     const texts = cleanCandidates.map((candidate) => candidate.keyword);
-    const [googleMetrics, naverMetrics] = await Promise.all([
+    const [googleMetrics, naverMetrics, competition] = await Promise.all([
       fetchGoogleAdsMetrics(texts),
       fetchNaverSearchAdMetrics(texts),
+      fetchNaverBlogCompetition(texts),
     ]);
 
     // 5) 점수 계산
@@ -204,8 +206,12 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
         { score: candidate.freshness, weight: 0.35 },
         { score: candidate.problemSolving, weight: 0.4 },
       ]);
+      // 상위노출 기회: 네이버 블로그 경쟁 문서 수(실측)를 최우선 반영 — 저경쟁 롱테일 우대
+      const comp = competition.get(key) ?? null;
+      const competitionScore = lowCompetitionScore(volume, comp?.totalDocs ?? null);
       const opportunityScore = weighted([
-        { score: candidate.contentGap, weight: 0.4 },
+        { score: competitionScore, weight: 0.45 },
+        { score: candidate.contentGap, weight: 0.35 },
         {
           score: google?.competitionIndex !== null && google?.competitionIndex !== undefined
             ? 100 - google.competitionIndex
@@ -217,7 +223,10 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
         revenueScore * 0.4 + valueScore * 0.35 + opportunityScore * 0.25,
       );
 
-      return { candidate, google, naver, volume, revenueScore, valueScore, opportunityScore, finalScore };
+      return {
+        candidate, google, naver, volume, revenueScore, valueScore, opportunityScore, finalScore,
+        totalDocs: comp?.totalDocs ?? null,
+      };
     });
 
     scored.sort((a, b) => b.finalScore - a.finalScore);
@@ -279,7 +288,7 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
           valueScore: row.valueScore,
           opportunityScore: row.opportunityScore,
           finalScore: row.finalScore,
-          data: { trigger, type: row.candidate.type, category: row.candidate.category },
+          data: { trigger, type: row.candidate.type, category: row.candidate.category, totalDocs: row.totalDocs },
         },
         create: {
           keywordId: keyword.id,
@@ -290,7 +299,7 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
           valueScore: row.valueScore,
           opportunityScore: row.opportunityScore,
           finalScore: row.finalScore,
-          data: { trigger, type: row.candidate.type, category: row.candidate.category },
+          data: { trigger, type: row.candidate.type, category: row.candidate.category, totalDocs: row.totalDocs },
         },
       });
     }

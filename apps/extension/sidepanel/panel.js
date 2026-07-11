@@ -107,13 +107,20 @@ async function applyToForm() {
     ? currentArticle.titleForNaver
     : currentArticle.title;
 
+  // 네이버·티스토리 SEO: 본문 끝에 해시태그 라인 추가
+  let html = currentArticle.contentHtml || "";
+  if (currentArticle.hashtags) {
+    html += `<p style="margin-top:28px;color:#5a7edc;font-size:14px;">${currentArticle.hashtags}</p>`;
+  }
+
   const response = await chrome.runtime.sendMessage({
     relay: true,
     payload: {
       type: "APPLY",
       title,
-      html: currentArticle.contentHtml,
-      plainText: plainText(currentArticle.contentHtml || ""),
+      html,
+      plainText: plainText(html),
+      tags: currentArticle.tags || [],
     },
   });
 

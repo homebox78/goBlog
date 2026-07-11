@@ -51,6 +51,7 @@ const generateSchema = z.object({
   schemaTypes: z.array(z.string()).default(["BlogPosting"]),
   length: z.number().int().min(500).max(6000).optional(),
   tone: z.string().optional(),
+  allowSimilar: z.boolean().optional(),
   product: z
     .object({
       source: z.enum(["COUPANG", "BRANDCONNECT"]),

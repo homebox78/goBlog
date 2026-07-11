@@ -31,6 +31,7 @@ interface KeywordItem {
   searchIntent: string | null;
   status: string;
   reason: string | null;
+  totalDocs: number | null;
   scores: {
     revenue: number | null;
     value: number | null;
@@ -85,6 +86,7 @@ function suggestArticleType(item: KeywordItem): string {
 
 export default function KeywordsPage() {
   const queryClient = useQueryClient();
+  const [view, setView] = useState<"today" | "saved">("today");
   const [generateTarget, setGenerateTarget] = useState<{
     id: number;
     keyword: string;
@@ -92,8 +94,11 @@ export default function KeywordsPage() {
   } | null>(null);
 
   const query = useQuery({
-    queryKey: ["keywords", "today"],
-    queryFn: () => api.get<TodayResponse>("/api/keywords/today"),
+    queryKey: ["keywords", view],
+    queryFn: () =>
+      view === "today"
+        ? api.get<TodayResponse>("/api/keywords/today")
+        : api.get<TodayResponse>("/api/keywords/saved").then((r) => ({ ...r, date: "", running: false })),
   });
 
   const discoverMutation = useMutation({
@@ -102,7 +107,7 @@ export default function KeywordsPage() {
         "/api/keywords/discover",
       ),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["keywords", "today"] });
+      queryClient.invalidateQueries({ queryKey: ["keywords"] });
       const sources = Object.entries(result.issuesCollected)
         .map(([source, count]) => `${source} ${count}`)
         .join(" · ");
@@ -118,7 +123,7 @@ export default function KeywordsPage() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       api.patch<{ id: number; status: string }>(`/api/keywords/${id}/status`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["keywords", "today"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["keywords"] }),
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "상태 변경에 실패했습니다."),
   });
@@ -127,11 +132,27 @@ export default function KeywordsPage() {
     <div className="space-y-6">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold">오늘의 키워드</h1>
+          <h1 className="text-2xl font-bold">키워드</h1>
           <p className="text-sm text-muted-foreground">
-            매일 설정된 시간에 실시간 이슈·트렌드에서 수익 키워드를 자동 발굴합니다.
-            {query.data?.date ? ` (${query.data.date})` : ""}
+            하루 4회(06·12·18·00시) 이슈·트렌드에서 수익 키워드를 자동 발굴합니다.
+            {view === "today" && query.data?.date ? ` (${query.data.date})` : ""}
           </p>
+          <div className="mt-2 flex gap-1">
+            <Button
+              variant={view === "today" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("today")}
+            >
+              오늘의 추천
+            </Button>
+            <Button
+              variant={view === "saved" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("saved")}
+            >
+              저장된 키워드
+            </Button>
+          </div>
         </div>
         <Button
           onClick={() => discoverMutation.mutate()}
@@ -174,6 +195,7 @@ export default function KeywordsPage() {
                   <TableHead className="text-center">카테고리</TableHead>
                   <TableHead className="text-right">검색량(G)</TableHead>
                   <TableHead className="text-right">검색량(N)</TableHead>
+                  <TableHead className="text-right">경쟁문서</TableHead>
                   <TableHead className="text-right">CPC</TableHead>
                   <TableHead className="text-right">종합점수</TableHead>
                   <TableHead className="w-24 text-center">액션</TableHead>
@@ -220,6 +242,9 @@ export default function KeywordsPage() {
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {numberFormat(item.metrics.naverMonthlySearches)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {numberFormat(item.totalDocs)}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {item.metrics.googleCpcKrw === null

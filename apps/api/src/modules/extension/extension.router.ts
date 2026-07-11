@@ -40,6 +40,7 @@ extensionRouter.get(
       include: {
         schemas: { where: { isEnabled: true } },
         media: { where: { webpUrl: { not: null } }, orderBy: { position: "asc" } },
+        tags: { include: { tag: true }, take: 10 },
       },
     });
     if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
@@ -61,6 +62,8 @@ extensionRouter.get(
         contentHtml: article.contentHtml,
         contentMarkdown: article.contentMarkdown,
         excerpt: article.excerpt,
+        tags: article.tags.map((row) => row.tag.name),
+        hashtags: article.tags.map((row) => `#${row.tag.name.replace(/\s+/g, "")}`).join(" "),
         images: article.media.map((asset) => ({ url: asset.webpUrl, alt: asset.altText })),
       },
     });

@@ -17,6 +17,7 @@ import {
 } from "./jsonld.js";
 import { runQualityCheck } from "./quality.js";
 import { renderContentHtml } from "./render.js";
+import { findSimilarArticle } from "./similarity.js";
 
 export interface ProductInput {
   source: "COUPANG" | "BRANDCONNECT";
@@ -37,6 +38,8 @@ export interface GenerateOptions {
   length?: number;
   tone?: string;
   product?: ProductInput;
+  /** 유사 글 검사 건너뛰기 (의도적 재작성 시) */
+  allowSimilar?: boolean;
 }
 
 interface GeneratedContent {
@@ -47,6 +50,7 @@ interface GeneratedContent {
   excerpt: string;
   contentMarkdown: string;
   faq: FaqEntry[];
+  tags: string[];
   productReview: ProductReviewData | null;
   imagePrompts: Array<{
     role: "FEATURED" | "CONTENT";
@@ -168,6 +172,17 @@ export async function generateArticle(
   const product = options.product ?? null;
   const topic = keyword?.text ?? product!.name;
 
+  // 중복·유사 글 방지 — 같은 블로그에 비슷한 글이 쌓이면 검색 품질이 떨어진다
+  if (!options.allowSimilar) {
+    const similar = await findSimilarArticle(topic);
+    if (similar) {
+      throw new HttpError(
+        409,
+        `유사한 글이 이미 있습니다 (${Math.round(similar.similarity * 100)}% 유사): "${similar.title}" — 기존 글을 보강하거나 다른 키워드를 선택하세요.`,
+      );
+    }
+  }
+
   const settings = await getSettingValues(["anthropic.defaultLength"]);
   const length = options.length ?? Number(settings["anthropic.defaultLength"] ?? 2000) ?? 2000;
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
@@ -283,6 +298,7 @@ export async function generateArticle(
         excerpt: "글 요약 2~3문장",
         contentMarkdown: "마크다운 본문 (H2/H3, 표/목록, 이미지 자리 [IMAGE:n], 상품 배너 자리 [PRODUCT_BANNER])",
         faq: [{ question: "질문", answer: "답변" }],
+        tags: ["SEO 태그 7~10개 — 핵심 키워드·연관 검색어·카테고리 (해시(#) 없이, 각 1~4단어)"],
         productReview: wantsProduct
           ? { name: "상품명", brand: "브랜드", description: "객관적 설명", pros: ["장점"], cons: ["단점"], actuallyUsed: false }
           : null,
@@ -501,6 +517,24 @@ export async function generateArticle(
         isEnabled: row.isEnabled,
       },
     });
+  }
+
+  // SEO 태그 저장 (Blogger 라벨·인스타 해시태그·네이버/티스토리 태그로 사용)
+  const tags = (generated.tags ?? [])
+    .map((tag) => tag.replace(/^#/, "").trim())
+    .filter((tag) => tag.length > 0 && tag.length <= 30)
+    .slice(0, 10);
+  for (const name of tags) {
+    try {
+      const tag = await prisma.tag.upsert({
+        where: { name },
+        update: {},
+        create: { name, slug: name.toLowerCase().replace(/\s+/g, "-") },
+      });
+      await prisma.articleTag.create({ data: { articleId: article.id, tagId: tag.id } }).catch(() => undefined);
+    } catch {
+      // 태그 저장 실패는 무시
+    }
   }
 
   if (keyword) {

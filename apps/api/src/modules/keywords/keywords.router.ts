@@ -43,6 +43,7 @@ keywordsRouter.get(
           searchIntent: row.keyword.searchIntent,
           status: row.keyword.status,
           reason: row.reason,
+          totalDocs: (row.data as { totalDocs?: number } | null)?.totalDocs ?? null,
           scores: {
             revenue: row.revenueScore,
             value: row.valueScore,
@@ -52,6 +53,56 @@ keywordsRouter.get(
           metrics: {
             googleMonthlySearches: google?.avgMonthlySearches ?? null,
             // BigInt는 JSON 직렬화 불가 — 원 단위 숫자로 변환
+            googleCpcKrw:
+              google?.cpcMicros !== null && google?.cpcMicros !== undefined
+                ? Math.round(Number(google.cpcMicros) / 1_000_000)
+                : null,
+            googleCompetition: google?.competition ?? null,
+            naverMonthlySearches: naver?.avgMonthlySearches ?? null,
+          },
+        };
+      }),
+    });
+  }),
+);
+
+/** 저장(북마크)한 키워드 목록 — 날짜 무관 */
+keywordsRouter.get(
+  "/saved",
+  asyncHandler(async (req, res) => {
+    const keywords = await prisma.keyword.findMany({
+      where: { status: "SAVED" },
+      orderBy: { updatedAt: "desc" },
+      take: 100,
+      include: {
+        metrics: { orderBy: { date: "desc" }, take: 2 },
+        recommendations: { orderBy: { date: "desc" }, take: 1 },
+      },
+    });
+
+    res.json({
+      items: keywords.map((keyword, index) => {
+        const google = keyword.metrics.find((metric) => metric.source === "GOOGLE_ADS");
+        const naver = keyword.metrics.find((metric) => metric.source === "NAVER_SEARCHAD");
+        const rec = keyword.recommendations[0];
+        return {
+          id: keyword.id,
+          rank: index + 1,
+          keyword: keyword.text,
+          category: keyword.category,
+          type: keyword.sourceType,
+          searchIntent: keyword.searchIntent,
+          status: keyword.status,
+          reason: rec?.reason ?? null,
+          totalDocs: (rec?.data as { totalDocs?: number } | null)?.totalDocs ?? null,
+          scores: {
+            revenue: rec?.revenueScore ?? null,
+            value: rec?.valueScore ?? null,
+            opportunity: rec?.opportunityScore ?? null,
+            final: rec?.finalScore ?? null,
+          },
+          metrics: {
+            googleMonthlySearches: google?.avgMonthlySearches ?? null,
             googleCpcKrw:
               google?.cpcMicros !== null && google?.cpcMicros !== undefined
                 ? Math.round(Number(google.cpcMicros) / 1_000_000)

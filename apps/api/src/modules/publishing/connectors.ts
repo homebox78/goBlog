@@ -21,8 +21,19 @@ async function googleAccessToken(clientId: string, clientSecret: string, refresh
   return data.access_token;
 }
 
+/** 글의 SEO 태그 조회 */
+async function getArticleTags(articleId: number): Promise<string[]> {
+  const rows = await prisma.articleTag.findMany({
+    where: { articleId },
+    include: { tag: true },
+    take: 10,
+  });
+  return rows.map((row) => row.tag.name);
+}
+
 /** Blogger — blogId는 숫자 ID 또는 블로그 URL 모두 허용 (URL이면 byurl로 해석) */
 export async function publishToBlogger(article: {
+  id: number;
   title: string;
   contentHtml: string | null;
   metaDescription: string | null;
@@ -57,10 +68,15 @@ export async function publishToBlogger(article: {
     blogId = blog.id;
   }
 
+  const labels = await getArticleTags(article.id).catch(() => [] as string[]);
   const res = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ title: article.title, content: article.contentHtml ?? "" }),
+    body: JSON.stringify({
+      title: article.title,
+      content: article.contentHtml ?? "",
+      ...(labels.length > 0 ? { labels } : {}),
+    }),
   });
   const post = (await res.json()) as { url?: string; error?: { message?: string } };
   if (!res.ok || !post.url) throw new Error(`Blogger 발행 실패: ${post.error?.message ?? `HTTP ${res.status}`}`);
@@ -150,9 +166,11 @@ export async function publishToInstagram(article: {
   const imageUrl = featured?.originalUrl ?? featured?.webpUrl;
   if (!imageUrl) throw new Error("발행할 대표 이미지가 없습니다. 먼저 이미지를 생성해주세요.");
 
-  // 대가성 문구(본문 첫 blockquote)를 캡션에도 유지
+  // 대가성 문구(본문 첫 blockquote)를 캡션에도 유지 + SEO 해시태그
   const disclosure = /^>\s*(.+)$/m.exec(article.contentMarkdown ?? "")?.[1] ?? "";
-  const caption = [article.title, "", article.excerpt ?? "", "", disclosure]
+  const tags = await getArticleTags(article.id).catch(() => [] as string[]);
+  const hashtags = tags.map((tag) => `#${tag.replace(/\s+/g, "")}`).join(" ");
+  const caption = [article.title, "", article.excerpt ?? "", "", disclosure, "", hashtags]
     .join("\n")
     .trim()
     .slice(0, 2000);
