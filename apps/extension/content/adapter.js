@@ -7,9 +7,13 @@ function detectPlatform() {
     return "TISTORY";
   }
   if (host === "blog.naver.com" || host.includes("blog.editor.naver.com")) {
-    // 스마트에디터 ONE 존재 확인
+    // 에디터(스마트에디터 ONE)는 #mainFrame 안에만 있어 프레임마다 감지 결과가 다르다.
+    // 콘텐츠 스크립트는 all_frames로 최상위+에디터 프레임 양쪽에서 실행되고, background 릴레이는
+    // frameId 없이 모든 프레임에 보내 '먼저 응답한' 프레임 결과를 쓴다 → 최상위가 null을 반환하면
+    // 에디터 프레임이 NAVER_BLOG를 반환해도 경합에서 져 '작성폼 아님'이 된다.
+    // 따라서 최상위 프레임도 글쓰기 URL(Redirect=Write / PostWriteForm)로 NAVER_BLOG를 반환해 경합을 없앤다.
     if (document.querySelector(".se-title-text, .se-container, [data-a11y-title]")) return "NAVER_BLOG";
-    if (/PostWriteForm|GoBlogWrite/.test(location.href)) return "NAVER_BLOG";
+    if (/PostWriteForm|GoBlogWrite/.test(location.href) || /[?&]Redirect=Write/i.test(location.href)) return "NAVER_BLOG";
   }
   return null;
 }
