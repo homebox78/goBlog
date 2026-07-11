@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { marked } from "marked";
 import { prisma } from "../../common/prisma.js";
 import { asyncHandler, HttpError, parseBody } from "../../common/http.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { generateArticle } from "./generator.js";
 import { runQualityCheck } from "./quality.js";
+import { renderContentHtml } from "./render.js";
 
 export const articlesRouter = Router();
 
@@ -125,7 +125,7 @@ articlesRouter.put(
       (body.title !== undefined && body.title !== article.title) ||
       (body.contentMarkdown !== undefined && body.contentMarkdown !== article.contentMarkdown);
 
-    const contentHtml = contentChanged ? await marked.parse(contentMarkdown) : article.contentHtml;
+    const contentHtml = contentChanged ? await renderContentHtml(contentMarkdown) : article.contentHtml;
 
     const quality = runQualityCheck({
       keyword: article.keyword?.text ?? "",

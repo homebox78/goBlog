@@ -12,6 +12,27 @@ export interface QualityReport {
   score: number;
   items: QualityCheckItem[];
   claimsToVerify: string[];
+  policyRisks: string[];
+}
+
+/**
+ * 애드센스·검색 정책 위험 문구 감지 (토큰 0, 규칙 기반).
+ * 발견 시 품질 점수를 크게 감점하고 자동발행을 차단한다.
+ * 근거: Google AdSense 프로그램 정책 / 검색 스팸 정책.
+ */
+const POLICY_RISK_PATTERNS: Array<{ re: RegExp; label: string }> = [
+  { re: /광고를?\s*클릭|아래\s*광고|하단\s*광고|배너\s*클릭|클릭\s*(부탁|해\s*주세요|바랍니다)/, label: "광고 클릭 유도 문구" },
+  { re: /100\s*%\s*(보장|성공|환급|승인|합격)|무조건\s*(승인|성공|합격|가능)|반드시\s*(성공|승인|합격|됩니다)/, label: "과장·보장성 문구" },
+  { re: /(월\s*\d+\s*만\s*원|일\s*\d+\s*만\s*원).{0,12}(보장|확정|가능합니다)/, label: "수익 보장성 표현" },
+  { re: /클릭\s*한\s*번으로|누구나\s*쉽게\s*수익|자동으로\s*돈이/, label: "비현실적 수익 유도" },
+];
+
+function detectPolicyRisks(text: string): string[] {
+  const found = new Set<string>();
+  for (const { re, label } of POLICY_RISK_PATTERNS) {
+    if (re.test(text)) found.add(label);
+  }
+  return [...found];
 }
 
 export function runQualityCheck(input: {
@@ -81,9 +102,22 @@ export function runQualityCheck(input: {
     input.claimsToVerify.length > 0 ? `${input.claimsToVerify.length}건 표시됨` : "없음",
   );
 
+  // 정책 위험 검사 — 제목·메타·본문 전체 대상
+  const policyRisks = detectPolicyRisks(
+    `${input.title}\n${input.metaDescription}\n${input.contentMarkdown}`,
+  );
+  add(
+    "애드센스·검색 정책 위험 문구 없음",
+    policyRisks.length === 0,
+    10,
+    policyRisks.length > 0 ? policyRisks.join(", ") : undefined,
+  );
+
   const maxTotal = items.reduce((sum, item) => sum + item.maxScore, 0);
   const total = items.reduce((sum, item) => sum + item.score, 0);
-  const score = Math.round((total / maxTotal) * 100);
+  // 정책 위험은 발견 항목당 20점 추가 감점 (자동발행 차단 유도)
+  const penalty = policyRisks.length * 20;
+  const score = Math.max(0, Math.round((total / maxTotal) * 100) - penalty);
 
-  return { score, items, claimsToVerify: input.claimsToVerify };
+  return { score, items, claimsToVerify: input.claimsToVerify, policyRisks };
 }

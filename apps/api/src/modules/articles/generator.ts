@@ -1,4 +1,3 @@
-import { marked } from "marked";
 import { prisma } from "../../common/prisma.js";
 import { HttpError } from "../../common/http.js";
 import { getSettingValues } from "../settings/settings.service.js";
@@ -13,6 +12,7 @@ import {
   type ProductReviewData,
 } from "./jsonld.js";
 import { runQualityCheck } from "./quality.js";
+import { renderContentHtml } from "./render.js";
 
 export interface ProductInput {
   source: "COUPANG" | "BRANDCONNECT";
@@ -149,23 +149,45 @@ export async function generateArticle(
 
   const generated = await callClaudeJson<GeneratedContent>({
     operation: product ? "promo-article-generate" : "article-generate",
-    maxTokens: 20000,
+    maxTokens: 32000,
     system: [
-      "당신은 검색 사용자에게 실제로 도움이 되는 콘텐츠를 쓰는 전문 에디터다.",
+      "당신은 조회수 높고 전환이 잘 되는 수익형 블로그 글을 쓰는 베테랑 콘텐츠 에디터다.",
       `본문 언어: ${LANGUAGE_NAME[language]}.`,
-      "원칙:",
+      "",
+      "[독자를 사로잡는 글쓰기]",
+      "- 첫 2~3문장에서 독자의 고민·상황에 공감하며 후킹하고, 이 글을 끝까지 읽으면 무엇을 얻는지 제시한다.",
+      "- 소제목(H2)은 독자의 궁금증을 자극하는 형태로 쓴다 (예: '지금 바꿔도 될까? 교체 시기 판단 기준 3가지').",
+      "- 각 단락의 핵심 결론·수치·판단 포인트는 **볼드**로 강조해 훑어보는 독자도 요점을 잡게 한다.",
+      "- 비교표, 체크리스트, 단계별 정리를 적극 활용해 '스크랩하고 싶은 글'로 만든다.",
+      "- 실제 선택·구매·실행에 바로 도움이 되는 구체적인 기준과 팁을 담는다 (막연한 일반론 금지).",
+      "- 마지막에 독자가 다음 행동을 하도록 자연스러운 마무리(요약 + 권유)를 넣는다.",
+      "",
+      "[검색 유입·전환을 높이는 실행 정보 — 이 부분이 '돈이 되는 글'의 핵심]",
+      "- 독자가 이 글 하나만 읽고도 실제로 행동할 수 있을 만큼 완결적으로 쓴다.",
+      "- 주제에 맞는 실행 정보를 구체적으로 담는다: 신청 방법·자격 조건·준비 서류·조회 방법·계산 방법·비용·비교·예약/해지/변경 방법 등 (해당되는 것).",
+      "- 단계(1·2·3)·조건·기준·수치를 명확히 제시한다. 막연한 일반론('잘 알아보세요' 같은)은 쓰지 않는다.",
+      "- '어떤 사람에게/어떤 상황에 맞는지', '자주 하는 실수', '놓치기 쉬운 포인트'를 넣어 실용성을 높인다.",
+      "",
+      "[신뢰·정책 — 애드센스/검색 정책 준수]",
       "- 첫 문단에서 검색자의 핵심 질문에 바로 답한다.",
-      "- H2(##)·H3(###) 구조, 표·목록·체크리스트를 활용한다.",
-      "- 확인할 수 없는 통계·가격·법률·의료 정보는 단정하지 않고 claimsToVerify에 표시한다.",
-      "- 존재하지 않는 URL·출처·개인 경험담·허위 후기를 만들지 않는다.",
+      "- H2(##)·H3(###) 구조를 지킨다.",
+      "- 확인할 수 없는 통계·가격·법률·의료·금융 정보는 단정하지 않고 claimsToVerify에 표시한다. 공식 확인이 필요한 부분은 본문에서 '최신 기준은 공식 사이트에서 확인' 식으로 안내한다.",
+      "- 존재하지 않는 URL·출처·개인 경험담·허위 후기·가상의 전문가 인용을 만들지 않는다.",
+      "- 존재하지 않는 혜택·신청 기능·다운로드를 있는 것처럼 쓰지 않는다.",
+      "- '광고를 클릭', '아래 광고' 같은 광고 클릭 유도 문구, '100% 보장·무조건 성공' 같은 과장·보장성 표현을 절대 쓰지 않는다.",
+      "- 마무리(CTA)는 광고가 아니라 실제 관련 정보/공식 페이지로 안내하며, 과장 없이 다음 행동을 권한다.",
+      "- 키워드를 부자연스럽게 반복하지 않는다.",
       product
-        ? "- 홍보 글이지만 과장·허위 표현 없이 특징과 장단점을 정직하게 쓴다. '직접 써보니' 같은 허위 경험담 금지."
+        ? "- 홍보 글이지만 과장·허위 없이 특징·장점과 함께 '어떤 사람에게 잘 맞는지'를 짚어 설득력을 높인다. '직접 써보니' 같은 허위 경험담은 금지."
+        : "",
+      product
+        ? "- '왜 지금 이 상품을 고려할 만한지'를 독자 상황과 연결해 자연스럽게 설득한다 (강매·과장 금지)."
         : "",
       product
         ? "- 본문에서 상품 구매 링크 배너가 들어갈 위치에 [PRODUCT_BANNER] 마커를 정확히 2번 넣는다 (도입부 다음 1번, 결론 직전 1번)."
         : "",
-      "- 키워드를 부자연스럽게 반복하지 않는다.",
-      "반드시 JSON만 출력한다.",
+      "",
+      "본문 목표 분량을 충분히 채우되 물타기 없이 밀도 있게 쓴다. 반드시 JSON만 출력한다.",
     ]
       .filter(Boolean)
       .join("\n"),
@@ -272,7 +294,7 @@ export async function generateArticle(
     claimsToVerify: claims,
   });
 
-  const contentHtml = await marked.parse(contentMarkdown);
+  const contentHtml = await renderContentHtml(contentMarkdown);
 
   const article = await prisma.article.create({
     data: {

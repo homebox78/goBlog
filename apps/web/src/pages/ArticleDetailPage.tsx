@@ -30,6 +30,7 @@ interface ArticleDetail {
     score: number;
     items: Array<{ label: string; ok: boolean; score: number; maxScore: number; note?: string }>;
     claimsToVerify: string[];
+    policyRisks?: string[];
   } | null;
   keyword: { id: number; text: string } | null;
   schemas: Array<{ id: number; schemaType: string; isEnabled: boolean; jsonLd: unknown }>;
@@ -269,6 +270,16 @@ export default function ArticleDetailPage() {
                   </span>
                 </div>
               ))}
+              {(article.qualityReport?.policyRisks?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+                  <p className="mb-1 font-semibold">정책 위험 (발행 차단):</p>
+                  <ul className="list-disc pl-4">
+                    {article.qualityReport?.policyRisks?.map((risk) => (
+                      <li key={risk}>{risk}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {(article.qualityReport?.claimsToVerify.length ?? 0) > 0 && (
                 <div className="mt-3 rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
                   <p className="mb-1 font-semibold">발행 전 확인 필요:</p>

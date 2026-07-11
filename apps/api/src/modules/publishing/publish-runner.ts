@@ -43,6 +43,12 @@ export async function processQueue(): Promise<void> {
           throw new Error("본문에 로컬 이미지 주소가 있습니다. 글 상세에서 'Gemini 생성'을 다시 눌러 이미지를 재생성한 뒤 발행해주세요.");
         }
 
+        // 애드센스·검색 정책 위험 문구가 있으면 발행 차단
+        const policyRisks = (job.article.qualityReport as { policyRisks?: string[] } | null)?.policyRisks;
+        if (policyRisks && policyRisks.length > 0) {
+          throw new Error(`정책 위험 문구 감지: ${policyRisks.join(", ")} — 본문을 수정한 뒤 발행해주세요.`);
+        }
+
         let url: string;
         if (job.platform === "BLOGGER") {
           url = (await publishToBlogger(job.article)).url;

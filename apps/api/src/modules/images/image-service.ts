@@ -2,10 +2,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
-import { marked } from "marked";
 import { prisma } from "../../common/prisma.js";
 import { HttpError } from "../../common/http.js";
 import { getSettingValues } from "../settings/settings.service.js";
+import { renderContentHtml } from "../articles/render.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -192,7 +192,7 @@ export async function generateArticleImages(articleId: number): Promise<{ genera
         .join("\n");
     }
 
-    const contentHtml = await marked.parse(markdown);
+    const contentHtml = await renderContentHtml(markdown);
     await prisma.article.update({ where: { id: articleId }, data: { contentMarkdown: markdown, contentHtml } });
   }
 
