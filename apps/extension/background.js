@@ -14,8 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
     try {
-      const response = await chrome.tabs.sendMessage(tab.id, message.payload);
-      sendResponse(response ?? { ok: false, error: "응답 없음" });
+      sendResponse(await sendToTab(tab.id, message.payload));
     } catch (error) {
       sendResponse({
         ok: false,
@@ -26,3 +25,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return true; // async sendResponse
 });
+
+/**
+ * 콘텐츠 스크립트에 메시지를 보낸다. 확장 재로드로 콘텐츠 스크립트가 끊긴(orphaned) 탭에서는
+ * sendMessage가 "Receiving end does not exist"로 실패하므로, 그때 adapter를 모든 프레임에
+ * 즉시 주입한 뒤 한 번 더 시도한다(이미 열려 있던 탭도 새로고침 없이 동작).
+ */
+async function sendToTab(tabId, payload) {
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, payload);
+    if (res) return res;
+  } catch (_) {
+    // 연결 없음 → 주입 후 재시도
+  }
+  await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    files: ["content/adapter.js"],
+  });
+  const res = await chrome.tabs.sendMessage(tabId, payload);
+  return res ?? { ok: false, error: "응답 없음" };
+}

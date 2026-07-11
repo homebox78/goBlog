@@ -89,7 +89,11 @@ async function applyNaver({ html, plainText }) {
   };
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+// background가 재시도용으로 executeScript로 다시 주입할 수 있어, 리스너 중복 등록을 막는다
+// (중복이면 sendResponse가 두 번 호출돼 응답이 꼬인다).
+if (!window.__goblogAdapterListener) {
+  window.__goblogAdapterListener = true;
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     try {
       if (message?.type === "DETECT") {
@@ -113,4 +117,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   })();
   return true;
-});
+  });
+}
