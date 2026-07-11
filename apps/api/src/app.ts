@@ -12,6 +12,7 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  app.set("trust proxy", true);
   app.use(
     cors({
       origin: env.WEB_URL,
@@ -21,9 +22,12 @@ export function createApp() {
   app.use(express.json({ limit: "2mb" }));
   app.use(cookieParser());
 
-  app.get("/health", async (req, res) => {
+  const healthHandler = async (req: express.Request, res: express.Response) => {
     res.json({ ok: true, db: await checkDatabase() });
-  });
+  };
+  app.get("/health", healthHandler);
+  // 운영 프록시(/goBlog/api → /api)에서도 접근 가능한 별칭
+  app.get("/api/health", healthHandler);
 
   app.use("/api/auth", authRouter);
   app.use("/api/settings", settingsRouter);

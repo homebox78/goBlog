@@ -10,6 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SettingView {
   key: string;
@@ -25,6 +32,17 @@ interface TestResult {
   message: string;
   detail?: unknown;
 }
+
+interface ModelList {
+  models: string[];
+  source: "api" | "default";
+}
+
+/** 드롭다운 선택형 설정 키 → 모델 목록 엔드포인트 */
+const MODEL_SELECT_KEYS: Record<string, string> = {
+  "anthropic.model": "/api/settings/models/anthropic",
+  "gemini.imageModel": "/api/settings/models/gemini",
+};
 
 const GROUPS: Array<{ id: string; label: string; description: string; testEndpoint?: string }> = [
   {
@@ -72,6 +90,23 @@ export default function SettingsPage() {
     queryKey: ["settings"],
     queryFn: () => api.get<{ settings: SettingView[] }>("/api/settings"),
   });
+
+  const anthropicModels = useQuery({
+    queryKey: ["models", "anthropic"],
+    queryFn: () => api.get<ModelList>("/api/settings/models/anthropic"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const geminiModels = useQuery({
+    queryKey: ["models", "gemini"],
+    queryFn: () => api.get<ModelList>("/api/settings/models/gemini"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const modelOptions: Record<string, string[]> = {
+    "anthropic.model": anthropicModels.data?.models ?? [],
+    "gemini.imageModel": geminiModels.data?.models ?? [],
+  };
 
   const saveMutation = useMutation({
     mutationFn: (values: Record<string, string | null>) =>
@@ -191,22 +226,32 @@ export default function SettingsPage() {
                           </Badge>
                         )}
                       </div>
-                      <Input
-                        id={setting.key}
-                        type={setting.isSecret ? "password" : "text"}
-                        autoComplete="off"
-                        placeholder={
-                          setting.isSecret
-                            ? setting.hasValue
-                              ? "변경하려면 새 값 입력"
-                              : "미설정"
-                            : undefined
-                        }
-                        value={edited[setting.key] ?? (setting.isSecret ? "" : (setting.value ?? ""))}
-                        onChange={(event) =>
-                          setEdited((prev) => ({ ...prev, [setting.key]: event.target.value }))
-                        }
-                      />
+                      {MODEL_SELECT_KEYS[setting.key] ? (
+                        <ModelSelect
+                          value={edited[setting.key] ?? setting.value ?? ""}
+                          options={modelOptions[setting.key] ?? []}
+                          onChange={(value) =>
+                            setEdited((prev) => ({ ...prev, [setting.key]: value }))
+                          }
+                        />
+                      ) : (
+                        <Input
+                          id={setting.key}
+                          type={setting.isSecret ? "password" : "text"}
+                          autoComplete="off"
+                          placeholder={
+                            setting.isSecret
+                              ? setting.hasValue
+                                ? "변경하려면 새 값 입력"
+                                : "미설정"
+                              : undefined
+                          }
+                          value={edited[setting.key] ?? (setting.isSecret ? "" : (setting.value ?? ""))}
+                          onChange={(event) =>
+                            setEdited((prev) => ({ ...prev, [setting.key]: event.target.value }))
+                          }
+                        />
+                      )}
                     </div>
                   ))}
               </CardContent>
@@ -215,5 +260,33 @@ export default function SettingsPage() {
         ))}
       </Tabs>
     </div>
+  );
+}
+
+function ModelSelect({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  // 현재 저장된 값이 목록에 없어도 선택 상태가 유지되도록 포함시킨다.
+  const items = value && !options.includes(value) ? [value, ...options] : options;
+
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="모델 선택" />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map((model) => (
+          <SelectItem key={model} value={model}>
+            {model}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

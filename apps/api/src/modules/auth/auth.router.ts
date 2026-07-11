@@ -33,7 +33,8 @@ function setAuthCookies(res: Response, accessToken: string, refreshToken: string
     sameSite: "lax",
     secure: isProduction,
     maxAge: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
-    path: "/api/auth",
+    // 운영에서 /goBlog/api 프록시 경로로 서빙되므로 경로를 고정하지 않는다.
+    path: "/",
   });
 }
 
@@ -129,7 +130,7 @@ authRouter.post(
       });
     }
     res.clearCookie(ACCESS_COOKIE, { path: "/" });
-    res.clearCookie(REFRESH_COOKIE, { path: "/api/auth" });
+    res.clearCookie(REFRESH_COOKIE, { path: "/" });
     res.json({ ok: true });
   }),
 );

@@ -1,5 +1,12 @@
 /** API 클라이언트: 쿠키 기반 인증 + 401 시 refresh 후 1회 재시도 */
 
+// dev는 "/"(vite 프록시), 운영 빌드는 "/goBlog" 서브경로 기준으로 호출한다.
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function apiUrl(path: string): string {
+  return API_BASE + path;
+}
+
 export class ApiError extends Error {
   status: number;
 
@@ -14,7 +21,7 @@ let refreshPromise: Promise<boolean> | null = null;
 async function tryRefresh(): Promise<boolean> {
   refreshPromise ??= (async () => {
     try {
-      const res = await fetch("/api/auth/refresh", {
+      const res = await fetch(apiUrl("/api/auth/refresh"), {
         method: "POST",
         credentials: "include",
       });
@@ -29,7 +36,7 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 async function request<T>(path: string, init?: RequestInit, retried = false): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     credentials: "include",
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
     ...init,

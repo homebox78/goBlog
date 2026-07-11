@@ -16,6 +16,67 @@ async function safeFetch(url: string, init?: RequestInit): Promise<Response> {
   }
 }
 
+const DEFAULT_CLAUDE_MODELS = [
+  "claude-sonnet-5",
+  "claude-opus-4-8",
+  "claude-haiku-4-5-20251001",
+];
+
+/** 설정 화면 드롭다운용 Claude 모델 목록. 키가 있으면 실제 API에서 조회한다. */
+export async function listAnthropicModels(): Promise<{
+  models: string[];
+  source: "api" | "default";
+}> {
+  const { "anthropic.apiKey": apiKey } = await getSettingValues(["anthropic.apiKey"]);
+  if (!apiKey) return { models: DEFAULT_CLAUDE_MODELS, source: "default" };
+
+  try {
+    const res = await safeFetch("https://api.anthropic.com/v1/models?limit=100", {
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    });
+    if (!res.ok) return { models: DEFAULT_CLAUDE_MODELS, source: "default" };
+
+    const data = (await res.json()) as { data?: Array<{ id: string }> };
+    const models = (data.data ?? []).map((model) => model.id).filter((id) => id.startsWith("claude"));
+    return models.length > 0
+      ? { models, source: "api" }
+      : { models: DEFAULT_CLAUDE_MODELS, source: "default" };
+  } catch {
+    return { models: DEFAULT_CLAUDE_MODELS, source: "default" };
+  }
+}
+
+const DEFAULT_GEMINI_IMAGE_MODELS = [
+  "gemini-2.5-flash-image",
+  "imagen-4.0-generate-001",
+];
+
+/** 설정 화면 드롭다운용 Gemini 이미지 모델 목록. 키가 있으면 실제 API에서 조회한다. */
+export async function listGeminiImageModels(): Promise<{
+  models: string[];
+  source: "api" | "default";
+}> {
+  const { "gemini.apiKey": apiKey } = await getSettingValues(["gemini.apiKey"]);
+  if (!apiKey) return { models: DEFAULT_GEMINI_IMAGE_MODELS, source: "default" };
+
+  try {
+    const res = await safeFetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${encodeURIComponent(apiKey)}`,
+    );
+    if (!res.ok) return { models: DEFAULT_GEMINI_IMAGE_MODELS, source: "default" };
+
+    const data = (await res.json()) as { models?: Array<{ name: string }> };
+    const models = (data.models ?? [])
+      .map((model) => model.name.replace(/^models\//, ""))
+      .filter((id) => id.includes("image") || id.startsWith("imagen"));
+    return models.length > 0
+      ? { models, source: "api" }
+      : { models: DEFAULT_GEMINI_IMAGE_MODELS, source: "default" };
+  } catch {
+    return { models: DEFAULT_GEMINI_IMAGE_MODELS, source: "default" };
+  }
+}
+
 /** Anthropic: 모델 목록 조회로 API 키를 검증한다. */
 export async function testAnthropic(): Promise<TestResult> {
   const { "anthropic.apiKey": apiKey } = await getSettingValues(["anthropic.apiKey"]);

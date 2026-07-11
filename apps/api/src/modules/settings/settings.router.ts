@@ -3,7 +3,14 @@ import { z } from "zod";
 import { asyncHandler, parseBody } from "../../common/http.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { listSettings, updateSettings } from "./settings.service.js";
-import { testAnthropic, testGemini, testGoogleAds, testWordpress } from "./connection-tests.js";
+import {
+  listAnthropicModels,
+  listGeminiImageModels,
+  testAnthropic,
+  testGemini,
+  testGoogleAds,
+  testWordpress,
+} from "./connection-tests.js";
 
 const updateSchema = z.object({
   values: z.record(z.string(), z.string().nullable()),
@@ -27,6 +34,16 @@ settingsRouter.put(
     await updateSettings(values);
     res.json({ settings: await listSettings() });
   }),
+);
+
+settingsRouter.get(
+  "/models/anthropic",
+  asyncHandler(async (req, res) => res.json(await listAnthropicModels())),
+);
+
+settingsRouter.get(
+  "/models/gemini",
+  asyncHandler(async (req, res) => res.json(await listGeminiImageModels())),
 );
 
 settingsRouter.post(
