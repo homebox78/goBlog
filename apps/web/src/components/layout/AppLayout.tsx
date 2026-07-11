@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
@@ -46,9 +46,9 @@ export default function AppLayout() {
   }
 
   if (meQuery.isError) {
+    // 렌더 중 navigate() 호출 금지 — 프로덕션 빌드에서 백지 원인 (선언적 Navigate 사용)
     if (meQuery.error instanceof ApiError && meQuery.error.status === 401) {
-      navigate("/login", { replace: true });
-      return null;
+      return <Navigate to="/login" replace />;
     }
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-3">
