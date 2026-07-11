@@ -60,7 +60,8 @@ const GROUPS: Array<{ id: string; label: string; description: string; testEndpoi
   {
     id: "keywords",
     label: "키워드",
-    description: "매일 자동 수집할 관심 주제와 비율을 설정합니다.",
+    description:
+      "주제는 매일 수집한 이슈·트렌드 데이터에서 AI가 자동 발굴합니다. 추천 개수·시간·유형 비율만 설정합니다.",
   },
   {
     id: "googleAds",

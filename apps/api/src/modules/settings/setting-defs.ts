@@ -27,9 +27,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "gemini.convertWebp", group: "gemini", label: "WebP 자동 변환", secret: false, defaultValue: "true" },
   { key: "gemini.thumbnailTextOverlay", group: "gemini", label: "썸네일 문자 합성", secret: false, defaultValue: "true" },
 
-  // 키워드
-  { key: "keywords.interests", group: "keywords", label: "관심 주제 (쉼표 구분)", secret: false, defaultValue: "" },
-  { key: "keywords.excluded", group: "keywords", label: "제외 주제 (쉼표 구분)", secret: false, defaultValue: "" },
+  // 키워드 — 주제는 사용자가 입력하지 않는다. 매일 수집한 이슈·트렌드 데이터에서 자동 발굴한다.
   { key: "keywords.dailyCount", group: "keywords", label: "일일 추천 수", secret: false, defaultValue: "20" },
   { key: "keywords.collectTime", group: "keywords", label: "자동 수집 시간 (KST)", secret: false, defaultValue: "07:00" },
   { key: "keywords.revenueRatio", group: "keywords", label: "수익형 비율(%)", secret: false, defaultValue: "30" },
