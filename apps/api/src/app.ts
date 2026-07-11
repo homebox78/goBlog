@@ -11,6 +11,7 @@ import { articlesRouter } from "./modules/articles/articles.router.js";
 import { productsRouter } from "./modules/products/products.router.js";
 import { publishRouter } from "./modules/publishing/publish.router.js";
 import { mediaDir } from "./modules/images/image-service.js";
+import { extensionRouter } from "./modules/extension/extension.router.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 export function createApp() {
@@ -20,7 +21,14 @@ export function createApp() {
   app.set("trust proxy", true);
   app.use(
     cors({
-      origin: env.WEB_URL,
+      // Chrome 확장(chrome-extension://)은 토큰 인증이라 origin 제한 불필요
+      origin: (origin, callback) => {
+        if (!origin || origin === env.WEB_URL || origin.startsWith("chrome-extension://")) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      },
       credentials: true,
     }),
   );
@@ -41,6 +49,7 @@ export function createApp() {
   app.use("/api/articles", articlesRouter);
   app.use("/api/products", productsRouter);
   app.use("/api/publish-jobs", publishRouter);
+  app.use("/api/extension", extensionRouter);
   app.use("/media", express.static(mediaDir(), { maxAge: "7d" }));
 
   app.use(notFoundHandler);

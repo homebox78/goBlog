@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "goBlog 포스팅 어시스턴트",
+  "version": "0.1.0",
+  "description": "goBlog에서 작성한 홍보 글을 네이버 블로그·티스토리 작성폼에 자동 입력합니다.",
+  "permissions": ["sidePanel", "storage", "activeTab", "scripting", "clipboardWrite"],
+  "host_permissions": [
+    "https://blog.naver.com/*",
+    "https://*.tistory.com/*",
+    "https://hom2box.com/*",
+    "http://localhost:8787/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "goBlog 포스팅 어시스턴트"
+  },
+  "side_panel": {
+    "default_path": "sidepanel/panel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://blog.naver.com/*", "https://*.tistory.com/*"],
+      "js": ["content/adapter.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ]
+}
