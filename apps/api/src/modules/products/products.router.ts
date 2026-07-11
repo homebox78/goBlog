@@ -24,15 +24,16 @@ async function matchableKeywords() {
   });
 }
 
+// 분석 결과는 미상 필드를 null로 보내므로(예: description:null) optional이 아니라 nullish로 받는다.
 const saveProductSchema = z.object({
   source: z.enum(["COUPANG", "BRANDCONNECT"]),
   name: z.string().min(1, "상품명은 필수입니다."),
-  brand: z.string().optional(),
-  price: z.number().int().positive().optional(),
-  imageUrl: z.string().optional(),
+  brand: z.string().nullish(),
+  price: z.number().int().positive().nullish(),
+  imageUrl: z.string().nullish(),
   productUrl: z.string().min(1, "상품 링크는 필수입니다."),
-  description: z.string().optional(),
-  isRocket: z.boolean().optional(),
+  description: z.string().nullish(),
+  isRocket: z.boolean().nullish(),
 });
 
 /** 등록 상품 목록 (매칭된 키워드 포함) */

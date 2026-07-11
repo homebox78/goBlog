@@ -56,12 +56,13 @@ const generateSchema = z.object({
     .object({
       source: z.enum(["COUPANG", "BRANDCONNECT"]),
       name: z.string().min(1),
-      brand: z.string().optional(),
-      price: z.number().optional(),
-      imageUrl: z.string().optional(),
+      // 분석 결과는 미상 필드를 null로 보내므로 nullish로 받는다 (Expected string, received null 방지)
+      brand: z.string().nullish(),
+      price: z.number().nullish(),
+      imageUrl: z.string().nullish(),
       productUrl: z.string().url("상품/트래킹 링크가 올바른 URL이 아닙니다."),
-      description: z.string().optional(),
-      isRocket: z.boolean().optional(),
+      description: z.string().nullish(),
+      isRocket: z.boolean().nullish(),
     })
     .optional(),
 });
@@ -71,7 +72,18 @@ articlesRouter.post(
   "/generate",
   asyncHandler(async (req, res) => {
     const options = parseBody(generateSchema, req.body);
-    const result = await generateArticle(options);
+    // 상품 필드의 null(분석 미상)을 undefined로 정규화 (ProductInput은 string|undefined)
+    const product = options.product
+      ? {
+          ...options.product,
+          brand: options.product.brand ?? undefined,
+          price: options.product.price ?? undefined,
+          imageUrl: options.product.imageUrl ?? undefined,
+          description: options.product.description ?? undefined,
+          isRocket: options.product.isRocket ?? undefined,
+        }
+      : undefined;
+    const result = await generateArticle({ ...options, product });
     res.json(result);
   }),
 );
