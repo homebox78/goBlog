@@ -53,6 +53,34 @@ function extractPrice(html: string): number | null {
   return null;
 }
 
+/**
+ * 상품 입력을 분석한다.
+ * ① 쿠팡 파트너스 "이미지+텍스트" HTML 태그 → alt(상품명)·img(이미지)·href(링크) 파싱 (가장 정확)
+ * ② 일반 상품 URL → OG/메타 태그 추출
+ */
+export async function analyzeProductInput(input: string): Promise<AnalyzedProduct> {
+  const trimmed = input.trim();
+
+  // 쿠팡 이미지+텍스트 HTML 태그 감지 (<a ...><img ...></a>)
+  if (/<a\s/i.test(trimmed) && /<img\s/i.test(trimmed)) {
+    const href = trimmed.match(/<a[^>]+href=["']([^"']+)["']/i)?.[1];
+    const imgSrc = trimmed.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1];
+    const alt = trimmed.match(/<img[^>]+alt=["']([^"']*)["']/i)?.[1];
+    if (href) {
+      return {
+        source: /coupang/i.test(href) ? "COUPANG" : "BRANDCONNECT",
+        name: alt ? decodeEntities(alt) : "상품",
+        price: null,
+        imageUrl: imgSrc ?? null,
+        description: null,
+        productUrl: href,
+      };
+    }
+  }
+
+  return analyzeProductUrl(trimmed);
+}
+
 /** 상품 URL을 열어 OG/메타 태그로 상품 정보를 추출한다. */
 export async function analyzeProductUrl(rawUrl: string): Promise<AnalyzedProduct> {
   let url: URL;

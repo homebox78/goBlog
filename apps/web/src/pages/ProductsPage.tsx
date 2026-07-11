@@ -35,16 +35,20 @@ export default function ProductsPage() {
         <TabsContent value="coupang">
           <UrlAnalyzer
             source="COUPANG"
-            placeholder="쿠팡 파트너스 상품 링크 (예: https://link.coupang.com/... 또는 상품 URL)"
-            guide="쿠팡 파트너스에서 만든 상품 링크를 붙여넣으세요. 상품명·가격·이미지를 자동으로 가져오고, 대가성 문구가 자동 삽입됩니다."
+            placeholder={
+              '쿠팡 파트너스 "이미지+텍스트" HTML 태그를 붙여넣으세요 (권장 — 상품명·이미지 자동 추출)\n예) <a href="https://link.coupang.com/a/..." ...><img src="...coupangcdn..." alt="상품명" ...></a>\n\n또는 단축 URL만: https://link.coupang.com/a/...'
+            }
+            guide="쿠팡 파트너스 링크 만들기 화면에서 [이미지+텍스트]의 HTML 태그를 복사해 붙여넣으면 상품명·상품 이미지·링크가 자동으로 들어갑니다. 단축 URL만 넣으면 이미지·상품명은 직접 입력해야 합니다. 대가성 문구는 자동 삽입됩니다."
             onSelect={setTarget}
           />
         </TabsContent>
         <TabsContent value="naver">
           <UrlAnalyzer
             source="BRANDCONNECT"
-            placeholder="네이버 쇼핑 커넥트 트래킹 링크 (예: https://naver.me/...)"
-            guide="쇼핑 커넥트 [발급 링크 관리]에서 복사한 트래킹 링크를 붙여넣으세요. 상품 정보를 자동 분석하고, 규정 대가성 문구가 자동 삽입됩니다."
+            placeholder={
+              "네이버 상품 페이지 URL (스마트스토어/쇼핑) 또는 트래킹 링크를 붙여넣으세요\n예) https://smartstore.naver.com/... 또는 https://naver.me/..."
+            }
+            guide="상품 페이지 URL(스마트스토어 등)을 넣으면 상품명·가격·이미지를 자동 분석합니다. 트래킹 링크(naver.me)는 상품 정보가 안 나올 수 있으니, 분석 후 링크 필드에 트래킹 링크로 바꿔 넣으세요. 규정 대가성 문구가 자동 삽입됩니다."
             onSelect={setTarget}
           />
         </TabsContent>
@@ -79,7 +83,7 @@ function UrlAnalyzer({
     mutationFn: (link: string) =>
       api.post<{ product: Omit<ProductPayload, "price"> & { price: number | null } }>(
         "/api/products/analyze",
-        { url: link },
+        { input: link },
       ),
     onSuccess: (result) => {
       setForm({ ...result.product, source, price: result.product.price ?? undefined });
@@ -112,20 +116,25 @@ function UrlAnalyzer({
       <CardContent className="space-y-4 pt-6">
         <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">{guide}</div>
 
-        <div className="flex gap-2">
-          <Input
+        <div className="space-y-2">
+          <Textarea
+            rows={3}
+            className="font-mono text-xs"
             placeholder={placeholder}
             value={url}
             onChange={(event) => setUrl(event.target.value)}
-            onKeyDown={(event) => event.key === "Enter" && url.trim() && analyzeMutation.mutate(url.trim())}
           />
-          <Button onClick={() => url.trim() && analyzeMutation.mutate(url.trim())} disabled={analyzeMutation.isPending}>
+          <Button
+            className="w-full"
+            onClick={() => url.trim() && analyzeMutation.mutate(url.trim())}
+            disabled={analyzeMutation.isPending}
+          >
             {analyzeMutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <Sparkles className="size-4" />
             )}
-            분석
+            상품 분석
           </Button>
         </div>
 

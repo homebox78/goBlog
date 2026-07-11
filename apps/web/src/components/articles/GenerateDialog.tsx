@@ -91,21 +91,27 @@ export function GenerateDialog({
   const [withProduct, setWithProduct] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const schemaTypes = ["BlogPosting"];
       if (withFaq) schemaTypes.push("FAQPage");
       if (withProduct) schemaTypes.push("Product");
-      return api.post<{ articleId: number; qualityScore: number }>("/api/articles/generate", {
-        keywordId: keywordId ?? undefined,
-        articleType,
-        language,
-        schemaTypes,
-        length: Number(length),
-        product: product ?? undefined,
-      });
+      const result = await api.post<{ articleId: number; qualityScore: number }>(
+        "/api/articles/generate",
+        {
+          keywordId: keywordId ?? undefined,
+          articleType,
+          language,
+          schemaTypes,
+          length: Number(length),
+          product: product ?? undefined,
+        },
+      );
+      // 이미지도 자동 생성 (실패해도 글은 유지)
+      await api.post(`/api/articles/${result.articleId}/images`).catch(() => undefined);
+      return result;
     },
     onSuccess: (result) => {
-      toast.success(`글 생성 완료 (품질 ${result.qualityScore}점)`);
+      toast.success(`글·이미지 생성 완료 (품질 ${result.qualityScore}점)`);
       onOpenChange(false);
       navigate(`/articles/${result.articleId}`);
     },
@@ -207,7 +213,7 @@ export function GenerateDialog({
           </Button>
           <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || (!keywordId && !product)}>
             {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
-            {mutation.isPending ? "생성 중 (1~2분)..." : "글 생성"}
+            {mutation.isPending ? "글·이미지 생성 중 (3~4분)..." : "글 생성"}
           </Button>
         </DialogFooter>
       </DialogContent>

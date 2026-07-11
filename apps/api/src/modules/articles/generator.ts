@@ -116,8 +116,10 @@ async function rehostProductImage(url: string, key: string): Promise<string | nu
  */
 function buildProductBanner(product: ProductInput, linkUrl: string, imageUrl: string | null): string {
   const isCoupang = product.source === "COUPANG";
-  const accent = isCoupang ? "#ff5722" : "#03c75a"; // 쿠팡 주황 / 네이버 그린
-  const accentDark = isCoupang ? "#e64a19" : "#02b350";
+  const accent = isCoupang ? "#e52528" : "#03c75a"; // 쿠팡 레드 / 네이버 그린
+  const accentDark = isCoupang ? "#c41f22" : "#02b350";
+  const tintBg = isCoupang ? "#fff4f4" : "#f2fdf6";
+  const shadowRgba = isCoupang ? "229,37,40" : "3,199,90";
   const ctaText = isCoupang ? "쿠팡에서 최저가 확인하기" : "네이버에서 상품 보기";
 
   // Blogger는 <a> 안의 block 요소(div/p)를 제거하므로 배너 전체 링크는 <a> + <span>만으로 구성한다.
@@ -130,13 +132,13 @@ function buildProductBanner(product: ProductInput, linkUrl: string, imageUrl: st
     : "";
 
   return [
-    `<a href="${linkUrl}" target="_blank" rel="sponsored nofollow noopener" style="display:flex;gap:20px;align-items:center;border:2px solid ${accent};border-radius:18px;padding:20px;margin:20px 0;background:linear-gradient(135deg,${isCoupang ? "#fff8f4" : "#f2fdf6"},#ffffff);box-shadow:0 6px 20px ${isCoupang ? "rgba(255,87,34,0.15)" : "rgba(3,199,90,0.15)"};position:relative;text-decoration:none;color:inherit;">`,
+    `<a href="${linkUrl}" target="_blank" rel="sponsored nofollow noopener" style="display:flex;gap:20px;align-items:center;border:2px solid ${accent};border-radius:18px;padding:20px;margin:20px 0;background:linear-gradient(135deg,${tintBg},#ffffff);box-shadow:0 6px 20px rgba(${shadowRgba},0.15);position:relative;text-decoration:none;color:inherit;">`,
     '<span style="position:absolute;top:11px;right:14px;font-size:11px;color:#c4c4c4;">광고</span>',
     image,
     '<span style="display:block;min-width:0;flex:1;">',
     `<span style="display:block;margin:0 0 8px;font-weight:700;font-size:18px;line-height:1.45;color:#1a1a1a;">${escapeHtml(product.name)}</span>`,
     price,
-    `<span style="display:inline-block;background:linear-gradient(135deg,${accent},${accentDark});color:#fff;padding:13px 26px;border-radius:12px;font-size:16px;font-weight:800;box-shadow:0 3px 10px ${isCoupang ? "rgba(255,87,34,0.35)" : "rgba(3,199,90,0.35)"};">${ctaText} →</span>`,
+    `<span style="display:inline-block;background:linear-gradient(135deg,${accent},${accentDark});color:#fff;padding:13px 26px;border-radius:12px;font-size:16px;font-weight:800;box-shadow:0 3px 10px rgba(${shadowRgba},0.35);">${ctaText} →</span>`,
     "</span></a>",
   ].join("");
 }
