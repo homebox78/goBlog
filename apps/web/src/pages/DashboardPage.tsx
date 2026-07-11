@@ -1,5 +1,6 @@
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -105,11 +106,16 @@ export default function DashboardPage() {
             ) : (
               <ul className="space-y-3">
                 {data.recentArticles.map((article) => (
-                  <li key={article.id} className="flex items-center justify-between gap-3">
-                    <span className="truncate text-sm">{article.title}</span>
-                    <Badge variant="secondary">
-                      {STATUS_LABEL[article.status] ?? article.status}
-                    </Badge>
+                  <li key={article.id}>
+                    <Link
+                      to={`/articles/${article.id}`}
+                      className="flex items-center justify-between gap-3 rounded-md -mx-2 px-2 py-1 hover:bg-accent"
+                    >
+                      <span className="truncate text-sm hover:underline">{article.title}</span>
+                      <Badge variant="secondary">
+                        {STATUS_LABEL[article.status] ?? article.status}
+                      </Badge>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -126,16 +132,34 @@ export default function DashboardPage() {
               <EmptyNote text="발행 이력이 없습니다." />
             ) : (
               <ul className="space-y-3">
-                {data.recentJobs.map((job) => (
-                  <li key={job.id} className="flex items-center justify-between gap-3">
-                    <span className="truncate text-sm">
-                      [{job.platform}] {job.article.title}
-                    </span>
-                    <Badge variant={job.status === "FAILED" ? "destructive" : "secondary"}>
-                      {STATUS_LABEL[job.status] ?? job.status}
-                    </Badge>
-                  </li>
-                ))}
+                {data.recentJobs.map((job) => {
+                  const inner = (
+                    <>
+                      <span className="flex min-w-0 items-center gap-1 truncate text-sm">
+                        [{job.platform}] {job.article.title}
+                        {job.publishedUrl && <ExternalLink className="size-3 shrink-0 opacity-60" />}
+                      </span>
+                      <Badge variant={job.status === "FAILED" ? "destructive" : "secondary"}>
+                        {STATUS_LABEL[job.status] ?? job.status}
+                      </Badge>
+                    </>
+                  );
+                  const cls =
+                    "flex items-center justify-between gap-3 rounded-md -mx-2 px-2 py-1 hover:bg-accent";
+                  return (
+                    <li key={job.id}>
+                      {job.publishedUrl ? (
+                        <a href={job.publishedUrl} target="_blank" rel="noreferrer" className={cls}>
+                          {inner}
+                        </a>
+                      ) : (
+                        <Link to={`/articles/${job.article.id}`} className={cls}>
+                          {inner}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>

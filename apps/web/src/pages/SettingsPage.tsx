@@ -46,6 +46,31 @@ const MODEL_SELECT_KEYS: Record<string, string> = {
   "gemini.imageModel": "/api/settings/models/gemini",
 };
 
+/** 고정 옵션 셀렉트 설정 키 */
+const STATIC_SELECT_KEYS: Record<string, Array<{ value: string; label: string }>> = {
+  "anthropic.defaultLength": [
+    { value: "1500", label: "짧게 (~1,500자)" },
+    { value: "2000", label: "보통 (~2,000자)" },
+    { value: "2500", label: "길게 (~2,500자)" },
+    { value: "3500", label: "심층 (~3,500자)" },
+  ],
+  "anthropic.defaultTone": [
+    { value: "친절한 설명체", label: "친절한 설명체" },
+    { value: "전문적인 분석체", label: "전문적인 분석체" },
+    { value: "간결한 정보체", label: "간결한 정보체" },
+    { value: "친근한 대화체", label: "친근한 대화체" },
+  ],
+  "gemini.featuredImageCount": [
+    { value: "1", label: "1장" },
+    { value: "2", label: "2장" },
+  ],
+  "gemini.contentImageCount": [
+    { value: "2", label: "2장" },
+    { value: "3", label: "3장" },
+    { value: "4", label: "4장" },
+  ],
+};
+
 const GROUPS: Array<{ id: string; label: string; description: string; testEndpoint?: string }> = [
   {
     id: "claude",
@@ -271,6 +296,24 @@ export default function SettingsPage() {
                             setEdited((prev) => ({ ...prev, [setting.key]: value }))
                           }
                         />
+                      ) : STATIC_SELECT_KEYS[setting.key] ? (
+                        <Select
+                          value={edited[setting.key] ?? setting.value ?? ""}
+                          onValueChange={(value) =>
+                            setEdited((prev) => ({ ...prev, [setting.key]: value }))
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATIC_SELECT_KEYS[setting.key].map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       ) : (
                         <Input
                           id={setting.key}

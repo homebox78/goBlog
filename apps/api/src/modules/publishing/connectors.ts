@@ -67,6 +67,69 @@ export async function publishToBlogger(article: {
   return { url: post.url };
 }
 
+/** WordPress REST API — Application Password 인증으로 글 발행 */
+export async function publishToWordpress(article: {
+  id: number;
+  title: string;
+  contentHtml: string | null;
+  excerpt: string | null;
+  slug: string | null;
+}): Promise<PublishResult> {
+  const values = await getSettingValues(["wordpress.url", "wordpress.username", "wordpress.appPassword"]);
+  const baseUrl = values["wordpress.url"]?.replace(/\/+$/, "");
+  if (!baseUrl || !values["wordpress.username"] || !values["wordpress.appPassword"]) {
+    throw new Error("WordPress URL·사용자명·Application Password가 설정되지 않았습니다.");
+  }
+  if (/(^|\.)wordpress\.com$/i.test(new URL(baseUrl).hostname)) {
+    throw new Error("WordPress.com 호스팅 블로그는 Application Password 발행을 지원하지 않습니다. 자체설치형 워드프레스를 사용하세요.");
+  }
+
+  const credentials = Buffer.from(`${values["wordpress.username"]}:${values["wordpress.appPassword"]}`).toString("base64");
+
+  // 대표 이미지를 미디어로 업로드해 featured image로 설정 (실패해도 본문 발행은 진행)
+  let featuredMediaId: number | undefined;
+  const featured = await prisma.mediaAsset.findFirst({
+    where: { articleId: article.id, kind: "FEATURED", webpUrl: { not: null } },
+  });
+  if (featured?.webpUrl) {
+    try {
+      const imgRes = await fetch(featured.webpUrl);
+      const buffer = Buffer.from(await imgRes.arrayBuffer());
+      const uploadRes = await fetch(`${baseUrl}/wp-json/wp/v2/media`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          "Content-Type": "image/webp",
+          "Content-Disposition": `attachment; filename="${featured.fileName ?? `a${article.id}-featured.webp`}"`,
+        },
+        body: buffer,
+      });
+      const media = (await uploadRes.json()) as { id?: number };
+      if (uploadRes.ok && media.id) featuredMediaId = media.id;
+    } catch {
+      // 이미지 업로드 실패 무시
+    }
+  }
+
+  const res = await fetch(`${baseUrl}/wp-json/wp/v2/posts`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${credentials}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: article.title,
+      content: article.contentHtml ?? "",
+      excerpt: article.excerpt ?? "",
+      slug: article.slug ?? undefined,
+      status: "publish",
+      ...(featuredMediaId ? { featured_media: featuredMediaId } : {}),
+    }),
+  });
+  const post = (await res.json()) as { link?: string; message?: string };
+  if (!res.ok || !post.link) {
+    throw new Error(`WordPress 발행 실패: ${post.message ?? `HTTP ${res.status}`}`);
+  }
+  return { url: post.link };
+}
+
 /** Instagram Graph API — 대표 이미지(공개 URL) + 캡션 발행 */
 export async function publishToInstagram(article: {
   id: number;

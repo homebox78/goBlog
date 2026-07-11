@@ -1,9 +1,13 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import sharp from "sharp";
 import { prisma } from "../../common/prisma.js";
 import { HttpError } from "../../common/http.js";
 import { getSettingValues } from "../settings/settings.service.js";
 import { callClaudeJson } from "../ai/claude.js";
 import { kstToday } from "../keywords/engine.js";
 import { createCoupangDeeplink } from "../products/coupang.js";
+import { mediaDir, mediaPublicUrl } from "../images/image-service.js";
 import {
   buildArticleJsonLd,
   buildFaqJsonLd,
@@ -86,21 +90,49 @@ export function disclosureText(product: Pick<ProductInput, "source">): string {
   return "이 포스팅은 네이버 쇼핑 커넥트 활동의 일환으로, 판매 발생 시 수수료를 제공받습니다.";
 }
 
-/** 본문에 삽입할 상품 배너 HTML (인라인 스타일 — 플랫폼 에디터에서도 유지) */
-function buildProductBanner(product: ProductInput, linkUrl: string): string {
+/** 네이버·쿠팡 CDN 이미지는 blogspot 등에서 hotlink가 막히므로 서버에 재호스팅한다. */
+async function rehostProductImage(url: string, key: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const webp = await sharp(buffer).resize({ width: 600, withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
+    const dir = mediaDir();
+    await fs.mkdir(dir, { recursive: true });
+    const name = `product-${key}.webp`;
+    await fs.writeFile(path.join(dir, name), webp);
+    return `${mediaPublicUrl()}/${name}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 본문에 삽입할 상품 배너 HTML — [이미지][정보+CTA] 카드형.
+ * Blogger 등은 <a> 안의 block 요소(div)를 제거하므로, div 컨테이너 + CTA만 링크로 구성한다.
+ */
+function buildProductBanner(product: ProductInput, linkUrl: string, imageUrl: string | null): string {
+  const isCoupang = product.source === "COUPANG";
+  const accent = isCoupang ? "#ff5722" : "#03c75a"; // 쿠팡 주황 / 네이버 그린
+  const accentDark = isCoupang ? "#e64a19" : "#02b350";
+  const ctaText = isCoupang ? "쿠팡에서 최저가 확인하기" : "네이버에서 상품 보기";
+
   const price = product.price
-    ? `<p style="margin:4px 0 10px;font-size:18px;font-weight:700;color:#e0451f;">${new Intl.NumberFormat("ko-KR").format(product.price)}원${product.isRocket ? ' <span style="font-size:12px;color:#2c7fff;">🚀 로켓배송</span>' : ""}</p>`
+    ? `<p style="margin:0 0 14px;font-size:23px;font-weight:800;color:${accent};line-height:1.2;">${new Intl.NumberFormat("ko-KR").format(product.price)}원${product.isRocket ? ' <span style="font-size:12px;font-weight:700;color:#2c7fff;vertical-align:middle;">🚀 로켓배송</span>' : ""}</p>`
     : "";
-  const image = product.imageUrl
-    ? `<img src="${product.imageUrl}" alt="${escapeHtml(product.name)}" style="width:130px;height:130px;object-fit:contain;border-radius:8px;background:#fff;flex-shrink:0;" />`
+
+  const image = imageUrl
+    ? `<img src="${imageUrl}" alt="${escapeHtml(product.name)}" style="width:170px;height:170px;object-fit:contain;border-radius:14px;background:#fff;flex-shrink:0;border:1px solid #f0f0f0;" />`
     : "";
+
   return [
-    '<div style="display:flex;gap:16px;align-items:center;border:1px solid #e4e8f1;border-radius:12px;padding:16px;margin:28px 0;background:#fafbfd;">',
+    `<div style="display:flex;gap:20px;align-items:center;border:2px solid ${accent};border-radius:18px;padding:20px;margin:20px 0;background:linear-gradient(135deg,${isCoupang ? "#fff8f4" : "#f2fdf6"},#ffffff);box-shadow:0 6px 20px ${isCoupang ? "rgba(255,87,34,0.15)" : "rgba(3,199,90,0.15)"};position:relative;">`,
+    '<span style="position:absolute;top:11px;right:14px;font-size:11px;color:#c4c4c4;">광고</span>',
     image,
-    '<div style="min-width:0;">',
-    `<p style="margin:0;font-weight:700;font-size:15px;line-height:1.4;">${escapeHtml(product.name)}</p>`,
+    '<div style="min-width:0;flex:1;">',
+    `<p style="margin:0 0 8px;font-weight:700;font-size:18px;line-height:1.45;color:#1a1a1a;">${escapeHtml(product.name)}</p>`,
     price,
-    `<a href="${linkUrl}" target="_blank" rel="sponsored nofollow noopener" style="display:inline-block;background:#1a1a1a;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">${product.source === "COUPANG" ? "쿠팡 최저가 확인하기" : "자세히 보기"}</a>`,
+    `<a href="${linkUrl}" target="_blank" rel="sponsored nofollow noopener" style="display:inline-block;background:linear-gradient(135deg,${accent},${accentDark});color:#fff;padding:13px 26px;border-radius:12px;font-size:16px;font-weight:800;text-decoration:none;box-shadow:0 3px 10px ${isCoupang ? "rgba(255,87,34,0.35)" : "rgba(3,199,90,0.35)"};">${ctaText} →</a>`,
     "</div></div>",
   ].join("");
 }
@@ -233,7 +265,7 @@ export async function generateArticle(
         imagePrompts: [
           {
             role: "FEATURED|CONTENT",
-            prompt: "이미지 생성 프롬프트 (영어, 스타일 명시, 텍스트 넣지 말 것)",
+            prompt: "이미지 생성 프롬프트 (영어). 밝고 긍정적인 분위기, 등장인물은 한국인만, 외국인 금지, 이미지 속 글자 없이, 사진 또는 깔끔한 일러스트",
             altText: "한국어 대체 텍스트",
             caption: "캡션",
             position: "본문 [IMAGE:n]의 n (대표는 0)",
@@ -260,7 +292,11 @@ export async function generateArticle(
         // 딥링크 실패 시 원본 URL 사용
       }
     }
-    const banner = buildProductBanner(product, linkUrl);
+    // 상품 이미지를 서버에 재호스팅 (네이버·쿠팡 CDN hotlink 차단 회피)
+    const bannerImage = product.imageUrl
+      ? await rehostProductImage(product.imageUrl, `p${keyword?.id ?? "x"}-${Date.now()}`)
+      : null;
+    const banner = buildProductBanner(product, linkUrl, bannerImage);
 
     if (contentMarkdown.includes("[PRODUCT_BANNER]")) {
       contentMarkdown = contentMarkdown.replaceAll("[PRODUCT_BANNER]", banner);

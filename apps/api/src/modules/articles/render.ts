@@ -9,6 +9,11 @@ export async function renderContentHtml(markdown: string): Promise<string> {
   let html = await marked.parse(markdown);
 
   html = html
+    // 본문 이미지는 항상 글 가로 폭 100%로 채운다 (기존 발행 글의 max-width 버전도 교체)
+    .replace(
+      /style="max-width:100%;border-radius:10px;"/g,
+      'style="width:100%;height:auto;display:block;border-radius:10px;"',
+    )
     .replace(/<h1>/g, '<h1 style="font-size:30px;font-weight:800;line-height:1.35;margin:36px 0 18px;color:#111;">')
     .replace(
       /<h2>/g,
@@ -26,9 +31,10 @@ export async function renderContentHtml(markdown: string): Promise<string> {
     )
     .replace(/<th>/g, '<th style="border:1px solid #dde1e8;padding:11px 12px;background:#f4f5f7;font-weight:700;text-align:left;">')
     .replace(/<td>/g, '<td style="border:1px solid #dde1e8;padding:11px 12px;">')
+    // 대가성 고지 문구 등 인용구 — 본문보다 25% 작게 (식별은 가능하되 눈에 덜 띄게)
     .replace(
       /<blockquote>/g,
-      '<blockquote style="font-size:14px;color:#667085;background:#f7f7f8;border-left:4px solid #cbd0d8;margin:20px 0;padding:12px 16px;border-radius:6px;line-height:1.6;">',
+      '<blockquote style="font-size:11px;color:#8a909b;background:#f7f7f8;border-left:3px solid #d5d9e0;margin:18px 0;padding:9px 13px;border-radius:6px;line-height:1.55;">',
     );
 
   // 컨테이너로 감싸 기본 폰트·색·행간을 상속시킨다 (인라인 스타일이 없는 요소 대비)

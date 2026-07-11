@@ -31,8 +31,13 @@ async function generateOneImage(prompt: string, fileBase: string): Promise<{
   if (!apiKey) throw new HttpError(400, "Gemini API Key가 설정되지 않았습니다.");
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const STYLE_GUIDE =
+    "Style: bright, warm, clean and positive mood — never dark, gloomy, or depressing. " +
+    "If any person appears, they must be Korean (East Asian) — absolutely no Western or foreign-looking faces. " +
+    "Avoid any visible text, letters, words, or captions in the image. " +
+    "Wide 4:3 landscape composition, natural lighting, high quality photography or clean illustration.";
   const requestBody = (withAspect: boolean) => ({
-    contents: [{ parts: [{ text: `${prompt}\n\nWide 4:3 landscape composition.` }] }],
+    contents: [{ parts: [{ text: `${prompt}\n\n${STYLE_GUIDE}` }] }],
     generationConfig: {
       responseModalities: ["IMAGE"],
       ...(withAspect ? { imageConfig: { aspectRatio: "4:3" } } : {}),
@@ -102,7 +107,7 @@ async function generateOneImage(prompt: string, fileBase: string): Promise<{
 }
 
 function contentFigure(image: { webpUrl: string; altText: string; caption: string | null }, slot: number): string {
-  return `<figure data-img="${slot}"><img src="${image.webpUrl}" alt="${image.altText}" style="max-width:100%;border-radius:10px;" />${image.caption ? `<figcaption style="font-size:13px;color:#888;margin-top:6px;">${image.caption}</figcaption>` : ""}</figure>`;
+  return `<figure data-img="${slot}" style="margin:24px 0;"><img src="${image.webpUrl}" alt="${image.altText}" style="width:100%;height:auto;display:block;border-radius:10px;" />${image.caption ? `<figcaption style="font-size:13px;color:#888;margin-top:6px;text-align:center;">${image.caption}</figcaption>` : ""}</figure>`;
 }
 
 /**

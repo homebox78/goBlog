@@ -1,6 +1,6 @@
 import { Cron } from "croner";
 import { prisma } from "../../common/prisma.js";
-import { publishToBlogger, publishToInstagram } from "./connectors.js";
+import { publishToBlogger, publishToInstagram, publishToWordpress } from "./connectors.js";
 
 const MAX_RETRY = 3;
 let processing = false;
@@ -18,6 +18,8 @@ export async function processQueue(): Promise<void> {
     const jobs = await prisma.publishJob.findMany({
       where: {
         status: "QUEUED",
+        // 네이버·티스토리는 Chrome 확장이 처리하므로 서버 러너는 건너뛴다
+        platform: { in: ["WORDPRESS", "BLOGGER", "INSTAGRAM"] },
         OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
       },
       orderBy: { id: "asc" },
@@ -50,12 +52,14 @@ export async function processQueue(): Promise<void> {
         }
 
         let url: string;
-        if (job.platform === "BLOGGER") {
+        if (job.platform === "WORDPRESS") {
+          url = (await publishToWordpress(job.article)).url;
+        } else if (job.platform === "BLOGGER") {
           url = (await publishToBlogger(job.article)).url;
         } else if (job.platform === "INSTAGRAM") {
           url = (await publishToInstagram(job.article)).url;
         } else {
-          throw new Error(`${job.platform} 자동 발행은 아직 지원하지 않습니다 (네이버·티스토리는 Chrome 확장 단계).`);
+          throw new Error(`${job.platform} 자동 발행은 Chrome 확장(6단계)에서 지원합니다.`);
         }
 
         await prisma.publishJob.update({

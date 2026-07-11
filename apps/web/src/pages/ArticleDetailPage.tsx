@@ -108,22 +108,46 @@ export default function ArticleDetailPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 생성 실패"),
   });
 
+  const [scheduleAt, setScheduleAt] = useState("");
+
   const publishMutation = useMutation({
     mutationFn: (platform: string) =>
-      api.post<{ jobId: number }>("/api/publish-jobs", { articleId: Number(id), platform }),
+      api.post<{ jobId: number }>("/api/publish-jobs", {
+        articleId: Number(id),
+        platform,
+        scheduledAt: scheduleAt ? new Date(scheduleAt).toISOString() : undefined,
+      }),
     onSuccess: () => {
-      toast.success("발행 작업을 등록했습니다. 잠시 후 상태가 갱신됩니다.");
+      toast.success(
+        scheduleAt ? "예약 발행을 등록했습니다." : "발행 작업을 등록했습니다. 잠시 후 상태가 갱신됩니다.",
+      );
       queryClient.invalidateQueries({ queryKey: ["publish-jobs", id] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "발행 요청 실패"),
   });
 
+  const retryMutation = useMutation({
+    mutationFn: (jobId: number) => api.post(`/api/publish-jobs/${jobId}/retry`),
+    onSuccess: () => {
+      toast.success("재시도 요청했습니다.");
+      queryClient.invalidateQueries({ queryKey: ["publish-jobs", id] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "재시도 실패"),
+  });
+
   const jobsQuery = useQuery({
     queryKey: ["publish-jobs", id],
     queryFn: () =>
-      api.get<{ jobs: Array<{ id: number; platform: string; status: string; publishedUrl: string | null; error: string | null }> }>(
-        `/api/publish-jobs?articleId=${id}`,
-      ),
+      api.get<{
+        jobs: Array<{
+          id: number;
+          platform: string;
+          status: string;
+          publishedUrl: string | null;
+          error: string | null;
+          scheduledAt: string | null;
+        }>;
+      }>(`/api/publish-jobs?articleId=${id}`),
     refetchInterval: 15000,
   });
 
@@ -364,42 +388,83 @@ export default function ArticleDetailPage() {
                 <Send className="size-3.5" /> 발행
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex gap-2">
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">예약 시간 (비우면 즉시 발행)</Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduleAt}
+                  onChange={(event) => setScheduleAt(event.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   size="sm"
-                  className="flex-1"
+                  disabled={publishMutation.isPending}
+                  onClick={() => publishMutation.mutate("WORDPRESS")}
+                >
+                  WordPress
+                </Button>
+                <Button
+                  size="sm"
                   disabled={publishMutation.isPending}
                   onClick={() => publishMutation.mutate("BLOGGER")}
                 >
-                  Blogger 발행
+                  Blogger
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1"
                   disabled={publishMutation.isPending}
                   onClick={() => publishMutation.mutate("INSTAGRAM")}
                 >
                   Instagram
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={publishMutation.isPending}
+                  onClick={() => publishMutation.mutate("NAVER_BLOG")}
+                  title="네이버·티스토리는 Chrome 확장으로 발행합니다"
+                >
+                  네이버/티스토리
+                </Button>
               </div>
-              {(jobsQuery.data?.jobs ?? []).slice(0, 5).map((job) => (
+              {(jobsQuery.data?.jobs ?? []).slice(0, 6).map((job) => (
                 <div key={job.id} className="rounded-md border p-2 text-xs">
                   <div className="flex items-center justify-between">
-                    <span>{job.platform}</span>
-                    <Badge
-                      variant={
-                        job.status === "FAILED"
-                          ? "destructive"
-                          : job.status === "SUCCEEDED"
-                            ? "default"
-                            : "secondary"
-                      }
-                      className="text-[10px]"
-                    >
-                      {job.status}
-                    </Badge>
+                    <span>
+                      {job.platform}
+                      {job.scheduledAt && (
+                        <span className="ml-1 text-muted-foreground">
+                          · 예약 {new Date(job.scheduledAt).toLocaleString("ko-KR")}
+                        </span>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {job.status === "FAILED" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 px-1.5 text-[10px]"
+                          onClick={() => retryMutation.mutate(job.id)}
+                        >
+                          재시도
+                        </Button>
+                      )}
+                      <Badge
+                        variant={
+                          job.status === "FAILED"
+                            ? "destructive"
+                            : job.status === "SUCCEEDED"
+                              ? "default"
+                              : "secondary"
+                        }
+                        className="text-[10px]"
+                      >
+                        {job.status}
+                      </Badge>
+                    </div>
                   </div>
                   {job.publishedUrl && (
                     <a
@@ -415,8 +480,8 @@ export default function ArticleDetailPage() {
                 </div>
               ))}
               <p className="text-xs text-muted-foreground">
-                85점 미만은 자동발행이 차단됩니다. 네이버·티스토리는 Chrome 확장(6단계)에서
-                지원됩니다.
+                품질 85점 미만·정책 위험 문구가 있으면 발행이 차단됩니다. 네이버·티스토리는 발행
+                대기로 등록되어 Chrome 확장에서 처리합니다.
               </p>
             </CardContent>
           </Card>
