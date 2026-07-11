@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, PlugZap } from "lucide-react";
+import { CheckCircle2, Loader2, MinusCircle, PlugZap, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,8 @@ interface TestResult {
   ok: boolean;
   message: string;
   detail?: unknown;
+  name?: string;
+  skipped?: boolean;
 }
 
 interface ModelList {
@@ -84,7 +86,7 @@ const GROUPS: Array<{ id: string; label: string; description: string; testEndpoi
     id: "platforms",
     label: "게시 플랫폼",
     description: "WordPress·Blogger 발행 및 네이버·티스토리 작성 URL을 설정합니다.",
-    testEndpoint: "/api/settings/test/wordpress",
+    testEndpoint: "/api/settings/test/platforms",
   },
 ];
 
@@ -92,6 +94,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [edited, setEdited] = useState<Record<string, string>>({});
   const [testing, setTesting] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, TestResult[]>>({});
 
   const query = useQuery({
     queryKey: ["settings"],
@@ -152,16 +155,19 @@ export default function SettingsPage() {
     saveMutation.mutate(edited);
   };
 
-  const handleTest = async (endpoint: string) => {
+  const handleTest = async (groupId: string, groupLabel: string, endpoint: string) => {
     setTesting(endpoint);
     try {
-      const result = await api.post<TestResult>(endpoint);
-      if (result.ok) {
-        toast.success(result.message);
+      const result = await api.post<TestResult | { results: TestResult[] }>(endpoint);
+      const list = "results" in result ? result.results : [{ ...result, name: groupLabel }];
+      setTestResults((prev) => ({ ...prev, [groupId]: list }));
+
+      const tested = list.filter((item) => !item.skipped);
+      const okCount = tested.filter((item) => item.ok).length;
+      if (okCount === tested.length) {
+        toast.success(`연결 테스트: ${okCount}/${tested.length} 성공`);
       } else {
-        toast.error(result.message, {
-          description: typeof result.detail === "string" ? result.detail : undefined,
-        });
+        toast.error(`연결 테스트: ${okCount}/${tested.length} 성공 — 실패 항목을 확인하세요.`);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "테스트 요청에 실패했습니다.");
@@ -207,7 +213,7 @@ export default function SettingsPage() {
                     variant="outline"
                     size="sm"
                     disabled={testing !== null}
-                    onClick={() => handleTest(group.testEndpoint!)}
+                    onClick={() => handleTest(group.id, group.label, group.testEndpoint!)}
                   >
                     {testing === group.testEndpoint ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -218,6 +224,30 @@ export default function SettingsPage() {
                   </Button>
                 )}
               </CardHeader>
+              {testResults[group.id] && (
+                <CardContent className="pb-0">
+                  <div className="space-y-1.5 rounded-lg border bg-muted/40 p-3">
+                    {testResults[group.id].map((result) => (
+                      <div key={result.name ?? result.message} className="flex items-start gap-2 text-sm">
+                        {result.skipped ? (
+                          <MinusCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        ) : result.ok ? (
+                          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                        ) : (
+                          <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                        )}
+                        <span className={result.skipped ? "text-muted-foreground" : ""}>
+                          {result.name && <b>{result.name}: </b>}
+                          {result.message}
+                          {typeof result.detail === "string" && (
+                            <span className="text-muted-foreground"> — {result.detail}</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 {settings
                   .filter((setting) => setting.group === group.id)

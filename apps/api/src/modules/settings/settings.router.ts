@@ -6,10 +6,10 @@ import { listSettings, updateSettings } from "./settings.service.js";
 import {
   listAnthropicModels,
   listGeminiImageModels,
+  testAllPlatforms,
   testAnthropic,
   testGemini,
   testGoogleAds,
-  testWordpress,
 } from "./connection-tests.js";
 
 const updateSchema = z.object({
@@ -69,8 +69,8 @@ settingsRouter.post(
 );
 
 settingsRouter.post(
-  "/test/wordpress",
-  asyncHandler(async (req, res) => res.json(await testWordpress())),
+  "/test/platforms",
+  asyncHandler(async (req, res) => res.json(await testAllPlatforms())),
 );
 
 settingsRouter.post(

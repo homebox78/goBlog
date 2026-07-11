@@ -4,6 +4,8 @@ export interface TestResult {
   ok: boolean;
   message: string;
   detail?: unknown;
+  name?: string;
+  skipped?: boolean;
 }
 
 async function safeFetch(url: string, init?: RequestInit): Promise<Response> {
@@ -184,6 +186,80 @@ export async function testGoogleAds(): Promise<TestResult> {
   }
 
   return { ok: true, message: "Google Ads API 연결 성공", detail: data?.resourceNames };
+}
+
+/** Blogger: OAuth refresh 토큰으로 블로그 정보를 조회한다. */
+export async function testBlogger(): Promise<TestResult> {
+  const values = await getSettingValues([
+    "blogger.blogId",
+    "blogger.clientId",
+    "blogger.clientSecret",
+    "blogger.refreshToken",
+  ]);
+  const missing = Object.entries(values).filter(([, value]) => !value).map(([key]) => key.replace("blogger.", ""));
+  if (missing.length > 0) {
+    return { ok: false, message: `설정 누락: ${missing.join(", ")}` };
+  }
+
+  const tokenRes = await safeFetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: values["blogger.clientId"]!,
+      client_secret: values["blogger.clientSecret"]!,
+      refresh_token: values["blogger.refreshToken"]!,
+      grant_type: "refresh_token",
+    }),
+  });
+  const tokenData = (await tokenRes.json()) as { access_token?: string; error_description?: string };
+  if (!tokenData.access_token) {
+    return { ok: false, message: `OAuth 토큰 발급 실패: ${tokenData.error_description ?? "확인 필요"}` };
+  }
+
+  const blogIdRaw = values["blogger.blogId"]!.trim();
+  const url = /^https?:\/\//i.test(blogIdRaw)
+    ? `https://www.googleapis.com/blogger/v3/blogs/byurl?url=${encodeURIComponent(blogIdRaw)}`
+    : `https://www.googleapis.com/blogger/v3/blogs/${encodeURIComponent(blogIdRaw)}`;
+  const res = await safeFetch(url, { headers: { Authorization: `Bearer ${tokenData.access_token}` } });
+  const blog = (await res.json().catch(() => null)) as { name?: string; posts?: { totalItems?: number }; error?: { message?: string } } | null;
+  if (!res.ok || !blog?.name) {
+    return { ok: false, message: `블로그 조회 실패: ${blog?.error?.message ?? `HTTP ${res.status}`}` };
+  }
+  return { ok: true, message: `연결 성공 — "${blog.name}" (게시글 ${blog.posts?.totalItems ?? 0}개)` };
+}
+
+/** Instagram: 액세스 토큰으로 비즈니스 계정 정보를 조회한다. */
+export async function testInstagram(): Promise<TestResult> {
+  const values = await getSettingValues(["instagram.businessAccountId", "instagram.accessToken"]);
+  if (!values["instagram.businessAccountId"] || !values["instagram.accessToken"]) {
+    return { ok: false, message: "비즈니스 계정 ID·액세스 토큰 미설정" };
+  }
+  const res = await safeFetch(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(values["instagram.businessAccountId"]!)}?fields=username,name&access_token=${encodeURIComponent(values["instagram.accessToken"]!)}`,
+  );
+  const data = (await res.json().catch(() => null)) as { username?: string; error?: { message?: string } } | null;
+  if (!res.ok || !data?.username) {
+    return { ok: false, message: `계정 조회 실패: ${data?.error?.message ?? `HTTP ${res.status}`}` };
+  }
+  return { ok: true, message: `연결 성공 — @${data.username}` };
+}
+
+/** 게시 플랫폼 전체 — 서비스별 결과 목록 */
+export async function testAllPlatforms(): Promise<{ results: TestResult[] }> {
+  const [wordpress, blogger, instagram] = await Promise.all([
+    testWordpress().catch((error) => ({ ok: false, message: (error as Error).message })),
+    testBlogger().catch((error) => ({ ok: false, message: (error as Error).message })),
+    testInstagram().catch((error) => ({ ok: false, message: (error as Error).message })),
+  ]);
+  return {
+    results: [
+      { name: "WordPress", ...wordpress },
+      { name: "Blogger", ...blogger },
+      { name: "Instagram", ...instagram },
+      { name: "네이버 블로그", ok: false, skipped: true, message: "Chrome 확장 방식 — 연결 테스트 대상 아님" },
+      { name: "티스토리", ok: false, skipped: true, message: "Chrome 확장 방식 — 연결 테스트 대상 아님" },
+    ],
+  };
 }
 
 /** WordPress: Application Password로 현재 사용자 정보를 조회한다. */
