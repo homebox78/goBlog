@@ -1,9 +1,34 @@
 import { Cron } from "croner";
 import { prisma } from "../../common/prisma.js";
 import { runDailyDiscovery, kstToday } from "../keywords/engine.js";
-import { generateArticle } from "../articles/generator.js";
+import { generateArticle, type ProductInput } from "../articles/generator.js";
+import { searchCoupangProducts } from "../products/coupang.js";
 
 let keywordJob: Cron | null = null;
+
+/**
+ * 키워드에 어울리는 쿠팡 상품을 찾아 홍보 배너용 product로 변환한다.
+ * goBlog의 목적이 제휴 수익이므로 자동 생성 글에도 관련 상품 배너를 붙인다.
+ * 상품을 못 찾거나 쿠팡 API가 안 되면 null → 광고 없는 정보성 글로 폴백(도배·정책 위험 방지).
+ */
+async function findProductForKeyword(text: string): Promise<ProductInput | null> {
+  try {
+    const products = await searchCoupangProducts(text, 5);
+    const best = products.find((p) => p.productUrl && p.productName);
+    if (!best) return null;
+    return {
+      source: "COUPANG",
+      name: best.productName,
+      price: best.productPrice,
+      imageUrl: best.productImage,
+      productUrl: best.productUrl,
+      isRocket: best.isRocket,
+    };
+  } catch (error) {
+    console.error(`[scheduler] 쿠팡 상품 검색 실패 (${text}):`, (error as Error).message);
+    return null;
+  }
+}
 
 /** 키워드 문구·유형으로 어울리는 글 유형을 추천한다 (서버 자동 판단) */
 function suggestArticleType(text: string, sourceType: string | null, intent: string | null): string {
@@ -44,11 +69,14 @@ async function autoGenerateTopArticles(count: number): Promise<number> {
   for (const rec of recommendations) {
     if (made >= count) break;
     try {
+      // 제휴 수익화: 키워드에 어울리는 쿠팡 상품을 찾아 붙이면 배너·딥링크·대가성 문구가 자동 삽입된다.
+      const product = await findProductForKeyword(rec.keyword.text);
       await generateArticle({
         keywordId: rec.keywordId,
         articleType: suggestArticleType(rec.keyword.text, rec.keyword.sourceType, rec.keyword.searchIntent),
         language: "ko",
         schemaTypes: ["BlogPosting", "FAQPage"],
+        product: product ?? undefined,
       });
       made += 1;
     } catch (error) {
