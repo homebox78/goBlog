@@ -101,7 +101,14 @@ async function generateOneImage(prompt: string, fileBase: string): Promise<{
   };
 }
 
-/** 글의 미생성 이미지 프롬프트를 전부 생성하고 본문 [IMAGE:n]에 삽입한다. */
+function contentFigure(image: { webpUrl: string; altText: string; caption: string | null }, slot: number): string {
+  return `<figure data-img="${slot}"><img src="${image.webpUrl}" alt="${image.altText}" style="max-width:100%;border-radius:10px;" />${image.caption ? `<figcaption style="font-size:13px;color:#888;margin-top:6px;">${image.caption}</figcaption>` : ""}</figure>`;
+}
+
+/**
+ * 글의 이미지를 생성해 본문에 삽입한다.
+ * webpUrl이 없거나 현재 서버의 공개 URL이 아닌(=이전에 다른 환경에서 만든 로컬 URL) 이미지는 재생성한다.
+ */
 export async function generateArticleImages(articleId: number): Promise<{ generated: number; failed: number }> {
   const article = await prisma.article.findUnique({
     where: { id: articleId },
@@ -109,14 +116,16 @@ export async function generateArticleImages(articleId: number): Promise<{ genera
   });
   if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
 
-  const pending = article.media.filter((asset) => asset.prompt && !asset.webpUrl);
+  const base = mediaPublicUrl();
+  const pending = article.media.filter(
+    (asset) => asset.prompt && (!asset.webpUrl || !asset.webpUrl.startsWith(base)),
+  );
   if (pending.length === 0) {
     return { generated: 0, failed: 0 };
   }
 
   let generated = 0;
   let failed = 0;
-  const inserted = new Map<number, { webpUrl: string; altText: string; caption: string | null }>();
 
   for (const asset of pending) {
     try {
@@ -134,36 +143,57 @@ export async function generateArticleImages(articleId: number): Promise<{ genera
         },
       });
       generated += 1;
-      if (asset.kind === "CONTENT") {
-        inserted.set(asset.position ?? -1, {
-          webpUrl: result.webpUrl,
-          altText: asset.altText ?? "",
-          caption: asset.caption,
-        });
-      }
     } catch (error) {
       console.error(`[images] asset ${asset.id} 생성 실패:`, (error as Error).message);
       failed += 1;
     }
   }
 
-  // 본문 [IMAGE:n] 마커 치환 (마커 없으면 그대로 둠 — 대표 이미지는 발행 시 사용)
-  if (inserted.size > 0 && article.contentMarkdown) {
-    let markdown = article.contentMarkdown;
-    for (const [position, image] of inserted) {
-      const figure = `\n\n<figure><img src="${image.webpUrl}" alt="${image.altText}" style="max-width:100%;border-radius:10px;" />${image.caption ? `<figcaption style="font-size:13px;color:#888;margin-top:6px;">${image.caption}</figcaption>` : ""}</figure>\n\n`;
-      const marker = `[IMAGE:${position}]`;
-      markdown = markdown.includes(marker)
-        ? markdown.replace(marker, figure.trim())
-        : markdown;
+  // 본문 재구성 — 최신 CONTENT 이미지 URL로 다시 삽입
+  const fresh = await prisma.mediaAsset.findMany({
+    where: { articleId, kind: "CONTENT", webpUrl: { not: null } },
+    orderBy: { position: "asc" },
+  });
+
+  if (article.contentMarkdown) {
+    // 이전에 삽입된 figure 블록을 모두 제거하고(로컬 URL 포함 가능) 다시 넣는다
+    let markdown = article.contentMarkdown.replace(/<figure[\s\S]*?<\/figure>/g, "").replace(/\n{3,}/g, "\n\n");
+
+    const remaining: typeof fresh = [];
+    for (const asset of fresh) {
+      const image = { webpUrl: asset.webpUrl!, altText: asset.altText ?? "", caption: asset.caption };
+      const marker = `[IMAGE:${asset.position}]`;
+      if (markdown.includes(marker)) {
+        markdown = markdown.replace(marker, `\n\n${contentFigure(image, asset.position ?? 0)}\n\n`);
+      } else {
+        remaining.push(asset);
+      }
     }
-    // 남은 마커 제거 + 미삽입 이미지는 본문 끝에 첨부하지 않음(과잉 방지)
     markdown = markdown.replace(/\[IMAGE:\d+\]/g, "");
+
+    // 마커가 없던 이미지는 H2(##) 앞에 순서대로 배치, 부족하면 본문 끝에
+    if (remaining.length > 0) {
+      const lines = markdown.split("\n");
+      const h2Indexes = lines.map((line, index) => (/^##\s/.test(line) ? index : -1)).filter((index) => index > 0);
+      let placed = 0;
+      const insertions = new Map<number, string>();
+      for (const asset of remaining) {
+        const image = { webpUrl: asset.webpUrl!, altText: asset.altText ?? "", caption: asset.caption };
+        const figure = contentFigure(image, asset.position ?? 0);
+        if (placed < h2Indexes.length) {
+          insertions.set(h2Indexes[placed], figure);
+          placed += 1;
+        } else {
+          lines.push("", figure);
+        }
+      }
+      markdown = lines
+        .map((line, index) => (insertions.has(index) ? `${insertions.get(index)}\n\n${line}` : line))
+        .join("\n");
+    }
+
     const contentHtml = await marked.parse(markdown);
-    await prisma.article.update({
-      where: { id: articleId },
-      data: { contentMarkdown: markdown, contentHtml },
-    });
+    await prisma.article.update({ where: { id: articleId }, data: { contentMarkdown: markdown, contentHtml } });
   }
 
   return { generated, failed };

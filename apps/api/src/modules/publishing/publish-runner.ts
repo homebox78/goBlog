@@ -38,6 +38,11 @@ export async function processQueue(): Promise<void> {
           throw new Error(`품질 점수 ${job.article.qualityScore ?? 0}점 — 85점 미만은 자동발행이 차단됩니다.`);
         }
 
+        // 본문에 접근 불가한 로컬 이미지 주소가 남아 있으면 발행 차단 (엑박 방지)
+        if (/(localhost|127\.0\.0\.1)(:\d+)?\/media\//.test(job.article.contentHtml ?? "")) {
+          throw new Error("본문에 로컬 이미지 주소가 있습니다. 글 상세에서 'Gemini 생성'을 다시 눌러 이미지를 재생성한 뒤 발행해주세요.");
+        }
+
         let url: string;
         if (job.platform === "BLOGGER") {
           url = (await publishToBlogger(job.article)).url;
