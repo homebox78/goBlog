@@ -74,7 +74,19 @@ async function detectPlatform() {
   }
 }
 
+async function loadCategories() {
+  try {
+    const { categories } = await api("/api/extension/categories");
+    if (categories?.length) {
+      $("#catList").textContent = `네이버에 만들 카테고리: ${categories.join(" · ")}`;
+    }
+  } catch {
+    // 카테고리 안내는 실패해도 무시
+  }
+}
+
 async function loadArticles() {
+  loadCategories();
   $("#list").innerHTML = '<p class="muted">불러오는 중...</p>';
   try {
     const { articles } = await api("/api/extension/articles");
@@ -86,8 +98,9 @@ async function loadArticles() {
     for (const article of articles) {
       const div = document.createElement("div");
       div.className = "item";
-      div.innerHTML = `<p></p><small>${article.qualityScore ?? "—"}점 · ${article.language} · ${article.status}</small>`;
+      div.innerHTML = `<p></p><small><span class="cat"></span> ${article.qualityScore ?? "—"}점 · ${article.language} · ${article.status}</small>`;
       div.querySelector("p").textContent = article.title;
+      div.querySelector(".cat").textContent = article.category ? `📁 ${article.category}` : "";
       div.addEventListener("click", () => openArticle(article.id));
       $("#list").appendChild(div);
     }
@@ -100,6 +113,7 @@ async function openArticle(id) {
   const { article } = await api(`/api/extension/articles/${id}`);
   currentArticle = article;
   $("#detailTitle").textContent = article.title;
+  $("#detailCategory").textContent = article.category ? `📁 ${article.category} 카테고리에 발행` : "";
   $("#detail").classList.remove("hidden");
   $("#notes").innerHTML = "";
   detectPlatform();

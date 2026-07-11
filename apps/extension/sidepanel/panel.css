@@ -69,3 +69,18 @@ button.link { background: none; color: #888; font-weight: 400; padding: 4px; }
 .muted { color: #999; text-align: center; padding: 12px 0; }
 .hidden { display: none !important; }
 footer { text-align: center; padding: 4px 0 10px; }
+
+/* 추천 카테고리 표시 */
+#catList { margin: 0 0 8px; font-size: 11px; line-height: 1.5; }
+.item .cat { color: #03c75a; font-weight: 700; }
+.cat-badge {
+  margin: 0 0 10px;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eafaf0;
+  color: #03a44e;
+  font-size: 12px;
+  font-weight: 700;
+}
+.cat-badge:empty { display: none; }

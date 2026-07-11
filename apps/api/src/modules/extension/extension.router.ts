@@ -3,6 +3,7 @@ import { prisma } from "../../common/prisma.js";
 import { asyncHandler, HttpError } from "../../common/http.js";
 import { env } from "../../common/env.js";
 import { disclosureText } from "../articles/generator.js";
+import { NAVER_CATEGORIES, suggestNaverCategory } from "../articles/naver-category.js";
 
 /** Chrome 확장은 쿠키 대신 X-Extension-Token 헤더로 인증한다 (서드파티 쿠키 차단 회피). */
 function requireExtensionToken(req: Request, res: Response, next: NextFunction) {
@@ -17,16 +18,36 @@ export const extensionRouter = Router();
 
 extensionRouter.use(requireExtensionToken);
 
-/** 발행 가능한 글 목록 (검수 완료·승인 상태) */
+/** 네이버 블로그에 만들면 되는 고정 카테고리 목록 */
+extensionRouter.get(
+  "/categories",
+  asyncHandler(async (_req, res) => {
+    res.json({ categories: NAVER_CATEGORIES });
+  }),
+);
+
+/** 발행 가능한 글 목록 (검수 완료·승인 상태) — 글마다 추천 네이버 카테고리 포함 */
 extensionRouter.get(
   "/articles",
   asyncHandler(async (req, res) => {
-    const articles = await prisma.article.findMany({
+    const rows = await prisma.article.findMany({
       where: { status: { in: ["REVIEW", "APPROVED"] } },
       orderBy: { updatedAt: "desc" },
       take: 30,
-      select: { id: true, title: true, status: true, qualityScore: true, language: true, updatedAt: true },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        qualityScore: true,
+        language: true,
+        updatedAt: true,
+        keyword: { select: { category: true, text: true } },
+      },
     });
+    const articles = rows.map(({ keyword, ...a }) => ({
+      ...a,
+      category: suggestNaverCategory(keyword?.category, keyword?.text ?? a.title),
+    }));
     res.json({ articles });
   }),
 );
@@ -41,6 +62,7 @@ extensionRouter.get(
         schemas: { where: { isEnabled: true } },
         media: { where: { webpUrl: { not: null } }, orderBy: { position: "asc" } },
         tags: { include: { tag: true }, take: 10 },
+        keyword: { select: { category: true, text: true } },
       },
     });
     if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
@@ -57,6 +79,7 @@ extensionRouter.get(
       article: {
         id: article.id,
         title: article.title,
+        category: suggestNaverCategory(article.keyword?.category, article.keyword?.text ?? article.title),
         titleForNaver: isPromo && naverPrefix ? `(${naverPrefix.slice(0, 24)}...) ${article.title}` : article.title,
         naverDisclosure: naverPrefix,
         contentHtml: article.contentHtml,
