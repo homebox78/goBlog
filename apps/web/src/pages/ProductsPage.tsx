@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Link2, Loader2, PenLine, Sparkles, Save, Trash2, Tag } from "lucide-react";
+import { Link2, Loader2, PenLine, Sparkles, Save, Trash2, Tag, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenerateDialog, type ProductPayload } from "@/components/articles/GenerateDialog";
 
 const won = (value: number) => new Intl.NumberFormat("ko-KR").format(value);
+
+const PARTNER_SITE: Record<"COUPANG" | "BRANDCONNECT", { label: string; url: string }> = {
+  COUPANG: { label: "쿠팡 파트너스 열기", url: "https://partners.coupang.com/" },
+  BRANDCONNECT: { label: "네이버 브랜드커넥트 열기", url: "https://brandconnect.naver.com/" },
+};
 
 interface RegisteredProduct {
   id: number;
@@ -222,6 +227,15 @@ function UrlAnalyzer({
   return (
     <Card>
       <CardContent className="space-y-4 pt-6">
+        <a
+          href={PARTNER_SITE[source].url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-2 rounded-md border border-dashed py-2.5 text-sm font-medium hover:bg-accent"
+        >
+          <ExternalLink className="size-4" />
+          {PARTNER_SITE[source].label} — 상품 링크 만들러 가기
+        </a>
         <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">{guide}</div>
 
         <div className="space-y-2">
