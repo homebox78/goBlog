@@ -7,6 +7,14 @@ let processing = false;
 
 /** 예약된 발행 작업을 1분마다 처리한다 (Redis 없이 in-process). */
 export function startPublishRunner(): void {
+  // 서버 재시작 시 처리 중(RUNNING)에 멈춘 작업을 다시 대기로 되돌린다
+  prisma.publishJob
+    .updateMany({ where: { status: "RUNNING" }, data: { status: "QUEUED" } })
+    .then((result) => {
+      if (result.count > 0) console.log(`[publish] 재시작 복구: RUNNING ${result.count}건 → QUEUED`);
+    })
+    .catch(() => undefined);
+
   new Cron("* * * * *", { protect: true }, () => processQueue());
   console.log("[publish] 발행 러너 시작 (1분 주기)");
 }

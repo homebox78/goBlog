@@ -29,6 +29,12 @@ interface DashboardData {
     updatedAt: string;
     article: { id: number; title: string };
   }>;
+  usage?: {
+    monthlyCostKrw: number;
+    claudeCostKrw: number;
+    geminiCostKrw: number;
+    geminiImages: number;
+  };
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -94,6 +100,33 @@ export default function DashboardPage() {
         <StatCard label="발행 성공" value={publishedCount} />
         <StatCard label="발행 실패" value={failedCount} accent={failedCount > 0} />
       </div>
+
+      {data.usage && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+            <div>
+              <p className="text-xs text-muted-foreground">이번 달 AI 예상 비용</p>
+              <p className="text-2xl font-bold">
+                ₩{new Intl.NumberFormat("ko-KR").format(data.usage.monthlyCostKrw)}
+              </p>
+            </div>
+            <div className="flex gap-6 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Claude (글)</p>
+                <p className="font-medium">
+                  ₩{new Intl.NumberFormat("ko-KR").format(data.usage.claudeCostKrw)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Gemini (이미지 {data.usage.geminiImages}장)</p>
+                <p className="font-medium">
+                  ₩{new Intl.NumberFormat("ko-KR").format(data.usage.geminiCostKrw)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
