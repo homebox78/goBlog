@@ -10,10 +10,15 @@
 ```bash
 pnpm install
 cp .env.example .env   # 관리자 계정·암호화 키 채우기
-pnpm db:up             # MySQL 8.4 + Redis 7 (Docker)
+pnpm db:tunnel         # 별도 창: 운영 서버 MariaDB SSH 터널 (localhost:3307)
 pnpm db:push           # Prisma 스키마 반영 (최초 1회)
 pnpm dev               # api :8787 + web :5173
 ```
+
+DB는 **운영 서버(hom2box.com)의 MariaDB `goBlog`**를 SSH 터널로 사용한다.
+- `.env`와 `apps/api/.env`의 `MYSQL_URL`은 `mysql://goblog:<비밀번호>@127.0.0.1:3307/goBlog`
+- 터널에는 `config/google_key.pem`이 필요하다 (git 제외 — PC 간 수동 복사)
+- 로컬 Docker(MySQL)를 쓰려면 `pnpm db:up` 후 `MYSQL_URL`을 `localhost:3306/publisher`로 변경
 
 - 웹 관리 화면: http://localhost:5173
 - API 헬스체크: http://localhost:8787/health

@@ -8,6 +8,7 @@
     "dev:web": "pnpm --filter web dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
+    "db:tunnel": "powershell -ExecutionPolicy Bypass -File scripts/db-tunnel.ps1",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter api db:migrate",
