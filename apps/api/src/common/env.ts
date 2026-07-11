@@ -1,7 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { webcrypto } from "node:crypto";
 import dotenv from "dotenv";
 import { z } from "zod";
+
+// Node 18에는 전역 WebCrypto가 없어 jose v6가 실패한다. (운영 서버 Node 18.19)
+if (!globalThis.crypto) {
+  (globalThis as Record<string, unknown>).crypto = webcrypto;
+}
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // 루트 .env 를 우선 사용하고, apps/api/.env 가 있으면 함께 로드한다.

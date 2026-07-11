@@ -13,6 +13,11 @@ $target = "hbox78@hom2box.com"
 
 # ---- key (locked temp copy) ----
 $key = Join-Path $env:TEMP "goblog_key.pem"
+if (Test-Path $key) {
+    # previously locked read-only; restore ACL before overwrite
+    icacls $key /grant "$($env:USERNAME):F" | Out-Null
+    Remove-Item $key -Force
+}
 Copy-Item (Join-Path $root "config\google_key.pem") $key -Force
 icacls $key /inheritance:r | Out-Null
 icacls $key /grant:r "$($env:USERNAME):R" | Out-Null

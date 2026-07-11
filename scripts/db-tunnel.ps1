@@ -13,6 +13,10 @@ if (-not (Test-Path $sourceKey)) {
     Write-Error "config/google_key.pem not found. Copy server secrets into config/ first."
 }
 
+if (Test-Path $tempKey) {
+    icacls $tempKey /grant "$($env:USERNAME):F" | Out-Null
+    Remove-Item $tempKey -Force
+}
 Copy-Item $sourceKey $tempKey -Force
 icacls $tempKey /inheritance:r | Out-Null
 icacls $tempKey /grant:r "$($env:USERNAME):R" | Out-Null
