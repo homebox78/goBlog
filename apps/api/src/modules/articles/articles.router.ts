@@ -28,9 +28,19 @@ articlesRouter.get(
         createdAt: true,
         updatedAt: true,
         keyword: { select: { id: true, text: true } },
+        media: {
+          where: { kind: "FEATURED", webpUrl: { not: null } },
+          select: { webpUrl: true },
+          take: 1,
+        },
       },
     });
-    res.json({ articles });
+    res.json({
+      articles: articles.map((article) => {
+        const { media, ...rest } = article;
+        return { ...rest, thumbnailUrl: media[0]?.webpUrl ?? null };
+      }),
+    });
   }),
 );
 

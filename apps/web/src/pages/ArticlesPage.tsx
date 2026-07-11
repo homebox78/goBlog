@@ -22,6 +22,7 @@ interface ArticleListItem {
   qualityScore: number | null;
   createdAt: string;
   keyword: { id: number; text: string } | null;
+  thumbnailUrl: string | null;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
@@ -64,6 +65,7 @@ export default function ArticlesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">이미지</TableHead>
                   <TableHead>제목</TableHead>
                   <TableHead className="text-center">키워드</TableHead>
                   <TableHead className="text-center">언어</TableHead>
@@ -80,6 +82,21 @@ export default function ArticlesPage() {
                   };
                   return (
                     <TableRow key={article.id}>
+                      <TableCell>
+                        <Link to={`/articles/${article.id}`} className="block">
+                          {article.thumbnailUrl ? (
+                            <img
+                              src={article.thumbnailUrl}
+                              alt=""
+                              className="h-10 w-14 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-14 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+                              없음
+                            </div>
+                          )}
+                        </Link>
+                      </TableCell>
                       <TableCell>
                         <Link
                           to={`/articles/${article.id}`}

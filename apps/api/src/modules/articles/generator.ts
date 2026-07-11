@@ -186,12 +186,16 @@ export async function generateArticle(
   const recommendation = keyword?.recommendations[0];
   const naverMetric = keyword?.metrics.find((metric) => metric.source === "NAVER_SEARCHAD");
 
-  const generated = await callClaudeJson<GeneratedContent>({
-    operation: product ? "promo-article-generate" : "article-generate",
-    maxTokens: 32000,
-    system: [
-      "당신은 조회수 높고 전환이 잘 되는 수익형 블로그 글을 쓰는 베테랑 콘텐츠 에디터다.",
+  const claudeSystem = [
+      "당신은 검색 유입과 조회수를 폭발적으로 끌어올리는 수익형 블로그 전문 에디터다. 이 글의 최우선 목표는 '검색 노출 극대화 + 클릭 + 끝까지 읽게 만들기'다.",
       `본문 언어: ${LANGUAGE_NAME[language]}.`,
+      "",
+      "[조회수 극대화 — 최우선]",
+      "- 제목: 핵심 키워드를 앞쪽에 자연스럽게 넣고, 구체적 숫자·연도·대상·결과를 담아 클릭하고 싶게 만든다. 단 과장·허위 낚시는 금지(정책 위반).",
+      "- 검색 의도를 100% 충족한다: 검색자가 정확히 원하는 답을 빠짐없이, 경쟁 글보다 더 완결적으로 담아 이탈을 막는다.",
+      "- 도입부 첫 문장에서 바로 관심을 붙잡고, 스크롤을 멈추지 않게 문단마다 다음을 읽을 이유를 만든다.",
+      "- 사람들이 함께 검색하는 연관 질문·롱테일 표현을 본문·소제목·FAQ에 자연스럽게 녹여 검색 노출 범위를 넓힌다.",
+      "- '저장/스크랩하고 싶다'는 느낌이 들도록 표·체크리스트·핵심 요약을 배치한다.",
       "",
       "[문체 — AI가 글 성격에 맞게 스스로 판단]",
       "- 문체를 고정하지 말고 글의 주제·독자·목적에 맞춰 가장 자연스러운 톤을 스스로 고른다 (정보성은 차분한 설명체, 생활/후기성은 친근한 대화체 등).",
@@ -240,8 +244,10 @@ export async function generateArticle(
       "본문 목표 분량을 충분히 채우되 물타기 없이 밀도 있게 쓴다. 반드시 JSON만 출력한다.",
     ]
       .filter(Boolean)
-      .join("\n"),
-    user: JSON.stringify({
+      .join("\n");
+
+  const userPayload = (revision?: { prev: GeneratedContent; issues: string[] }) =>
+    JSON.stringify({
       task: product ? "제휴 상품 홍보 글 생성" : "SEO 블로그 글 생성",
       topic,
       keywordContext: keyword
@@ -292,14 +298,75 @@ export async function generateArticle(
         ],
         claimsToVerify: ["발행 전 확인이 필요한 주장·수치"],
       },
-    }),
+      ...(revision
+        ? {
+            previousDraft: {
+              title: revision.prev.title,
+              metaDescription: revision.prev.metaDescription,
+              excerpt: revision.prev.excerpt,
+              contentMarkdown: revision.prev.contentMarkdown,
+            },
+            qualityIssues: revision.issues,
+            revisionInstruction:
+              "이 previousDraft가 품질 기준(85점)에 미달했습니다. qualityIssues의 각 항목을 반드시 해결해 더 완성도 높은 새 버전을 작성하세요. 본문 분량·H2/H3 구조·표/목록·FAQ·제목/메타 길이를 보완하되, 자연스러운 문체·이모지·사람이 쓴 느낌은 유지하세요.",
+          }
+        : {}),
+    });
+
+  const claudeOp = product ? "promo-article-generate" : "article-generate";
+  let generated = await callClaudeJson<GeneratedContent>({
+    operation: claudeOp,
+    maxTokens: 32000,
+    system: claudeSystem,
+    user: userPayload(),
   });
+
+  const checkDraft = (g: GeneratedContent) =>
+    runQualityCheck({
+      keyword: topic,
+      title: g.title || "",
+      metaDescription: g.metaDescription || "",
+      excerpt: g.excerpt || "",
+      contentMarkdown: g.contentMarkdown || "",
+      faqCount: (g.faq ?? []).filter((entry) => entry.question && entry.answer).length,
+      faqRequested: wantsFaq,
+      imagePromptCount: (g.imagePrompts ?? []).length,
+      claimsToVerify: g.claimsToVerify ?? [],
+    });
+
+  // 품질 85점 미만이면 미달 항목을 알려주고 자동 개선한다 (최대 2회 재시도)
+  let draftQuality = checkDraft(generated);
+  for (let attempt = 1; attempt <= 2 && draftQuality.score < 85; attempt += 1) {
+    const issues = draftQuality.items
+      .filter((item) => !item.ok)
+      .map((item) => item.label + (item.note ? ` — ${item.note}` : ""));
+    if (draftQuality.policyRisks.length > 0) {
+      issues.push("정책 위험 문구 제거: " + draftQuality.policyRisks.join(", "));
+    }
+    try {
+      const revised = await callClaudeJson<GeneratedContent>({
+        operation: `${claudeOp}-revise`,
+        maxTokens: 32000,
+        system: claudeSystem,
+        user: userPayload({ prev: generated, issues }),
+      });
+      if (revised.title && revised.contentMarkdown) {
+        generated = revised;
+        draftQuality = checkDraft(generated);
+      } else {
+        break;
+      }
+    } catch {
+      break;
+    }
+  }
 
   if (!generated.title || !generated.contentMarkdown) {
     throw new HttpError(502, "글 생성 결과가 올바르지 않습니다.");
   }
 
   let contentMarkdown = generated.contentMarkdown;
+  let bannerImageUrl: string | null = null; // 상품 홍보 글의 대표 이미지로도 사용
 
   // 상품 배너·딥링크·대가성 문구 삽입
   if (product) {
@@ -312,10 +379,10 @@ export async function generateArticle(
       }
     }
     // 상품 이미지를 서버에 재호스팅 (네이버·쿠팡 CDN hotlink 차단 회피)
-    const bannerImage = product.imageUrl
+    bannerImageUrl = product.imageUrl
       ? await rehostProductImage(product.imageUrl, `p${keyword?.id ?? "x"}-${Date.now()}`)
       : null;
-    const banner = buildProductBanner(product, linkUrl, bannerImage);
+    const banner = buildProductBanner(product, linkUrl, bannerImageUrl);
 
     if (contentMarkdown.includes("[PRODUCT_BANNER]")) {
       contentMarkdown = contentMarkdown.replaceAll("[PRODUCT_BANNER]", banner);
@@ -382,13 +449,17 @@ export async function generateArticle(
           const characters = (prompt.characters ?? [])
             .filter((key) => VALID_CHARACTER_KEYS.includes(key))
             .join(",");
+          const isFeatured = prompt.role === "FEATURED";
+          // 상품 홍보 글의 대표 이미지는 실제 상품 사진을 사용한다 (Gemini가 브랜드 상표를 못 그려 엉뚱한 제품이 나오는 문제 방지)
+          const useProductImage = isFeatured && bannerImageUrl;
           return {
-            kind: prompt.role === "FEATURED" ? "FEATURED" : "CONTENT",
+            kind: isFeatured ? "FEATURED" : "CONTENT",
             prompt: prompt.prompt,
             altText: prompt.altText || null,
             caption: prompt.caption || null,
             position: Number.isInteger(position) ? position : index,
             characterKeys: characters || null,
+            ...(useProductImage ? { webpUrl: bannerImageUrl, originalUrl: bannerImageUrl } : {}),
           };
         }),
       },
