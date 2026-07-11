@@ -1,0 +1,405 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("MYSQL_URL")
+}
+
+// ── 사용자 · 인증 ────────────────────────────────────────────────
+
+model User {
+  id               Int            @id @default(autoincrement())
+  email            String         @unique
+  passwordHash     String
+  totpSecret       String?
+  failedLoginCount Int            @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  refreshTokens    RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ── 설정 ─────────────────────────────────────────────────────────
+
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  isSecret  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// ── 사이트 · 플랫폼 연결 ─────────────────────────────────────────
+
+enum Platform {
+  WORDPRESS
+  BLOGGER
+  NAVER_BLOG
+  TISTORY
+}
+
+model Site {
+  id          Int                  @id @default(autoincrement())
+  name        String
+  platform    Platform
+  url         String?
+  isActive    Boolean              @default(true)
+  config      Json?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  connections PlatformConnection[]
+  articles    Article[]
+  publishJobs PublishJob[]
+
+  @@map("sites")
+}
+
+model PlatformConnection {
+  id                   Int       @id @default(autoincrement())
+  siteId               Int
+  kind                 String
+  encryptedCredentials String?   @db.Text
+  status               String    @default("UNKNOWN")
+  lastCheckedAt        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  site                 Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@map("platform_connections")
+}
+
+// ── 키워드 ───────────────────────────────────────────────────────
+
+enum KeywordStatus {
+  RECOMMENDED
+  SAVED
+  EXCLUDED
+  USED
+}
+
+model Keyword {
+  id              Int                          @id @default(autoincrement())
+  text            String
+  category        String?
+  sourceType      String? // ISSUE | EVERGREEN | REVENUE | SEARCH_CONSOLE | MANUAL
+  searchIntent    String?
+  status          KeywordStatus                @default(RECOMMENDED)
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+  metrics         KeywordMetric[]
+  recommendations DailyKeywordRecommendation[]
+  articles        Article[]
+
+  @@unique([text])
+  @@map("keywords")
+}
+
+model KeywordMetric {
+  id                 Int      @id @default(autoincrement())
+  keywordId          Int
+  date               DateTime @db.Date
+  source             String // GOOGLE_ADS | NAVER_SEARCHAD | ...
+  avgMonthlySearches Int?
+  cpcMicros          BigInt?
+  currency           String?
+  competition        String?
+  competitionIndex   Int?
+  raw                Json?
+  createdAt          DateTime @default(now())
+  keyword            Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([keywordId, date, source])
+  @@map("keyword_metrics")
+}
+
+model DailyKeywordRecommendation {
+  id               Int      @id @default(autoincrement())
+  keywordId        Int
+  date             DateTime @db.Date
+  rank             Int
+  reason           String?  @db.Text
+  revenueScore     Int?
+  valueScore       Int?
+  opportunityScore Int?
+  finalScore       Int?
+  data             Json?
+  createdAt        DateTime @default(now())
+  keyword          Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([keywordId, date])
+  @@index([date])
+  @@map("daily_keyword_recommendations")
+}
+
+// ── 콘텐츠 ───────────────────────────────────────────────────────
+
+enum ArticleStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+model Article {
+  id              Int               @id @default(autoincrement())
+  keywordId       Int?
+  siteId          Int?
+  title           String
+  slug            String?
+  language        String            @default("ko")
+  articleType     String            @default("guide")
+  status          ArticleStatus     @default(DRAFT)
+  metaTitle       String?
+  metaDescription String?           @db.Text
+  excerpt         String?           @db.Text
+  contentMarkdown String?           @db.LongText
+  contentHtml     String?           @db.LongText
+  qualityScore    Int?
+  qualityReport   Json?
+  publishAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  keyword         Keyword?          @relation(fields: [keywordId], references: [id], onDelete: SetNull)
+  site            Site?             @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  versions        ArticleVersion[]
+  sources         ArticleSource[]
+  schemas         ArticleSchema[]
+  media           MediaAsset[]
+  publishJobs     PublishJob[]
+  categories      ArticleCategory[]
+  tags            ArticleTag[]
+  analytics       AnalyticsDaily[]
+
+  @@index([status])
+  @@map("articles")
+}
+
+model ArticleVersion {
+  id              Int      @id @default(autoincrement())
+  articleId       Int
+  version         Int
+  title           String
+  contentMarkdown String?  @db.LongText
+  contentHtml     String?  @db.LongText
+  changeNote      String?
+  createdAt       DateTime @default(now())
+  article         Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, version])
+  @@map("article_versions")
+}
+
+model ArticleSource {
+  id          Int       @id @default(autoincrement())
+  articleId   Int
+  url         String    @db.Text
+  title       String?
+  publisher   String?
+  publishedAt DateTime?
+  verifiedAt  DateTime?
+  status      String    @default("PENDING") // PENDING | VERIFIED | BROKEN
+  createdAt   DateTime  @default(now())
+  article     Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@map("article_sources")
+}
+
+model ArticleSchema {
+  id         Int      @id @default(autoincrement())
+  articleId  Int
+  schemaType String // Article | NewsArticle | BlogPosting | FAQPage | Product | Review | HowTo | BreadcrumbList
+  jsonLd     Json
+  isEnabled  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@map("article_schemas")
+}
+
+model Category {
+  id       Int               @id @default(autoincrement())
+  name     String            @unique
+  slug     String            @unique
+  articles ArticleCategory[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id       Int          @id @default(autoincrement())
+  name     String       @unique
+  slug     String       @unique
+  articles ArticleTag[]
+
+  @@map("tags")
+}
+
+model ArticleCategory {
+  articleId  Int
+  categoryId Int
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, categoryId])
+  @@map("article_categories")
+}
+
+model ArticleTag {
+  articleId Int
+  tagId     Int
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@map("article_tags")
+}
+
+model MediaAsset {
+  id          Int      @id @default(autoincrement())
+  articleId   Int?
+  kind        String   @default("CONTENT") // FEATURED | CONTENT
+  prompt      String?  @db.Text
+  altText     String?
+  caption     String?
+  fileName    String?
+  originalUrl String?  @db.Text
+  webpUrl     String?  @db.Text
+  width       Int?
+  height      Int?
+  bytes       Int?
+  position    Int?
+  createdAt   DateTime @default(now())
+  article     Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+
+  @@index([articleId])
+  @@map("media_assets")
+}
+
+// ── 스케줄 · 발행 ────────────────────────────────────────────────
+
+model Schedule {
+  id        Int       @id @default(autoincrement())
+  name      String
+  jobType   String // KEYWORD_COLLECT | ARTICLE_GENERATE | PUBLISH | ANALYTICS_SYNC
+  cron      String
+  isActive  Boolean   @default(true)
+  config    Json?
+  lastRunAt DateTime?
+  nextRunAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("schedules")
+}
+
+enum PublishJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+model PublishJob {
+  id           Int              @id @default(autoincrement())
+  articleId    Int
+  siteId       Int?
+  platform     Platform
+  status       PublishJobStatus @default(QUEUED)
+  scheduledAt  DateTime?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  publishedUrl String?          @db.Text
+  error        String?          @db.Text
+  retryCount   Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  article      Article          @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  site         Site?            @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  logs         PublishLog[]
+
+  @@index([status])
+  @@map("publish_jobs")
+}
+
+model PublishLog {
+  id           Int        @id @default(autoincrement())
+  publishJobId Int
+  level        String     @default("INFO")
+  message      String     @db.Text
+  createdAt    DateTime   @default(now())
+  publishJob   PublishJob @relation(fields: [publishJobId], references: [id], onDelete: Cascade)
+
+  @@index([publishJobId])
+  @@map("publish_logs")
+}
+
+// ── 사용량 · 확장 · 분석 ─────────────────────────────────────────
+
+model ModelUsageLog {
+  id           Int      @id @default(autoincrement())
+  provider     String // anthropic | gemini | google-ads | ...
+  model        String
+  operation    String
+  inputTokens  Int?
+  outputTokens Int?
+  costMicros   BigInt?
+  articleId    Int?
+  createdAt    DateTime @default(now())
+
+  @@index([provider, createdAt])
+  @@map("model_usage_logs")
+}
+
+model ExtensionDevice {
+  id         Int       @id @default(autoincrement())
+  name       String
+  tokenHash  String    @unique
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@map("extension_devices")
+}
+
+model AnalyticsDaily {
+  id              Int      @id @default(autoincrement())
+  date            DateTime @db.Date
+  articleId       Int?
+  source          String // SEARCH_CONSOLE | GA4 | ADSENSE
+  impressions     Int?
+  clicks          Int?
+  pageviews       Int?
+  avgPosition     Float?
+  adRevenueMicros BigInt?
+  rpmMicros       BigInt?
+  raw             Json?
+  createdAt       DateTime @default(now())
+  article         Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+
+  @@unique([date, articleId, source])
+  @@map("analytics_daily")
+}

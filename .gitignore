@@ -1,0 +1,17 @@
+# 배포·서버 접속 정보 (절대 커밋 금지)
+config/
+*.pem
+
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.local
+.DS_Store
+Thumbs.db
+apps/api/prisma/migrations/**/migration_lock.toml.bak
+apps/web/.vite/
+coverage/
+*.log
+storage/

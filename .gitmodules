@@ -1,0 +1,3 @@
+[submodule "myDev"]
+	path = myDev
+	url = https://github.com/homebox78/myDev.git
