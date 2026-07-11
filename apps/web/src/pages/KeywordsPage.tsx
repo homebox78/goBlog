@@ -32,6 +32,7 @@ interface KeywordItem {
   status: string;
   reason: string | null;
   totalDocs: number | null;
+  competitionScore: number | null;
   scores: {
     revenue: number | null;
     value: number | null;
@@ -60,6 +61,18 @@ const TYPE_LABEL: Record<string, { label: string; className: string }> = {
 
 const numberFormat = (value: number | null) =>
   value === null ? "—" : new Intl.NumberFormat("ko-KR").format(value);
+
+/** 점수를 색으로 구분해 직관적으로 (높을수록 초록, 낮을수록 회색) */
+function ScoreCell({ value, strong }: { value: number | null; strong?: boolean }) {
+  if (value === null) return <span className="text-muted-foreground">—</span>;
+  const color =
+    value >= 70
+      ? "text-emerald-600"
+      : value >= 45
+        ? "text-foreground"
+        : "text-muted-foreground";
+  return <span className={`font-mono text-sm ${color} ${strong ? "font-bold" : ""}`}>{value}</span>;
+}
 
 /** 키워드 문구·유형·검색의도로 어울리는 글 유형을 추천한다 */
 function suggestArticleType(item: KeywordItem): string {
@@ -192,13 +205,14 @@ export default function KeywordsPage() {
                   <TableHead className="w-10 text-center">#</TableHead>
                   <TableHead>키워드</TableHead>
                   <TableHead className="text-center">유형</TableHead>
-                  <TableHead className="text-center">카테고리</TableHead>
-                  <TableHead className="text-right">검색량(G)</TableHead>
                   <TableHead className="text-right">검색량(N)</TableHead>
                   <TableHead className="text-right">경쟁문서</TableHead>
-                  <TableHead className="text-right">CPC</TableHead>
-                  <TableHead className="text-right">종합점수</TableHead>
-                  <TableHead className="w-24 text-center">액션</TableHead>
+                  <TableHead className="text-right">경쟁효율</TableHead>
+                  <TableHead className="text-right">수익</TableHead>
+                  <TableHead className="text-right">가치</TableHead>
+                  <TableHead className="text-right">기회</TableHead>
+                  <TableHead className="text-right">종합</TableHead>
+                  <TableHead className="w-20 text-center">액션</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -234,26 +248,26 @@ export default function KeywordsPage() {
                       <TableCell className="text-center">
                         {type ? <Badge className={type.className}>{type.label}</Badge> : "—"}
                       </TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">
-                        {item.category ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {numberFormat(item.metrics.googleMonthlySearches)}
-                      </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {numberFormat(item.metrics.naverMonthlySearches)}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">
                         {numberFormat(item.totalDocs)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {item.metrics.googleCpcKrw === null
-                          ? "—"
-                          : `₩${numberFormat(item.metrics.googleCpcKrw)}`}
+                      <TableCell className="text-right">
+                        <ScoreCell value={item.competitionScore} strong />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ScoreCell value={item.scores.revenue} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ScoreCell value={item.scores.value} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ScoreCell value={item.scores.opportunity} />
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="font-bold">{item.scores.final ?? "—"}</span>
-                        <span className="text-xs text-muted-foreground">점</span>
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-center gap-1">
@@ -321,9 +335,14 @@ export default function KeywordsPage() {
                 })}
               </TableBody>
             </Table>
-            <p className="mt-3 text-xs text-muted-foreground">
-              검색량(G)·CPC는 Google Ads, 검색량(N)은 네이버 검색광고 데이터입니다. API 미연결 시
-              "—"로 표시되며 임의 수치를 만들지 않습니다.
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              <b>순위 기준(종합점수)</b> = 상위노출 기회 45% + 수익 30% + 가치 25%. 신생 블로그가
+              실제로 상위 노출될 수 있는 키워드를 우선합니다.
+              <br />
+              <b>경쟁효율</b> = 검색량 대비 경쟁문서 수 (높을수록 경쟁 적고 유리) — 순위를 좌우하는
+              핵심 지표입니다. <b>수익</b>=CPC·구매의도, <b>가치</b>=시의성·문제해결,{" "}
+              <b>기회</b>=경쟁효율·정보공백 종합. 검색량(N)·경쟁문서는 네이버 실측이며 API 미연결
+              항목은 "—"입니다.
             </p>
           </CardContent>
         </Card>

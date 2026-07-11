@@ -196,36 +196,50 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
         ? Number(google.cpcMicros)
         : null;
 
-      const revenueScore = weighted([
-        { score: cpc !== null ? logScore(cpc, maxCpc) : null, weight: 0.3 },
-        { score: volume !== null ? logScore(volume, maxVolume) : null, weight: 0.25 },
-        { score: candidate.commercialIntent, weight: 0.3 },
-        { score: google?.competitionIndex ?? null, weight: 0.15 },
-      ]);
-      const valueScore = weighted([
-        { score: candidate.freshness, weight: 0.35 },
-        { score: candidate.problemSolving, weight: 0.4 },
-      ]);
-      // 상위노출 기회: 네이버 블로그 경쟁 문서 수(실측)를 최우선 반영 — 저경쟁 롱테일 우대
       const comp = competition.get(key) ?? null;
-      const competitionScore = lowCompetitionScore(volume, comp?.totalDocs ?? null);
+      const totalDocs = comp?.totalDocs ?? null;
+
+      // 수익 가능성: CPC·구매의도·검색량. 신생 블로그라 검색량 비중은 낮춘다(검색량↑=경쟁↑).
+      const revenueScore = weighted([
+        { score: cpc !== null ? logScore(cpc, maxCpc) : null, weight: 0.35 },
+        { score: candidate.commercialIntent, weight: 0.4 },
+        { score: volume !== null ? logScore(volume, maxVolume) : null, weight: 0.15 },
+        { score: google?.competitionIndex ?? null, weight: 0.1 },
+      ]);
+
+      // 콘텐츠 가치: 이슈 시의성·문제 해결
+      const valueScore = weighted([
+        { score: candidate.freshness, weight: 0.4 },
+        { score: candidate.problemSolving, weight: 0.4 },
+        { score: candidate.contentGap, weight: 0.2 },
+      ]);
+
+      // 상위노출 기회 = 경쟁 효율(검색량÷경쟁문서)이 핵심. 신생 블로그가 실제로 이길 수 있는지.
+      const competitionScore = lowCompetitionScore(volume, totalDocs);
       const opportunityScore = weighted([
-        { score: competitionScore, weight: 0.45 },
-        { score: candidate.contentGap, weight: 0.35 },
+        { score: competitionScore, weight: 0.7 },
+        { score: candidate.contentGap, weight: 0.15 },
         {
           score: google?.competitionIndex !== null && google?.competitionIndex !== undefined
             ? 100 - google.competitionIndex
             : null,
-          weight: 0.2,
+          weight: 0.15,
         },
       ]);
-      const finalScore = Math.round(
-        revenueScore * 0.4 + valueScore * 0.35 + opportunityScore * 0.25,
+
+      // 신생 블로그 목표(조회수) → 상위노출 기회 45%, 수익 30%, 가치 25%.
+      // 단 경쟁문서를 아직 못 구한 키워드는 기회 점수 신뢰도가 낮아 소폭 감점.
+      const noCompetitionData = totalDocs === null;
+      const finalScore = Math.max(
+        0,
+        Math.round(
+          opportunityScore * 0.45 + revenueScore * 0.3 + valueScore * 0.25 - (noCompetitionData ? 8 : 0),
+        ),
       );
 
       return {
-        candidate, google, naver, volume, revenueScore, valueScore, opportunityScore, finalScore,
-        totalDocs: comp?.totalDocs ?? null,
+        candidate, google, naver, volume, revenueScore, valueScore, opportunityScore,
+        competitionScore, finalScore, totalDocs,
       };
     });
 
@@ -288,7 +302,13 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
           valueScore: row.valueScore,
           opportunityScore: row.opportunityScore,
           finalScore: row.finalScore,
-          data: { trigger, type: row.candidate.type, category: row.candidate.category, totalDocs: row.totalDocs },
+          data: {
+            trigger,
+            type: row.candidate.type,
+            category: row.candidate.category,
+            totalDocs: row.totalDocs,
+            competitionScore: row.competitionScore,
+          },
         },
         create: {
           keywordId: keyword.id,
@@ -299,7 +319,13 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
           valueScore: row.valueScore,
           opportunityScore: row.opportunityScore,
           finalScore: row.finalScore,
-          data: { trigger, type: row.candidate.type, category: row.candidate.category, totalDocs: row.totalDocs },
+          data: {
+            trigger,
+            type: row.candidate.type,
+            category: row.candidate.category,
+            totalDocs: row.totalDocs,
+            competitionScore: row.competitionScore,
+          },
         },
       });
     }

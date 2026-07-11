@@ -18,7 +18,7 @@ keywordsRouter.get(
     const recommendations = await prisma.dailyKeywordRecommendation.findMany({
       where: { date },
       orderBy: { finalScore: "desc" },
-      take: 60,
+      take: 30,
       include: {
         keyword: {
           include: {
@@ -44,6 +44,7 @@ keywordsRouter.get(
           status: row.keyword.status,
           reason: row.reason,
           totalDocs: (row.data as { totalDocs?: number } | null)?.totalDocs ?? null,
+          competitionScore: (row.data as { competitionScore?: number } | null)?.competitionScore ?? null,
           scores: {
             revenue: row.revenueScore,
             value: row.valueScore,
