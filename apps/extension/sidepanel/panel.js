@@ -115,6 +115,7 @@ async function openArticle(id) {
   $("#detailTitle").textContent = article.title;
   $("#detailCategory").textContent = article.category ? `📁 ${article.category} 카테고리에 발행` : "";
   $("#detail").classList.remove("hidden");
+  $("#actionBar").classList.remove("hidden");
   $("#notes").innerHTML = "";
   detectPlatform();
 }
@@ -206,13 +207,14 @@ async function copyBody() {
   $("#notes").appendChild(li);
 }
 
+// 발행 완료는 background가 발행 게시글 URL 이동을 감지해 자동 기록한다.
+// 이 함수는 자동 감지가 실패했을 때를 위한 수동 폴백(URL 입력 없이 현재 글을 발행 완료 처리).
 async function markPublished() {
   if (!currentArticle) return;
-  const url = $("#publishedUrl").value.trim();
   await fetch(`${config.apiBase}/api/extension/articles/${currentArticle.id}/published`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Extension-Token": config.token },
-    body: JSON.stringify({ platform: currentPlatform ?? "NAVER_BLOG", url: url || null }),
+    body: JSON.stringify({ platform: currentPlatform ?? "NAVER_BLOG", url: null }),
   });
   const li = document.createElement("li");
   li.textContent = "발행 완료로 기록했습니다.";
