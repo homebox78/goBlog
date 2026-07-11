@@ -60,9 +60,36 @@ const TYPE_LABEL: Record<string, { label: string; className: string }> = {
 const numberFormat = (value: number | null) =>
   value === null ? "—" : new Intl.NumberFormat("ko-KR").format(value);
 
+/** 키워드 문구·유형·검색의도로 어울리는 글 유형을 추천한다 */
+function suggestArticleType(item: KeywordItem): string {
+  const keyword = item.keyword;
+  if (/후기|리뷰/.test(keyword)) return "product-review";
+  if (/추천|비교|vs/i.test(keyword)) return "comparison";
+  if (/신청|가입|접수/.test(keyword)) return "how-to-apply";
+  if (/비용|가격|요금|수수료|예상가/.test(keyword)) return "pricing";
+  if (/방법|사용법|하는 법/.test(keyword)) return "how-to";
+  if (/해결|오류|대처|안 될 때/.test(keyword)) return "troubleshooting";
+  if (item.type === "ISSUE") return "news";
+  switch (item.searchIntent) {
+    case "비교검토":
+    case "구매전환":
+      return "comparison";
+    case "신청전환":
+      return "how-to-apply";
+    case "문제해결":
+      return "troubleshooting";
+    default:
+      return "guide";
+  }
+}
+
 export default function KeywordsPage() {
   const queryClient = useQueryClient();
-  const [generateTarget, setGenerateTarget] = useState<{ id: number; keyword: string } | null>(null);
+  const [generateTarget, setGenerateTarget] = useState<{
+    id: number;
+    keyword: string;
+    articleType: string;
+  } | null>(null);
 
   const query = useQuery({
     queryKey: ["keywords", "today"],
@@ -212,7 +239,11 @@ export default function KeywordsPage() {
                                 size="icon"
                                 className="size-7"
                                 onClick={() =>
-                                  setGenerateTarget({ id: item.id, keyword: item.keyword })
+                                  setGenerateTarget({
+                                    id: item.id,
+                                    keyword: item.keyword,
+                                    articleType: suggestArticleType(item),
+                                  })
                                 }
                               >
                                 <PenLine className="size-4" />
@@ -276,6 +307,7 @@ export default function KeywordsPage() {
       <GenerateDialog
         keywordId={generateTarget?.id ?? null}
         keyword={generateTarget?.keyword ?? ""}
+        defaultArticleType={generateTarget?.articleType}
         open={generateTarget !== null}
         onOpenChange={(open) => !open && setGenerateTarget(null)}
       />

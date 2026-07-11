@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -65,17 +65,26 @@ export function GenerateDialog({
   keywordId,
   keyword,
   product,
+  defaultArticleType,
   open,
   onOpenChange,
 }: {
   keywordId?: number | null;
   keyword: string;
   product?: ProductPayload | null;
+  defaultArticleType?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const navigate = useNavigate();
   const [articleType, setArticleType] = useState(product ? "product-review" : "guide");
+
+  // 모달이 열릴 때마다 대상 키워드/상품에 맞는 글 유형을 기본 선택한다
+  useEffect(() => {
+    if (open) {
+      setArticleType(product ? "product-review" : (defaultArticleType ?? "guide"));
+    }
+  }, [open, product, defaultArticleType]);
   const [language, setLanguage] = useState("ko");
   const [length, setLength] = useState("2000");
   const [withFaq, setWithFaq] = useState(true);
