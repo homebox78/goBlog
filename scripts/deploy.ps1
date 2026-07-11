@@ -60,7 +60,9 @@ $serverEnv = @(
     "ADMIN_PASSWORD=$(Get-EnvValue $rootEnv 'ADMIN_PASSWORD')",
     "SESSION_SECRET=$(Get-EnvValue $rootEnv 'SESSION_SECRET')",
     "MASTER_ENCRYPTION_KEY=$(Get-EnvValue $rootEnv 'MASTER_ENCRYPTION_KEY')",
-    "EXTENSION_TOKEN=$(Get-EnvValue $rootEnv 'EXTENSION_TOKEN')"
+    "EXTENSION_TOKEN=$(Get-EnvValue $rootEnv 'EXTENSION_TOKEN')",
+    "MEDIA_DIR=/var/www/html/goBlog/media",
+    "MEDIA_PUBLIC_URL=https://hom2box.com/goBlog/media"
 ) -join "`n"
 [IO.File]::WriteAllText("$stage\server.env", $serverEnv + "`n", [Text.UTF8Encoding]::new($false))
 
@@ -87,9 +89,11 @@ mkdir -p ~/goblog-api
 tar xzf /tmp/api.tar.gz -C ~/goblog-api
 mv /tmp/server.env ~/goblog-api/.env
 chmod 600 ~/goblog-api/.env
-cd ~/goblog-api && npm install --no-audit --no-fund 2>&1 | tail -2
+cd ~/goblog-api && /opt/node22/bin/npm install --no-audit --no-fund 2>&1 | tail -2
+# sharp 네이티브 바인딩이 optional deps에서 누락되는 경우 보정
+/opt/node22/bin/node -e "require('sharp')" 2>/dev/null || /opt/node22/bin/npm install --no-save @img/sharp-linux-x64 2>&1 | tail -1
 
-mkdir -p /var/www/html/goBlog
+mkdir -p /var/www/html/goBlog /var/www/html/goBlog/media
 rm -rf /var/www/html/goBlog/assets
 tar xzf /tmp/web.tar.gz -C /var/www/html/goBlog
 mv /tmp/htaccess /var/www/html/goBlog/.htaccess

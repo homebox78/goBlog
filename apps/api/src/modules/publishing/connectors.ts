@@ -1,0 +1,114 @@
+import { prisma } from "../../common/prisma.js";
+import { getSettingValues } from "../settings/settings.service.js";
+
+export interface PublishResult {
+  url: string;
+}
+
+async function googleAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<string> {
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+  const data = (await res.json()) as { access_token?: string; error_description?: string };
+  if (!data.access_token) throw new Error(`Google OAuth 실패: ${data.error_description ?? "토큰 없음"}`);
+  return data.access_token;
+}
+
+/** Blogger — blogId는 숫자 ID 또는 블로그 URL 모두 허용 (URL이면 byurl로 해석) */
+export async function publishToBlogger(article: {
+  title: string;
+  contentHtml: string | null;
+  metaDescription: string | null;
+}): Promise<PublishResult> {
+  const values = await getSettingValues([
+    "blogger.blogId",
+    "blogger.clientId",
+    "blogger.clientSecret",
+    "blogger.refreshToken",
+  ]);
+  const blogIdRaw = values["blogger.blogId"];
+  if (!blogIdRaw) throw new Error("Blogger Blog ID(또는 블로그 주소)가 설정되지 않았습니다.");
+  if (!values["blogger.clientId"] || !values["blogger.clientSecret"] || !values["blogger.refreshToken"]) {
+    throw new Error("Blogger OAuth(Client ID/Secret/Refresh Token)가 설정되지 않았습니다.");
+  }
+
+  const token = await googleAccessToken(
+    values["blogger.clientId"]!,
+    values["blogger.clientSecret"]!,
+    values["blogger.refreshToken"]!,
+  );
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+  let blogId = blogIdRaw.trim();
+  if (/^https?:\/\//i.test(blogId)) {
+    const byUrl = await fetch(
+      `https://www.googleapis.com/blogger/v3/blogs/byurl?url=${encodeURIComponent(blogId)}`,
+      { headers },
+    );
+    const blog = (await byUrl.json()) as { id?: string; error?: { message?: string } };
+    if (!blog.id) throw new Error(`Blogger 블로그 조회 실패: ${blog.error?.message ?? "ID 없음"}`);
+    blogId = blog.id;
+  }
+
+  const res = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ title: article.title, content: article.contentHtml ?? "" }),
+  });
+  const post = (await res.json()) as { url?: string; error?: { message?: string } };
+  if (!res.ok || !post.url) throw new Error(`Blogger 발행 실패: ${post.error?.message ?? `HTTP ${res.status}`}`);
+  return { url: post.url };
+}
+
+/** Instagram Graph API — 대표 이미지(공개 URL) + 캡션 발행 */
+export async function publishToInstagram(article: {
+  id: number;
+  title: string;
+  excerpt: string | null;
+  contentMarkdown: string | null;
+}): Promise<PublishResult> {
+  const values = await getSettingValues(["instagram.businessAccountId", "instagram.accessToken"]);
+  const accountId = values["instagram.businessAccountId"];
+  const token = values["instagram.accessToken"];
+  if (!accountId || !token) {
+    throw new Error("Instagram 비즈니스 계정 ID·액세스 토큰이 설정되지 않았습니다.");
+  }
+
+  const featured = await prisma.mediaAsset.findFirst({
+    where: { articleId: article.id, kind: "FEATURED", webpUrl: { not: null } },
+  });
+  const imageUrl = featured?.originalUrl ?? featured?.webpUrl;
+  if (!imageUrl) throw new Error("발행할 대표 이미지가 없습니다. 먼저 이미지를 생성해주세요.");
+
+  // 대가성 문구(본문 첫 blockquote)를 캡션에도 유지
+  const disclosure = /^>\s*(.+)$/m.exec(article.contentMarkdown ?? "")?.[1] ?? "";
+  const caption = [article.title, "", article.excerpt ?? "", "", disclosure]
+    .join("\n")
+    .trim()
+    .slice(0, 2000);
+
+  const createRes = await fetch(`https://graph.facebook.com/v21.0/${accountId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image_url: imageUrl, caption, access_token: token }),
+  });
+  const container = (await createRes.json()) as { id?: string; error?: { message?: string } };
+  if (!container.id) throw new Error(`Instagram 컨테이너 생성 실패: ${container.error?.message ?? "ID 없음"}`);
+
+  const publishRes = await fetch(`https://graph.facebook.com/v21.0/${accountId}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ creation_id: container.id, access_token: token }),
+  });
+  const published = (await publishRes.json()) as { id?: string; error?: { message?: string } };
+  if (!published.id) throw new Error(`Instagram 발행 실패: ${published.error?.message ?? "ID 없음"}`);
+
+  return { url: `https://www.instagram.com/p/${published.id}` };
+}

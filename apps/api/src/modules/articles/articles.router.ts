@@ -65,6 +65,15 @@ articlesRouter.post(
   }),
 );
 
+/** Gemini 이미지 생성 + 본문 삽입 */
+articlesRouter.post(
+  "/:id/images",
+  asyncHandler(async (req, res) => {
+    const { generateArticleImages } = await import("../images/image-service.js");
+    res.json(await generateArticleImages(Number(req.params.id)));
+  }),
+);
+
 /** 글 상세 */
 articlesRouter.get(
   "/:id",

@@ -9,6 +9,8 @@ import { dashboardRouter } from "./modules/analytics/dashboard.router.js";
 import { keywordsRouter } from "./modules/keywords/keywords.router.js";
 import { articlesRouter } from "./modules/articles/articles.router.js";
 import { productsRouter } from "./modules/products/products.router.js";
+import { publishRouter } from "./modules/publishing/publish.router.js";
+import { mediaDir } from "./modules/images/image-service.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 export function createApp() {
@@ -38,6 +40,8 @@ export function createApp() {
   app.use("/api/keywords", keywordsRouter);
   app.use("/api/articles", articlesRouter);
   app.use("/api/products", productsRouter);
+  app.use("/api/publish-jobs", publishRouter);
+  app.use("/media", express.static(mediaDir(), { maxAge: "7d" }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

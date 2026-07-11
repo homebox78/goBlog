@@ -59,7 +59,10 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "wordpress.url", group: "platforms", label: "WordPress URL", secret: false },
   { key: "wordpress.username", group: "platforms", label: "WordPress Username", secret: false },
   { key: "wordpress.appPassword", group: "platforms", label: "WordPress Application Password", secret: true },
-  { key: "blogger.blogId", group: "platforms", label: "Blogger Blog ID", secret: false },
+  { key: "blogger.blogId", group: "platforms", label: "Blogger 블로그 주소 또는 ID", secret: false },
+  { key: "blogger.clientId", group: "platforms", label: "Blogger OAuth Client ID", secret: false },
+  { key: "blogger.clientSecret", group: "platforms", label: "Blogger OAuth Client Secret", secret: true },
+  { key: "blogger.refreshToken", group: "platforms", label: "Blogger OAuth Refresh Token", secret: true },
   { key: "naverBlog.writeUrl", group: "platforms", label: "네이버 블로그 작성 URL", secret: false },
   // 브랜드커넥트는 공개 API가 없어 Chrome 확장(6단계)에서 브라우저 세션으로 연동한다.
   { key: "naverBrandConnect.url", group: "platforms", label: "네이버 브랜드커넥트 크리에이터 URL", secret: false },

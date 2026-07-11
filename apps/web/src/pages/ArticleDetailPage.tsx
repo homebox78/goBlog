@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, History, Loader2, Save, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, Save, Send, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,7 @@ interface ArticleDetail {
     prompt: string | null;
     altText: string | null;
     position: number | null;
+    webpUrl: string | null;
   }>;
   versions: Array<{ id: number; version: number; title: string; changeNote: string | null; createdAt: string }>;
 }
@@ -95,6 +96,34 @@ export default function ArticleDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["article", id] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "복원 실패"),
+  });
+
+  const imagesMutation = useMutation({
+    mutationFn: () => api.post<{ generated: number; failed: number }>(`/api/articles/${id}/images`),
+    onSuccess: (result) => {
+      toast.success(`이미지 ${result.generated}장 생성${result.failed ? ` (실패 ${result.failed})` : ""}`);
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 생성 실패"),
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: (platform: string) =>
+      api.post<{ jobId: number }>("/api/publish-jobs", { articleId: Number(id), platform }),
+    onSuccess: () => {
+      toast.success("발행 작업을 등록했습니다. 잠시 후 상태가 갱신됩니다.");
+      queryClient.invalidateQueries({ queryKey: ["publish-jobs", id] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "발행 요청 실패"),
+  });
+
+  const jobsQuery = useQuery({
+    queryKey: ["publish-jobs", id],
+    queryFn: () =>
+      api.get<{ jobs: Array<{ id: number; platform: string; status: string; publishedUrl: string | null; error: string | null }> }>(
+        `/api/publish-jobs?articleId=${id}`,
+      ),
+    refetchInterval: 15000,
   });
 
   const schemaToggleMutation = useMutation({
@@ -276,19 +305,108 @@ export default function ArticleDetailPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">이미지 프롬프트 ({article.media.length})</CardTitle>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm">이미지 ({article.media.length})</CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={imagesMutation.isPending}
+                onClick={() => imagesMutation.mutate()}
+              >
+                {imagesMutation.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <ImagePlus className="size-3.5" />
+                )}
+                Gemini 생성
+              </Button>
             </CardHeader>
             <CardContent className="space-y-2">
+              {imagesMutation.isPending && (
+                <p className="text-xs text-muted-foreground">이미지 생성 중... (장당 10~20초)</p>
+              )}
               {article.media.map((asset) => (
                 <div key={asset.id} className="rounded-md border p-2 text-xs">
-                  <Badge variant="secondary" className="mb-1 text-[10px]">
-                    {asset.kind === "FEATURED" ? "대표" : `본문 ${asset.position ?? ""}`}
-                  </Badge>
-                  <p className="line-clamp-2 text-muted-foreground">{asset.prompt}</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px]">
+                      {asset.kind === "FEATURED" ? "대표" : `본문 ${asset.position ?? ""}`}
+                    </Badge>
+                    {asset.webpUrl && <Badge className="text-[10px]">생성됨</Badge>}
+                  </div>
+                  {asset.webpUrl ? (
+                    <img
+                      src={asset.webpUrl}
+                      alt={asset.altText ?? ""}
+                      className="mt-2 max-h-28 rounded-md object-cover"
+                    />
+                  ) : (
+                    <p className="mt-1 line-clamp-2 text-muted-foreground">{asset.prompt}</p>
+                  )}
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground">4단계에서 Gemini로 생성됩니다.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-1 text-sm">
+                <Send className="size-3.5" /> 발행
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  disabled={publishMutation.isPending}
+                  onClick={() => publishMutation.mutate("BLOGGER")}
+                >
+                  Blogger 발행
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={publishMutation.isPending}
+                  onClick={() => publishMutation.mutate("INSTAGRAM")}
+                >
+                  Instagram
+                </Button>
+              </div>
+              {(jobsQuery.data?.jobs ?? []).slice(0, 5).map((job) => (
+                <div key={job.id} className="rounded-md border p-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span>{job.platform}</span>
+                    <Badge
+                      variant={
+                        job.status === "FAILED"
+                          ? "destructive"
+                          : job.status === "SUCCEEDED"
+                            ? "default"
+                            : "secondary"
+                      }
+                      className="text-[10px]"
+                    >
+                      {job.status}
+                    </Badge>
+                  </div>
+                  {job.publishedUrl && (
+                    <a
+                      href={job.publishedUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block truncate text-blue-600 hover:underline"
+                    >
+                      {job.publishedUrl}
+                    </a>
+                  )}
+                  {job.error && <p className="mt-1 text-destructive">{job.error}</p>}
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">
+                85점 미만은 자동발행이 차단됩니다. 네이버·티스토리는 Chrome 확장(6단계)에서
+                지원됩니다.
+              </p>
             </CardContent>
           </Card>
 
