@@ -15,6 +15,16 @@ async function init() {
 
   $("#version").textContent = "v" + chrome.runtime.getManifest().version;
 
+  // background가 발행 성공을 감지해 자동 기록하면 목록을 새로고침한다
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg?.type === "PUBLISHED") {
+      const li = document.createElement("li");
+      li.textContent = "발행 완료가 자동 기록되었습니다.";
+      $("#notes").appendChild(li);
+      loadArticles();
+    }
+  });
+
   $("#saveSetup").addEventListener("click", saveSetup);
   $("#openSetup").addEventListener("click", () => $("#setup").classList.toggle("hidden"));
   $("#refresh").addEventListener("click", loadArticles);
@@ -129,6 +139,14 @@ function buildBodyHtml() {
 async function applyToForm() {
   if (!currentArticle) return;
   await detectPlatform();
+
+  // 발행 완료를 백엔드가 자동 기록하도록, '어떤 글을 어느 플랫폼에 올리는 중'인지 저장해둔다.
+  // background가 발행 성공(게시글 URL 이동)을 감지하면 이 정보로 자동 기록한다.
+  if (currentPlatform === "NAVER_BLOG" || currentPlatform === "TISTORY") {
+    await chrome.storage.local.set({
+      pendingPublish: { articleId: currentArticle.id, platform: currentPlatform },
+    });
+  }
 
   const title = naverTitle();
   const html = buildBodyHtml();
