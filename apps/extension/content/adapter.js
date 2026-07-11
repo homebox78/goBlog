@@ -67,34 +67,22 @@ async function applyTistory({ title, html, plainText }) {
   return { ok: true, notes };
 }
 
-/** 네이버 스마트에디터 ONE: DOM 직접 조작이 잘 깨져 클립보드 붙여넣기 방식이 기본 */
-async function applyNaver({ title, html, plainText }) {
-  const notes = [];
-
-  // 제목: contenteditable 영역에 삽입 시도
-  const titleArea = firstElement([".se-title-text .se-text-paragraph", ".se-documentTitle .se-text-paragraph"]);
-  if (titleArea) {
-    try {
-      titleArea.focus();
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(titleArea);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      document.execCommand("insertText", false, title);
-      notes.push("제목 입력 시도 완료 (확인 필요)");
-    } catch {
-      notes.push("제목 자동 입력 실패 — 직접 입력해주세요");
-    }
-  } else {
-    notes.push("제목 영역을 찾지 못했습니다 — 직접 입력해주세요");
-  }
-
+/**
+ * 네이버 스마트에디터 ONE.
+ * 제목·본문 문단(.se-text-paragraph)은 contenteditable이 아니고, 에디터가 화면 밖 숨은
+ * contenteditable DIV로 입력을 받아 내부 모델로 렌더한다 → execCommand/DOM 직접 입력이 반영되지 않는다.
+ * 따라서 붙여넣기(클립보드)만 안정적이며, 제목은 사이드패널의 2단계 복사로 처리한다.
+ */
+async function applyNaver({ html, plainText }) {
   await copyHtmlToClipboard(html, plainText);
-  notes.push("본문을 클립보드에 복사했습니다 — 본문 영역을 클릭하고 Ctrl+V로 붙여넣으세요");
-  notes.push("규정: 쇼핑커넥트 글은 대가성 문구가 제목 앞·본문 최상단에 있어야 합니다");
-
-  return { ok: true, notes };
+  return {
+    ok: true,
+    notes: [
+      "본문을 클립보드에 복사했습니다 — 본문 영역을 클릭하고 Ctrl+V로 붙여넣으세요",
+      "제목은 사이드패널 '작성폼에 넣기'가 따로 복사합니다 — 제목칸 클릭 후 Ctrl+V",
+      "쇼핑커넥트 글은 대가성 문구가 제목 앞·본문 최상단에 있어야 합니다",
+    ],
+  };
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

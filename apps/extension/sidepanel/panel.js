@@ -99,20 +99,52 @@ function plainText(html) {
   return div.innerText;
 }
 
-async function applyToForm() {
-  if (!currentArticle) return;
-  await detectPlatform();
+function showNotes(items) {
+  const notes = $("#notes");
+  notes.innerHTML = "";
+  for (const note of items) {
+    const li = document.createElement("li");
+    li.textContent = note;
+    notes.appendChild(li);
+  }
+}
 
-  const title = currentPlatform === "NAVER_BLOG" && currentArticle.titleForNaver
+function naverTitle() {
+  return currentPlatform === "NAVER_BLOG" && currentArticle.titleForNaver
     ? currentArticle.titleForNaver
     : currentArticle.title;
+}
 
-  // 네이버·티스토리 SEO: 본문 끝에 해시태그 라인 추가
+// 네이버·티스토리 SEO: 본문 끝에 해시태그 라인 추가
+function buildBodyHtml() {
   let html = currentArticle.contentHtml || "";
   if (currentArticle.hashtags) {
     html += `<p style="margin-top:28px;color:#5a7edc;font-size:14px;">${currentArticle.hashtags}</p>`;
   }
+  return html;
+}
 
+async function applyToForm() {
+  if (!currentArticle) return;
+  await detectPlatform();
+
+  const title = naverTitle();
+  const html = buildBodyHtml();
+
+  // 스마트에디터 ONE은 내부 모델형 에디터라 DOM 직접 입력이 안 된다(제목/본문 문단이 contenteditable이 아님).
+  // → 제목을 먼저 클립보드에 담고, 본문은 '본문 복사'로 이어서 붙여넣는 2단계 방식이 유일하게 안정적이다.
+  if (currentPlatform === "NAVER_BLOG") {
+    await navigator.clipboard.writeText(title);
+    showNotes([
+      "제목을 클립보드에 복사했습니다.",
+      "① 네이버 제목칸을 클릭하고 Ctrl+V로 붙여넣으세요.",
+      "② 아래 '본문 복사'를 누른 뒤 본문칸을 클릭하고 Ctrl+V로 붙여넣으세요.",
+      "쇼핑커넥트 글은 대가성 문구가 제목 앞·본문 최상단에 있어야 합니다.",
+    ]);
+    return;
+  }
+
+  // 티스토리(TinyMCE)는 iframe 본문 DOM 직접 입력이 동작하므로 기존 APPLY 경로 유지
   const response = await chrome.runtime.sendMessage({
     relay: true,
     payload: {
@@ -123,20 +155,12 @@ async function applyToForm() {
       tags: currentArticle.tags || [],
     },
   });
-
-  const notes = $("#notes");
-  notes.innerHTML = "";
-  const items = response?.ok ? response.notes : [response?.error || "적용 실패"];
-  for (const note of items) {
-    const li = document.createElement("li");
-    li.textContent = note;
-    notes.appendChild(li);
-  }
+  showNotes(response?.ok ? response.notes : [response?.error || "적용 실패"]);
 }
 
 async function copyBody() {
   if (!currentArticle) return;
-  const html = currentArticle.contentHtml || "";
+  const html = buildBodyHtml();
   await navigator.clipboard.write([
     new ClipboardItem({
       "text/html": new Blob([html], { type: "text/html" }),
@@ -144,7 +168,7 @@ async function copyBody() {
     }),
   ]);
   const li = document.createElement("li");
-  li.textContent = "본문을 클립보드에 복사했습니다.";
+  li.textContent = "본문을 클립보드에 복사했습니다 — 본문칸을 클릭하고 Ctrl+V로 붙여넣으세요.";
   $("#notes").appendChild(li);
 }
 
