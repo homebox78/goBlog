@@ -33,9 +33,12 @@ async function generateOneImage(prompt: string, fileBase: string): Promise<{
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const STYLE_GUIDE =
     "Style: bright, warm, clean and positive mood — never dark, gloomy, or depressing. " +
-    "If any person appears, they must be Korean (East Asian) — absolutely no Western or foreign-looking faces. " +
+    "All people must be Korean (East Asian) — absolutely no Western or foreign-looking faces. " +
+    "When people are needed, use a consistent recurring cast of Korean characters — a little girl, a little boy, " +
+    "a man in his 20s, a woman in her 20s, a middle-aged man, and a middle-aged woman — rendered in a consistent, " +
+    "friendly flat illustration style with the same design language, proportions, and color palette across all images. " +
     "Avoid any visible text, letters, words, or captions in the image. " +
-    "Wide 4:3 landscape composition, natural lighting, high quality photography or clean illustration.";
+    "Wide 4:3 landscape composition, natural lighting, clean modern look.";
   const requestBody = (withAspect: boolean) => ({
     contents: [{ parts: [{ text: `${prompt}\n\n${STYLE_GUIDE}` }] }],
     generationConfig: {

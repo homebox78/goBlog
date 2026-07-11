@@ -265,7 +265,7 @@ export async function generateArticle(
         imagePrompts: [
           {
             role: "FEATURED|CONTENT",
-            prompt: "이미지 생성 프롬프트 (영어). 밝고 긍정적인 분위기, 등장인물은 한국인만, 외국인 금지, 이미지 속 글자 없이, 사진 또는 깔끔한 일러스트",
+            prompt: "이미지 생성 프롬프트 (영어). 밝고 긍정적인 분위기, 등장인물은 한국인만(외국인 금지). 사람이 필요하면 여자아이·남자아이·20대 남녀·중년 남녀 캐릭터를 일관된 플랫 일러스트 스타일로. 이미지 속 글자 없이",
             altText: "한국어 대체 텍스트",
             caption: "캡션",
             position: "본문 [IMAGE:n]의 n (대표는 0)",
