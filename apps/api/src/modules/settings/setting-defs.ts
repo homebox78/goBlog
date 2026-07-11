@@ -16,7 +16,6 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "anthropic.apiKey", group: "claude", label: "Anthropic API Key", secret: true },
   { key: "anthropic.model", group: "claude", label: "Claude 모델", secret: false, defaultValue: "claude-sonnet-5" },
   { key: "anthropic.defaultLength", group: "claude", label: "기본 글 길이", secret: false, defaultValue: "2000" },
-  { key: "anthropic.defaultTone", group: "claude", label: "기본 문체", secret: false, defaultValue: "친절한 설명체" },
   { key: "anthropic.minQualityScore", group: "claude", label: "자동발행 최소 품질 점수", secret: false, defaultValue: "85" },
 
   // Gemini

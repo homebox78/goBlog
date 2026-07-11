@@ -5,6 +5,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/pages/DashboardPage";
 import KeywordsPage from "@/pages/KeywordsPage";
 import ProductsPage from "@/pages/ProductsPage";
+import CharactersPage from "@/pages/CharactersPage";
 import ArticlesPage from "@/pages/ArticlesPage";
 import ArticleDetailPage from "@/pages/ArticleDetailPage";
 import SchedulePage from "@/pages/SchedulePage";
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/articles" element={<ArticlesPage />} />
           <Route path="/articles/:id" element={<ArticleDetailPage />} />
+          <Route path="/characters" element={<CharactersPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

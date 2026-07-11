@@ -17,8 +17,22 @@ export function mediaPublicUrl(): string {
   return (process.env.MEDIA_PUBLIC_URL || "http://localhost:8787/media").replace(/\/+$/, "");
 }
 
+/** 등장 캐릭터 키에 해당하는 레퍼런스 이미지를 base64로 읽어온다. */
+async function loadCharacterReferences(keys: string[]): Promise<Array<{ mimeType: string; data: string }>> {
+  const refs: Array<{ mimeType: string; data: string }> = [];
+  for (const key of keys) {
+    try {
+      const buf = await fs.readFile(path.join(mediaDir(), "characters", `${key}.webp`));
+      refs.push({ mimeType: "image/webp", data: buf.toString("base64") });
+    } catch {
+      // 레퍼런스 없으면 건너뜀
+    }
+  }
+  return refs;
+}
+
 /** Gemini 이미지 생성 → PNG 원본 + WebP(최대 1600px) 저장, 공개 URL 반환 */
-async function generateOneImage(prompt: string, fileBase: string): Promise<{
+async function generateOneImage(prompt: string, fileBase: string, characterKeys: string[] = []): Promise<{
   originalUrl: string;
   webpUrl: string;
   width: number;
@@ -30,17 +44,28 @@ async function generateOneImage(prompt: string, fileBase: string): Promise<{
   const model = values["gemini.imageModel"] || "gemini-2.5-flash-image";
   if (!apiKey) throw new HttpError(400, "Gemini API Key가 설정되지 않았습니다.");
 
+  const references = await loadCharacterReferences(characterKeys);
+
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const STYLE_GUIDE =
     "Style: bright, warm, clean and positive mood — never dark, gloomy, or depressing. " +
     "All people must be Korean (East Asian) — absolutely no Western or foreign-looking faces. " +
-    "When people are needed, use a consistent recurring cast of Korean characters — a little girl, a little boy, " +
-    "a man in his 20s, a woman in her 20s, a middle-aged man, and a middle-aged woman — rendered in a consistent, " +
-    "friendly flat illustration style with the same design language, proportions, and color palette across all images. " +
     "Avoid any visible text, letters, words, or captions in the image. " +
     "Wide 4:3 landscape composition, natural lighting, clean modern look.";
+  const REFERENCE_GUIDE =
+    references.length > 0
+      ? " Reference character image(s) are provided. Use these EXACT characters in the scene — keep their face, hairstyle, clothing, proportions and art style perfectly consistent with the references."
+      : "";
+
   const requestBody = (withAspect: boolean) => ({
-    contents: [{ parts: [{ text: `${prompt}\n\n${STYLE_GUIDE}` }] }],
+    contents: [
+      {
+        parts: [
+          { text: `${prompt}\n\n${STYLE_GUIDE}${REFERENCE_GUIDE}` },
+          ...references.map((ref) => ({ inline_data: { mime_type: ref.mimeType, data: ref.data } })),
+        ],
+      },
+    ],
     generationConfig: {
       responseModalities: ["IMAGE"],
       ...(withAspect ? { imageConfig: { aspectRatio: "4:3" } } : {}),
@@ -138,7 +163,8 @@ export async function generateArticleImages(articleId: number): Promise<{ genera
   for (const asset of pending) {
     try {
       const fileBase = `a${articleId}-m${asset.id}-${Date.now()}`;
-      const result = await generateOneImage(asset.prompt!, fileBase);
+      const characterKeys = asset.characterKeys ? asset.characterKeys.split(",").filter(Boolean) : [];
+      const result = await generateOneImage(asset.prompt!, fileBase, characterKeys);
       await prisma.mediaAsset.update({
         where: { id: asset.id },
         data: {

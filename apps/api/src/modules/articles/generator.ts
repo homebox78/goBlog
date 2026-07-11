@@ -54,9 +54,12 @@ interface GeneratedContent {
     altText: string;
     caption?: string;
     position?: number;
+    characters?: string[];
   }>;
   claimsToVerify: string[];
 }
+
+const VALID_CHARACTER_KEYS = ["girl", "boy", "man_20s", "woman_20s", "man_middle", "woman_middle"];
 
 const LANGUAGE_NAME: Record<string, string> = {
   ko: "한국어",
@@ -117,8 +120,9 @@ function buildProductBanner(product: ProductInput, linkUrl: string, imageUrl: st
   const accentDark = isCoupang ? "#e64a19" : "#02b350";
   const ctaText = isCoupang ? "쿠팡에서 최저가 확인하기" : "네이버에서 상품 보기";
 
+  // Blogger는 <a> 안의 block 요소(div/p)를 제거하므로 배너 전체 링크는 <a> + <span>만으로 구성한다.
   const price = product.price
-    ? `<p style="margin:0 0 14px;font-size:23px;font-weight:800;color:${accent};line-height:1.2;">${new Intl.NumberFormat("ko-KR").format(product.price)}원${product.isRocket ? ' <span style="font-size:12px;font-weight:700;color:#2c7fff;vertical-align:middle;">🚀 로켓배송</span>' : ""}</p>`
+    ? `<span style="display:block;margin:0 0 14px;font-size:23px;font-weight:800;color:${accent};line-height:1.2;">${new Intl.NumberFormat("ko-KR").format(product.price)}원${product.isRocket ? ' <span style="font-size:12px;font-weight:700;color:#2c7fff;">🚀 로켓배송</span>' : ""}</span>`
     : "";
 
   const image = imageUrl
@@ -126,14 +130,14 @@ function buildProductBanner(product: ProductInput, linkUrl: string, imageUrl: st
     : "";
 
   return [
-    `<div style="display:flex;gap:20px;align-items:center;border:2px solid ${accent};border-radius:18px;padding:20px;margin:20px 0;background:linear-gradient(135deg,${isCoupang ? "#fff8f4" : "#f2fdf6"},#ffffff);box-shadow:0 6px 20px ${isCoupang ? "rgba(255,87,34,0.15)" : "rgba(3,199,90,0.15)"};position:relative;">`,
+    `<a href="${linkUrl}" target="_blank" rel="sponsored nofollow noopener" style="display:flex;gap:20px;align-items:center;border:2px solid ${accent};border-radius:18px;padding:20px;margin:20px 0;background:linear-gradient(135deg,${isCoupang ? "#fff8f4" : "#f2fdf6"},#ffffff);box-shadow:0 6px 20px ${isCoupang ? "rgba(255,87,34,0.15)" : "rgba(3,199,90,0.15)"};position:relative;text-decoration:none;color:inherit;">`,
     '<span style="position:absolute;top:11px;right:14px;font-size:11px;color:#c4c4c4;">광고</span>',
     image,
-    '<div style="min-width:0;flex:1;">',
-    `<p style="margin:0 0 8px;font-weight:700;font-size:18px;line-height:1.45;color:#1a1a1a;">${escapeHtml(product.name)}</p>`,
+    '<span style="display:block;min-width:0;flex:1;">',
+    `<span style="display:block;margin:0 0 8px;font-weight:700;font-size:18px;line-height:1.45;color:#1a1a1a;">${escapeHtml(product.name)}</span>`,
     price,
-    `<a href="${linkUrl}" target="_blank" rel="sponsored nofollow noopener" style="display:inline-block;background:linear-gradient(135deg,${accent},${accentDark});color:#fff;padding:13px 26px;border-radius:12px;font-size:16px;font-weight:800;text-decoration:none;box-shadow:0 3px 10px ${isCoupang ? "rgba(255,87,34,0.35)" : "rgba(3,199,90,0.35)"};">${ctaText} →</a>`,
-    "</div></div>",
+    `<span style="display:inline-block;background:linear-gradient(135deg,${accent},${accentDark});color:#fff;padding:13px 26px;border-radius:12px;font-size:16px;font-weight:800;box-shadow:0 3px 10px ${isCoupang ? "rgba(255,87,34,0.35)" : "rgba(3,199,90,0.35)"};">${ctaText} →</span>`,
+    "</span></a>",
   ].join("");
 }
 
@@ -162,9 +166,10 @@ export async function generateArticle(
   const product = options.product ?? null;
   const topic = keyword?.text ?? product!.name;
 
-  const settings = await getSettingValues(["anthropic.defaultLength", "anthropic.defaultTone"]);
+  const settings = await getSettingValues(["anthropic.defaultLength"]);
   const length = options.length ?? Number(settings["anthropic.defaultLength"] ?? 2000) ?? 2000;
-  const tone = options.tone ?? settings["anthropic.defaultTone"] ?? "친절한 설명체";
+  // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
+  const tone = options.tone;
   const language = LANGUAGE_NAME[options.language] ? options.language : "ko";
 
   const wantsFaq = options.schemaTypes.includes("FAQPage") || options.articleType === "faq";
@@ -186,13 +191,23 @@ export async function generateArticle(
       "당신은 조회수 높고 전환이 잘 되는 수익형 블로그 글을 쓰는 베테랑 콘텐츠 에디터다.",
       `본문 언어: ${LANGUAGE_NAME[language]}.`,
       "",
+      "[문체 — AI가 글 성격에 맞게 스스로 판단]",
+      "- 문체를 고정하지 말고 글의 주제·독자·목적에 맞춰 가장 자연스러운 톤을 스스로 고른다 (정보성은 차분한 설명체, 생활/후기성은 친근한 대화체 등).",
+      tone ? `- 참고 톤 힌트: ${tone} (절대적 규칙 아님, 글에 안 맞으면 무시).` : "",
+      "",
+      "[사람이 쓴 것처럼 — AI 티 최소화]",
+      "- 획일적인 AI 문투를 피한다: 문장 길이를 다양하게 섞고(짧은 문장·긴 문장 교차), 기계적인 나열·과도한 접속사를 줄인다.",
+      "- '결론적으로', '종합적으로', '~하는 것이 중요합니다', '~라고 할 수 있습니다' 같은 상투적·형식적 표현을 남발하지 않는다.",
+      "- 각 소제목·문단을 똑같은 틀(정의→예시→정리)로 찍어내지 말고 흐름을 자연스럽게 변주한다.",
+      "- 실제 사람이 조언하듯 구체적이고 솔직하게 쓴다 (단, 없는 개인 경험·후기는 지어내지 않는다).",
+      "- 불필요한 요약 반복, 뻔한 마무리 인사('오늘은 ~에 대해 알아봤습니다')를 피한다.",
+      "",
       "[독자를 사로잡는 글쓰기]",
-      "- 첫 2~3문장에서 독자의 고민·상황에 공감하며 후킹하고, 이 글을 끝까지 읽으면 무엇을 얻는지 제시한다.",
-      "- 소제목(H2)은 독자의 궁금증을 자극하는 형태로 쓴다 (예: '지금 바꿔도 될까? 교체 시기 판단 기준 3가지').",
-      "- 각 단락의 핵심 결론·수치·판단 포인트는 **볼드**로 강조해 훑어보는 독자도 요점을 잡게 한다.",
-      "- 비교표, 체크리스트, 단계별 정리를 적극 활용해 '스크랩하고 싶은 글'로 만든다.",
+      "- 첫 2~3문장에서 독자의 고민·상황에 공감하며 후킹하고, 이 글을 끝까지 읽으면 무엇을 얻는지 자연스럽게 제시한다.",
+      "- 소제목(H2)은 독자의 궁금증을 자극하는 형태로 쓴다.",
+      "- 핵심 결론·수치·판단 포인트는 **볼드**로 강조하되 과하지 않게.",
+      "- 비교표, 체크리스트, 단계별 정리를 적절히 활용한다.",
       "- 실제 선택·구매·실행에 바로 도움이 되는 구체적인 기준과 팁을 담는다 (막연한 일반론 금지).",
-      "- 마지막에 독자가 다음 행동을 하도록 자연스러운 마무리(요약 + 권유)를 넣는다.",
       "",
       "[검색 유입·전환을 높이는 실행 정보 — 이 부분이 '돈이 되는 글'의 핵심]",
       "- 독자가 이 글 하나만 읽고도 실제로 행동할 수 있을 만큼 완결적으로 쓴다.",
@@ -265,10 +280,11 @@ export async function generateArticle(
         imagePrompts: [
           {
             role: "FEATURED|CONTENT",
-            prompt: "이미지 생성 프롬프트 (영어). 밝고 긍정적인 분위기, 등장인물은 한국인만(외국인 금지). 사람이 필요하면 여자아이·남자아이·20대 남녀·중년 남녀 캐릭터를 일관된 플랫 일러스트 스타일로. 이미지 속 글자 없이",
+            prompt: "이미지 생성 프롬프트 (영어). 밝고 긍정적인 분위기, 등장인물은 한국인만(외국인 금지). 이미지 속 글자 없이. 사람이 등장하는 장면이면 아래 characters에 등장 인물을 지정",
             altText: "한국어 대체 텍스트",
             caption: "캡션",
             position: "본문 [IMAGE:n]의 n (대표는 0)",
+            characters: "등장 인물 키 배열 (사람 없으면 빈 배열). 가능한 값: girl(여자아이), boy(남자아이), man_20s(20대남), woman_20s(20대여), man_middle(중년남), woman_middle(중년여)",
           },
         ],
         claimsToVerify: ["발행 전 확인이 필요한 주장·수치"],
@@ -360,12 +376,16 @@ export async function generateArticle(
         create: imagePrompts.slice(0, 5).map((prompt, index) => {
           // Claude가 position을 문자열로 줄 수 있다 — Int로 강제
           const position = Number(prompt.position);
+          const characters = (prompt.characters ?? [])
+            .filter((key) => VALID_CHARACTER_KEYS.includes(key))
+            .join(",");
           return {
             kind: prompt.role === "FEATURED" ? "FEATURED" : "CONTENT",
             prompt: prompt.prompt,
             altText: prompt.altText || null,
             caption: prompt.caption || null,
             position: Number.isInteger(position) ? position : index,
+            characterKeys: characters || null,
           };
         }),
       },

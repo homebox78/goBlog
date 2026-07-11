@@ -12,6 +12,7 @@ import { productsRouter } from "./modules/products/products.router.js";
 import { publishRouter } from "./modules/publishing/publish.router.js";
 import { mediaDir } from "./modules/images/image-service.js";
 import { extensionRouter } from "./modules/extension/extension.router.js";
+import { charactersRouter } from "./modules/characters/characters.router.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 export function createApp() {
@@ -32,7 +33,7 @@ export function createApp() {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: "2mb" }));
+  app.use(express.json({ limit: "12mb" })); // 캐릭터 레퍼런스 base64 업로드 대응
   app.use(cookieParser());
 
   const healthHandler = async (req: express.Request, res: express.Response) => {
@@ -49,6 +50,7 @@ export function createApp() {
   app.use("/api/articles", articlesRouter);
   app.use("/api/products", productsRouter);
   app.use("/api/publish-jobs", publishRouter);
+  app.use("/api/characters", charactersRouter);
   app.use("/api/extension", extensionRouter);
   app.use("/media", express.static(mediaDir(), { maxAge: "7d" }));
 

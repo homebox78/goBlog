@@ -244,20 +244,51 @@ export async function testInstagram(): Promise<TestResult> {
   return { ok: true, message: `연결 성공 — @${data.username}` };
 }
 
+/** URL 접근 가능 여부 확인 (블로그 존재 확인용) */
+async function checkUrlReachable(url: string): Promise<TestResult> {
+  try {
+    const res = await safeFetch(url, { headers: { "User-Agent": "Mozilla/5.0 (goBlog)" } });
+    if (res.status >= 200 && res.status < 400) {
+      return { ok: true, message: `블로그 접근 가능 (HTTP ${res.status}) · 발행은 Chrome 확장에서 처리` };
+    }
+    return { ok: false, message: `접근 실패 (HTTP ${res.status}) — URL을 확인하세요` };
+  } catch (error) {
+    return { ok: false, message: `접근 불가: ${(error as Error).message}` };
+  }
+}
+
+/** 네이버 블로그 — 작성 URL에서 블로그 홈 접근 확인 */
+export async function testNaverBlog(): Promise<TestResult> {
+  const { "naverBlog.writeUrl": url } = await getSettingValues(["naverBlog.writeUrl"]);
+  if (!url) return { ok: false, message: "네이버 블로그 작성 URL이 설정되지 않았습니다." };
+  const match = url.match(/blog\.naver\.com\/([^/?]+)/);
+  return checkUrlReachable(match ? `https://blog.naver.com/${match[1]}` : url);
+}
+
+/** 티스토리 — 작성 URL에서 블로그 홈 접근 확인 */
+export async function testTistory(): Promise<TestResult> {
+  const { "tistory.writeUrl": url } = await getSettingValues(["tistory.writeUrl"]);
+  if (!url) return { ok: false, message: "티스토리 작성 URL이 설정되지 않았습니다." };
+  const match = url.match(/(https?:\/\/[^/]+)/);
+  return checkUrlReachable(match ? match[1] : url);
+}
+
 /** 게시 플랫폼 전체 — 서비스별 결과 목록 */
 export async function testAllPlatforms(): Promise<{ results: TestResult[] }> {
-  const [wordpress, blogger, instagram] = await Promise.all([
+  const [wordpress, blogger, instagram, naver, tistory] = await Promise.all([
     testWordpress().catch((error) => ({ ok: false, message: (error as Error).message })),
     testBlogger().catch((error) => ({ ok: false, message: (error as Error).message })),
     testInstagram().catch((error) => ({ ok: false, message: (error as Error).message })),
+    testNaverBlog().catch((error) => ({ ok: false, message: (error as Error).message })),
+    testTistory().catch((error) => ({ ok: false, message: (error as Error).message })),
   ]);
   return {
     results: [
       { name: "WordPress", ...wordpress },
       { name: "Blogger", ...blogger },
       { name: "Instagram", ...instagram },
-      { name: "네이버 블로그", ok: false, skipped: true, message: "Chrome 확장 방식 — 연결 테스트 대상 아님" },
-      { name: "티스토리", ok: false, skipped: true, message: "Chrome 확장 방식 — 연결 테스트 대상 아님" },
+      { name: "네이버 블로그", ...naver },
+      { name: "티스토리", ...tistory },
     ],
   };
 }

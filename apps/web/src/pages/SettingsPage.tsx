@@ -54,12 +54,6 @@ const STATIC_SELECT_KEYS: Record<string, Array<{ value: string; label: string }>
     { value: "2500", label: "길게 (~2,500자)" },
     { value: "3500", label: "심층 (~3,500자)" },
   ],
-  "anthropic.defaultTone": [
-    { value: "친절한 설명체", label: "친절한 설명체" },
-    { value: "전문적인 분석체", label: "전문적인 분석체" },
-    { value: "간결한 정보체", label: "간결한 정보체" },
-    { value: "친근한 대화체", label: "친근한 대화체" },
-  ],
   "gemini.featuredImageCount": [
     { value: "1", label: "1장" },
     { value: "2", label: "2장" },
@@ -75,7 +69,7 @@ const GROUPS: Array<{ id: string; label: string; description: string; testEndpoi
   {
     id: "claude",
     label: "Claude",
-    description: "글 작성·키워드 해석·품질 검수에 사용됩니다.",
+    description: "글 작성·키워드 해석·품질 검수에 사용됩니다. 문체는 AI가 글 성격에 맞게 자동 판단합니다.",
     testEndpoint: "/api/settings/test/anthropic",
   },
   {
