@@ -823,12 +823,13 @@ export default function ArticleDetailPage() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                쿠팡/네이버 상품 링크나 [이미지+텍스트] HTML을 붙여넣고, 본문에서 넣을 위치를 클릭한 뒤 삽입하세요. 여러 번 삽입할 수 있습니다.
+                쿠팡: [이미지+텍스트] HTML 또는 링크. <b>네이버: naver.me 링크 + 상품명을 두 줄로</b> 붙여넣으세요
+                (쇼핑검색으로 이미지·가격 자동 조회). 본문에서 넣을 위치 클릭 후 삽입.
               </p>
               <Textarea
                 rows={4}
                 className="font-mono text-xs"
-                placeholder={'<a href="https://link.coupang.com/a/..." ...><img src="...coupangcdn..." alt="상품명" ...></a>'}
+                placeholder={'쿠팡: <a href="https://link.coupang.com/a/..."><img ...></a>\n네이버:\nhttps://naver.me/xxxxx\n상품명 (한 줄 더)'}
                 value={bannerInput}
                 onChange={(event) => setBannerInput(event.target.value)}
               />

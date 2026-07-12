@@ -92,9 +92,9 @@ export default function ProductsPage() {
           <UrlAnalyzer
             source="BRANDCONNECT"
             placeholder={
-              "네이버 상품 페이지 URL (스마트스토어/쇼핑) 또는 트래킹 링크를 붙여넣으세요\n예) https://smartstore.naver.com/... 또는 https://naver.me/..."
+              "트래킹 링크(naver.me)와 상품명을 두 줄로 붙여넣으세요\n예)\nhttps://naver.me/xxxxx\n퍼니몽키 강아지 노즈워크 장난감"
             }
-            guide="상품 페이지 URL(스마트스토어 등)을 넣으면 상품명·가격·이미지를 자동 분석합니다. 트래킹 링크(naver.me)는 상품 정보가 안 나올 수 있으니, 분석 후 링크 필드에 트래킹 링크로 바꿔 넣으세요. 규정 대가성 문구가 자동 삽입됩니다."
+            guide="네이버는 링크만으론 상품 정보를 못 가져옵니다(크롤링 차단). naver.me 트래킹 링크 + 상품명을 두 줄로 넣으면 쇼핑검색 API로 이미지·가격을 자동 조회하고, 링크는 트래킹 링크가 유지됩니다(수수료 집계). 규정 대가성 문구는 자동 삽입됩니다."
             onSelect={(p) => setTarget({ product: p, keyword: "" })}
           />
           <BulkMatcher source="BRANDCONNECT" />

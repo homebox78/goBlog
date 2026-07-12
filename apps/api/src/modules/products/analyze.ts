@@ -1,4 +1,5 @@
 import { HttpError } from "../../common/http.js";
+import { getSettingValues } from "../settings/settings.service.js";
 
 export interface AnalyzedProduct {
   source: "COUPANG" | "BRANDCONNECT";
@@ -53,13 +54,86 @@ function extractPrice(html: string): number | null {
   return null;
 }
 
+/** 네이버 쇼핑 검색 API — 상품명으로 이미지·가격을 찾는다 (스마트스토어는 서버 크롤링이 차단되므로). */
+async function naverShopLookup(
+  name: string,
+): Promise<{ imageUrl: string | null; price: number | null; title: string | null } | null> {
+  const values = await getSettingValues(["naver.datalabClientId", "naver.datalabClientSecret"]);
+  const clientId = values["naver.datalabClientId"];
+  const clientSecret = values["naver.datalabClientSecret"];
+  if (!clientId || !clientSecret) return null;
+  try {
+    const res = await fetch(
+      `https://openapi.naver.com/v1/search/shop.json?query=${encodeURIComponent(name)}&display=5`,
+      { headers: { "X-Naver-Client-Id": clientId, "X-Naver-Client-Secret": clientSecret } },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      items?: Array<{ title: string; image?: string; lprice?: string }>;
+    };
+    const first = data.items?.[0];
+    if (!first) return null;
+    return {
+      imageUrl: first.image ?? null,
+      price: first.lprice ? Number(first.lprice) : null,
+      title: decodeEntities(first.title.replace(/<\/?b>/g, "")),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 네이버 커넥트 붙여넣기: naver.me(또는 스마트스토어) 링크 + 상품명(한 줄) [+ 이미지 URL 한 줄].
+ * 네이버는 서버 크롤링이 차단되므로, 상품명으로 쇼핑 검색 API에서 이미지·가격을 찾고 링크는 트래킹 링크를 유지한다.
+ */
+async function analyzeNaverPaste(trimmed: string): Promise<AnalyzedProduct | null> {
+  const lines = trimmed
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length < 1) return null;
+  const linkLine = lines.find((l) => /^https?:\/\//i.test(l) && /naver\.me|smartstore\.naver|shopping\.naver|brandconnect/i.test(l));
+  if (!linkLine) return null;
+
+  const imgLine = lines.find(
+    (l) => l !== linkLine && /^https?:\/\//i.test(l) && /pstatic\.net|\.(jpe?g|png|webp|gif)(\?|$)/i.test(l),
+  );
+  const nameLine = lines.find((l) => l !== linkLine && l !== imgLine && !/^https?:\/\//i.test(l) && l.length >= 2);
+
+  if (!nameLine) {
+    throw new HttpError(
+      422,
+      "네이버는 링크만으로 상품 정보를 가져올 수 없습니다(크롤링 차단). 링크 아랫줄에 상품명을 함께 붙여넣어 주세요.\n예)\nhttps://naver.me/xxxxx\n퍼니몽키 강아지 노즈워크 장난감",
+    );
+  }
+
+  // 상품명으로 네이버 쇼핑에서 이미지·가격 검색 (실패해도 이름·링크만으로 배너 생성 가능)
+  const found = await naverShopLookup(nameLine);
+  return {
+    source: "BRANDCONNECT",
+    name: nameLine,
+    price: found?.price ?? null,
+    imageUrl: imgLine ?? found?.imageUrl ?? null,
+    description: null,
+    productUrl: linkLine, // 트래킹 링크(naver.me) 그대로 유지 — 수수료 집계용
+  };
+}
+
 /**
  * 상품 입력을 분석한다.
  * ① 쿠팡 파트너스 "이미지+텍스트" HTML 태그 → alt(상품명)·img(이미지)·href(링크) 파싱 (가장 정확)
- * ② 일반 상품 URL → OG/메타 태그 추출
+ * ② 네이버 링크(+상품명 줄) → 쇼핑 검색 API로 이미지·가격 조회
+ * ③ 일반 상품 URL → OG/메타 태그 추출
  */
 export async function analyzeProductInput(input: string): Promise<AnalyzedProduct> {
   const trimmed = input.trim();
+
+  // 네이버 링크가 포함된 붙여넣기 — 여러 줄(링크+상품명) 또는 링크 단독
+  if (/naver\.me|smartstore\.naver|shopping\.naver|brandconnect/i.test(trimmed) && !/<a\s/i.test(trimmed)) {
+    const naver = await analyzeNaverPaste(trimmed);
+    if (naver) return naver;
+  }
 
   // 쿠팡 이미지+텍스트 HTML 태그 감지 (<a ...><img ...></a>)
   if (/<a\s/i.test(trimmed) && /<img\s/i.test(trimmed)) {
