@@ -5,6 +5,8 @@ import { HttpError } from "../../common/http.js";
 interface ClaudeUsage {
   input_tokens?: number;
   output_tokens?: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
 }
 
 /**
@@ -41,7 +43,8 @@ export async function callClaudeJson<T>(options: {
       body: JSON.stringify({
         model,
         max_tokens: options.maxTokens ?? 8000,
-        system: options.system,
+        // 시스템 프롬프트(대형·재사용) 캐싱 — 입력비 대폭 절감. 캐시 읽기는 0.1×, 쓰기는 1.25×.
+        system: [{ type: "text", text: options.system, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: options.user }],
       }),
       signal: controller.signal,
@@ -63,15 +66,20 @@ export async function callClaudeJson<T>(options: {
     );
   }
 
-  // 사용량 기록 (실패해도 본 작업엔 영향 없음)
+  // 사용량 기록 — 캐시 경제성을 '실효 입력 토큰'으로 환산해 저장(대시보드 $3/1M 곱셈이 그대로 정확).
+  //   실효입력 = 미캐시입력 + 캐시읽기×0.1 + 캐시쓰기×1.25
   try {
+    const u = data.usage ?? {};
+    const effectiveInput = Math.round(
+      (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) * 0.1 + (u.cache_creation_input_tokens ?? 0) * 1.25,
+    );
     await prisma.modelUsageLog.create({
       data: {
         provider: "anthropic",
         model,
         operation: options.operation,
-        inputTokens: data.usage?.input_tokens ?? null,
-        outputTokens: data.usage?.output_tokens ?? null,
+        inputTokens: effectiveInput,
+        outputTokens: u.output_tokens ?? null,
         articleId: options.articleId ?? null,
       },
     });

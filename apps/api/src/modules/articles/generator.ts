@@ -728,7 +728,10 @@ export async function buildManualBanner(input: string): Promise<{ banner: string
 export async function improveArticle(
   articleId: number,
 ): Promise<{ before: number; after: number; passed: boolean }> {
-  const article = await prisma.article.findUnique({ where: { id: articleId }, include: { keyword: true } });
+  const article = await prisma.article.findUnique({
+    where: { id: articleId },
+    include: { keyword: true, tags: { include: { tag: true } } },
+  });
   if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
   const topic = article.keyword?.text ?? article.title;
 
@@ -752,6 +755,22 @@ export async function improveArticle(
   let markdown = article.contentMarkdown ?? "";
   let quality = runCheck(title, meta, excerpt, markdown);
   const before = article.qualityScore ?? quality.score;
+
+  // ── 결정적(무료) 선(先)보정 — Claude 호출 전에 규칙만으로 고칠 수 있는 항목부터 처리해 비용 절감 ──
+  const countHashtags = (md: string) =>
+    (md.match(/#[0-9A-Za-z가-힣_]{1,30}/g) ?? []).filter((h) => !/^#[0-9a-fA-F]{3,8}$/.test(h)).length;
+  // ① 해시태그 20개 미만 → 저장된 태그로 본문 끝에 보충 (Claude 불필요)
+  if (countHashtags(markdown) < 20 && article.tags.length > 0) {
+    const existing = new Set((markdown.match(/#[0-9A-Za-z가-힣_]{1,30}/g) ?? []).map((h) => h.slice(1)));
+    const add = article.tags
+      .map((t) => t.tag.name.replace(/\s+/g, ""))
+      .filter((t) => t && t.length <= 30 && !existing.has(t))
+      .slice(0, 30 - existing.size);
+    if (add.length > 0) {
+      markdown = `${markdown}\n\n${add.map((t) => `#${t}`).join(" ")}`;
+      quality = runCheck(title, meta, excerpt, markdown);
+    }
+  }
 
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
   const curYear = kstNow.getUTCFullYear();
@@ -811,8 +830,6 @@ export async function improveArticle(
   }
 
   // 결정적 보정: 해시태그가 여전히 20개 미만이면 AI가 준 tags로 본문 끝에 직접 붙인다 (확실한 +10점)
-  const countHashtags = (md: string) =>
-    (md.match(/#[0-9A-Za-z가-힣_]{1,30}/g) ?? []).filter((h) => !/^#[0-9a-fA-F]{3,8}$/.test(h)).length;
   if (countHashtags(markdown) < 20 && lastTags.length > 0) {
     const tagLine = [
       ...new Set(lastTags.map((t) => t.replace(/^#/, "").replace(/\s+/g, "").trim()).filter((t) => t.length > 0 && t.length <= 30)),
