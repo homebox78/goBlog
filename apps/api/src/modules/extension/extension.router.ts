@@ -70,8 +70,7 @@ extensionRouter.get(
     });
     if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
 
-    // 쇼핑커넥트/쿠팡 글이면 네이버 규정(제목 앞 표기)용 제목도 제공
-    const isPromo = /쇼핑 커넥트 활동의 일환|쿠팡 파트너스 활동의 일환/.test(article.contentMarkdown ?? "");
+    // 대가성 문구는 본문 최상단에 이미 들어가 있으므로 제목엔 넣지 않는다 (제목이 지저분해지고 쿠팡은 불필요).
     const naverPrefix = article.contentMarkdown?.includes("쇼핑 커넥트 활동의 일환")
       ? disclosureText({ source: "BRANDCONNECT" })
       : article.contentMarkdown?.includes("쿠팡 파트너스 활동의 일환")
@@ -83,7 +82,7 @@ extensionRouter.get(
         id: article.id,
         title: article.title,
         category: suggestNaverCategory(article.keyword?.category, article.keyword?.text ?? article.title),
-        titleForNaver: isPromo && naverPrefix ? `(${naverPrefix.slice(0, 24)}...) ${article.title}` : article.title,
+        titleForNaver: article.title,
         naverDisclosure: naverPrefix,
         contentHtml: article.contentHtml,
         contentMarkdown: article.contentMarkdown,
