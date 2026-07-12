@@ -85,6 +85,7 @@ export default function ProductsPage() {
             guide="쿠팡 파트너스 링크 만들기 화면에서 [이미지+텍스트]의 HTML 태그를 복사해 붙여넣으면 상품명·상품 이미지·링크가 자동으로 들어갑니다. 단축 URL만 넣으면 이미지·상품명은 직접 입력해야 합니다. 대가성 문구는 자동 삽입됩니다."
             onSelect={(p) => setTarget({ product: p, keyword: "" })}
           />
+          <BulkMatcher source="COUPANG" />
         </TabsContent>
         <TabsContent value="naver">
           <UrlAnalyzer
@@ -95,6 +96,7 @@ export default function ProductsPage() {
             guide="상품 페이지 URL(스마트스토어 등)을 넣으면 상품명·가격·이미지를 자동 분석합니다. 트래킹 링크(naver.me)는 상품 정보가 안 나올 수 있으니, 분석 후 링크 필드에 트래킹 링크로 바꿔 넣으세요. 규정 대가성 문구가 자동 삽입됩니다."
             onSelect={(p) => setTarget({ product: p, keyword: "" })}
           />
+          <BulkMatcher source="BRANDCONNECT" />
         </TabsContent>
       </Tabs>
 
@@ -110,6 +112,71 @@ export default function ProductsPage() {
         onOpenChange={(open) => !open && setTarget(null)}
       />
     </div>
+  );
+}
+
+function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
+  const [text, setText] = useState("");
+  const matchMutation = useMutation({
+    mutationFn: () =>
+      api.post<{ scanned: number; matchedCount: number; matched: Array<{ name: string; keyword: string; score: number }> }>(
+        "/api/products/bulk-match",
+        { source, text },
+      ),
+    onError: (error) => toast.error(error instanceof Error ? error.message : "매칭 실패"),
+  });
+  const result = matchMutation.data;
+
+  return (
+    <Card className="mt-4">
+      <CardContent className="space-y-3 pt-6">
+        <div>
+          <h3 className="text-sm font-semibold">상품 목록 대량 매칭</h3>
+          <p className="text-xs text-muted-foreground">
+            {source === "COUPANG" ? "쿠팡 파트너스" : "네이버 브랜드커넥트"}에서 상품 목록을 통째로 복사해 붙여넣으면, 오늘의 키워드와
+            매칭되는 상품만 골라줍니다. 매칭된 상품만 제휴 링크를 가져와 위에서 등록하세요.
+          </p>
+        </div>
+        <Textarea
+          rows={8}
+          className="font-mono text-xs"
+          placeholder={"상품명을 줄바꿈으로 붙여넣으세요 (가격·평점 등이 섞여 있어도 매칭 안 되는 줄은 자동 무시)\n예)\n삼성 갤럭시워치7 프로 44mm\n무선 청소기 차이슨 ...\n..."}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+        />
+        <Button
+          className="w-full"
+          disabled={!text.trim() || matchMutation.isPending}
+          onClick={() => matchMutation.mutate()}
+        >
+          {matchMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          매칭되는 상품 찾기
+        </Button>
+        {result && (
+          <div className="rounded-md border p-3">
+            <p className="mb-2 text-xs text-muted-foreground">
+              {result.scanned}개 줄 중 <b className="text-emerald-600">{result.matchedCount}개</b> 매칭
+            </p>
+            {result.matched.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                매칭되는 상품이 없습니다. 오늘의 키워드와 겹치는 상품이 없을 수 있어요.
+              </p>
+            ) : (
+              <ul className="max-h-72 space-y-1.5 overflow-y-auto text-sm">
+                {result.matched.map((m, index) => (
+                  <li key={index} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 flex-1 truncate font-medium">{m.name}</span>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs text-emerald-600">
+                      <Tag className="size-3" /> {m.keyword}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

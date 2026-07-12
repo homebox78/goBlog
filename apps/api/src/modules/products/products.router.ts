@@ -76,6 +76,39 @@ productsRouter.post(
   }),
 );
 
+const bulkMatchSchema = z.object({
+  source: z.enum(["COUPANG", "BRANDCONNECT"]),
+  text: z.string().min(1, "상품 목록을 붙여넣어주세요."),
+});
+
+/**
+ * 대량 상품 목록(긁어붙인 텍스트)에서 오늘의 키워드와 매칭되는 상품만 골라준다.
+ * 사용자는 매칭된 상품의 제휴 링크만 가져와 등록하면 되므로 작업이 크게 줄어든다.
+ */
+productsRouter.post(
+  "/bulk-match",
+  asyncHandler(async (req, res) => {
+    const { text } = parseBody(bulkMatchSchema, req.body);
+    const keywords = await matchableKeywords();
+    const lines = [
+      ...new Set(
+        text
+          .split(/\r?\n/)
+          .map((line) => line.replace(/\s+/g, " ").trim())
+          .filter((line) => line.length >= 2 && line.length <= 120),
+      ),
+    ].slice(0, 800);
+
+    const matched: Array<{ name: string; keyword: string; score: number }> = [];
+    for (const name of lines) {
+      const m = bestKeywordForProduct({ name }, keywords);
+      if (m) matched.push({ name, keyword: m.keyword.text, score: m.score });
+    }
+    matched.sort((a, b) => b.score - a.score);
+    res.json({ scanned: lines.length, matchedCount: matched.length, matched });
+  }),
+);
+
 /** 상품 삭제 */
 productsRouter.delete(
   "/:id",
