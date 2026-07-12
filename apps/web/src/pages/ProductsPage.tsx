@@ -215,7 +215,19 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
               <ul className="max-h-72 space-y-1.5 overflow-y-auto text-sm">
                 {history.map((m, index) => (
                   <li key={index} className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 flex-1 truncate font-medium">{m.name}</span>
+                    {source === "COUPANG" ? (
+                      <a
+                        href={`https://partners.coupang.com/#affiliate/ws/link/0/${encodeURIComponent(m.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="쿠팡 파트너스에서 이 상품 링크 생성 (새창)"
+                        className="min-w-0 flex-1 truncate font-medium text-blue-600 underline decoration-dotted underline-offset-2 hover:text-blue-800"
+                      >
+                        {m.name}
+                      </a>
+                    ) : (
+                      <span className="min-w-0 flex-1 truncate font-medium">{m.name}</span>
+                    )}
                     <span className="inline-flex shrink-0 items-center gap-1 text-xs text-emerald-600">
                       <Tag className="size-3" /> {m.keyword}
                     </span>
