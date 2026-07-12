@@ -194,10 +194,16 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
       setLastRun({ scanned: data.scanned, matched: data.matchedCount, added: data.added });
       setText(""); // 입력 내용은 비운다 (매칭 결과만 남긴다)
       queryClient.invalidateQueries({ queryKey: ["bulk-history", source] });
-      if (data.matchedCount > 0 && data.added === 0) {
-        toast.info(`매칭 ${data.matchedCount}개 모두 이미 히스토리에 있습니다 (신규 없음).`);
-      } else if (data.matchedCount === 0) {
-        toast.info("이 목록과 겹치는 키워드가 풀에 없습니다. 키워드 수집 후 다시 시도하세요.");
+      // 실제 결과에 맞는 메시지 (매칭 안 됨 / 신규 없음 / 추가됨)
+      if (data.added > 0) {
+        toast.success(`${data.scanned}줄 스캔 → 신규 ${data.added}개 추가 (매칭 ${data.matchedCount}개).`);
+      } else if (data.matchedCount > 0) {
+        toast.info(`${data.matchedCount}개가 매칭됐지만 모두 이미 등록된 상품입니다 (신규 0개).`);
+      } else {
+        toast.warning(
+          `${data.scanned}줄 중 매칭된 상품이 없습니다. 현재 키워드 풀(금융·부동산·반도체 등)과 겹치는 상품이 없어요 — 해당 카테고리 키워드가 수집돼야 매칭됩니다.`,
+          { duration: 7000 },
+        );
       }
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "매칭 실패"),
