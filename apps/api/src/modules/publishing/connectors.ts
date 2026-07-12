@@ -92,7 +92,9 @@ export async function publishToWordpress(article: {
   slug: string | null;
 }): Promise<PublishResult> {
   const values = await getSettingValues(["wordpress.url", "wordpress.username", "wordpress.appPassword"]);
-  const baseUrl = values["wordpress.url"]?.replace(/\/+$/, "");
+  // 스킴(https://)이 없으면 자동 보정 — 'hom2box.com/wordpress'처럼 입력해도 동작
+  const raw = values["wordpress.url"]?.trim();
+  const baseUrl = raw ? (/^https?:\/\//i.test(raw) ? raw : `https://${raw}`).replace(/\/+$/, "") : undefined;
   if (!baseUrl || !values["wordpress.username"] || !values["wordpress.appPassword"]) {
     throw new Error("WordPress URL·사용자명·Application Password가 설정되지 않았습니다.");
   }

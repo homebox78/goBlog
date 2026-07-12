@@ -302,7 +302,8 @@ export async function testWordpress(): Promise<TestResult> {
     return { ok: false, message: `WordPress 설정 누락: ${missing.join(", ")}` };
   }
 
-  const baseUrl = values["wordpress.url"]!.replace(/\/+$/, "");
+  const rawUrl = values["wordpress.url"]!.trim();
+  const baseUrl = (/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`).replace(/\/+$/, "");
 
   if (/(^|\.)wordpress\.com$/i.test(new URL(baseUrl).hostname)) {
     return {
