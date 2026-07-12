@@ -304,7 +304,10 @@ async function applyToForm() {
       await sleep(500); // 에디터 반영 대기
       const pub = await chrome.runtime.sendMessage({ type: "NAVER_PUBLISH", tabId: tab.id });
       if (pub?.ok) {
-        showNotes(["✅ 네이버 발행 완료! (발행완료 자동 기록)"]);
+        showNotes(["✅ 네이버 발행 완료! ⏳ 발행완료 기록 중..."]);
+        const url = await recordPublished(tab.id, currentArticle.id, "NAVER_BLOG");
+        showNotes([url ? "✅ 네이버 발행 완료 (목록에 링크 기록됨)" : "✅ 네이버 발행 완료 (URL 미확인 — 기록만)"]);
+        loadArticles();
       } else {
         showNotes([
           "✅ 제목·본문 자동 입력 완료!",
@@ -350,7 +353,10 @@ async function applyToForm() {
         category: currentArticle.category || "",
       });
       if (pub?.ok && pub.done?.includes("공개 발행")) {
-        showNotes([`✅ 티스토리 발행 완료: ${res.done.join(" · ")} · ${pub.done.join(" · ")}`]);
+        showNotes([`✅ 티스토리 발행 완료: ${pub.done.join(" · ")} ⏳ 기록 중...`]);
+        const url = await recordPublished(tab.id, currentArticle.id, "TISTORY");
+        showNotes([url ? "✅ 티스토리 발행 완료 (목록에 링크 기록됨)" : "✅ 티스토리 발행 완료 (기록됨)"]);
+        loadArticles();
       } else {
         showNotes([
           `✅ 자동 입력 완료: ${res.done.join(" · ")}`,
@@ -385,6 +391,39 @@ async function applyToForm() {
     },
   });
   showNotes(response?.ok ? response.notes : [response?.error || "적용 실패"]);
+}
+
+// 발행 완료를 패널에서 직접 기록 — background 서비스워커가 잠들어 URL 감지를 놓치는 문제 방지.
+// 발행 후 탭이 게시글 URL로 이동할 때까지 폴링해서 URL을 잡고 /published에 기록한다.
+async function recordPublished(tabId, articleId, platform) {
+  const re =
+    platform === "NAVER_BLOG"
+      ? /^https:\/\/blog\.naver\.com\/[^/?#]+\/(\d{6,})/
+      : /^https:\/\/[^/]+\.tistory\.com\/(\d+)/;
+  let url = null;
+  for (let i = 0; i < 20; i++) {
+    await sleep(500);
+    try {
+      const t = await chrome.tabs.get(tabId);
+      if (t?.url && re.test(t.url)) {
+        url = t.url;
+        break;
+      }
+    } catch {
+      /* 탭 접근 실패 무시 */
+    }
+  }
+  try {
+    await fetch(`${config.apiBase}/api/extension/articles/${articleId}/published`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Extension-Token": config.token },
+      body: JSON.stringify({ platform, url, hide: true }),
+    });
+    await chrome.storage.local.remove("pendingPublish"); // background 중복 기록 방지
+  } catch {
+    /* 기록 실패 시 background 폴백에 맡김 */
+  }
+  return url;
 }
 
 async function copyIgCaption() {
