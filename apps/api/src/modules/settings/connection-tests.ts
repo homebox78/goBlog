@@ -317,10 +317,12 @@ export async function testWordpress(): Promise<TestResult> {
     `${values["wordpress.username"]}:${values["wordpress.appPassword"]}`,
   ).toString("base64");
 
-  // ?rest_route= 방식은 고유주소가 '기본(Plain)'이어도 작동한다 (/wp-json/ 예쁜 경로는 404 남)
-  const res = await safeFetch(`${baseUrl}/?rest_route=${encodeURIComponent("/wp/v2/users/me?context=edit")}`, {
-    headers: { Authorization: `Basic ${credentials}` },
-  });
+  // ?rest_route= 방식은 고유주소가 '기본(Plain)'이어도 작동. context=edit는 별도 쿼리로 분리해야 한다
+  // (rest_route 값 안에 넣으면 경로로 오인돼 rest_no_route 404).
+  const res = await safeFetch(
+    `${baseUrl}/?rest_route=${encodeURIComponent("/wp/v2/users/me")}&context=edit`,
+    { headers: { Authorization: `Basic ${credentials}` } },
+  );
 
   const data = (await res.json().catch(() => null)) as
     | { name?: string; message?: string }
