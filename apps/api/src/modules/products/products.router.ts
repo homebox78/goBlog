@@ -242,7 +242,13 @@ productsRouter.post(
   "/analyze",
   asyncHandler(async (req, res) => {
     const { input } = parseBody(analyzeSchema, req.body);
-    res.json({ product: await analyzeProductInput(input) });
+    try {
+      res.json({ product: await analyzeProductInput(input) });
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+      // 관리자 전용 도구 — 원인 파악을 위해 에러 메시지를 그대로 노출
+      throw new HttpError(500, `분석 실패: ${(error as Error).message}`);
+    }
   }),
 );
 
