@@ -96,6 +96,9 @@ async function detectPlatform() {
     chip.textContent = "작성폼 아님";
     chip.classList.remove("on");
   }
+  // 플랫폼이 확정된 뒤 인스타 카드 표시 여부 갱신 (인스타 탭에서만)
+  if (currentArticle) renderInstagram(currentArticle);
+
   // 쇼핑 커넥트 활동 제한 채널이면 붉은 경고 + 발행 차단
   const warn = $("#restrictedWarn");
   if (warn) {
@@ -163,15 +166,15 @@ async function openArticle(id) {
   $("#detail").classList.remove("hidden");
   $("#actionBar").classList.remove("hidden");
   $("#notes").innerHTML = "";
-  renderInstagram(article);
-  detectPlatform();
+  detectPlatform(); // 플랫폼 감지 후 인스타 카드 표시 여부까지 renderInstagram이 갱신
 }
 
-// 인스타그램 캐러셀 카드 렌더 — 슬라이드 제목·요약, 블로그 이미지 3장(저장 링크), 캡션, 해시태그
+// 인스타그램 캐러셀 카드 렌더 — 인스타그램 탭에서만, 캐러셀 데이터가 있을 때 표시
 function renderInstagram(article) {
-  const ig = article.instagram;
+  const ig = article?.instagram;
   const section = $("#igSection");
-  if (!ig || (!ig.slides?.length && !ig.caption)) {
+  // 인스타그램 작성 화면이 아니면 숨긴다 (티스토리·네이버에서 뜨던 문제)
+  if (currentPlatform !== "INSTAGRAM" || !ig || (!ig.slides?.length && !ig.caption)) {
     section.classList.add("hidden");
     return;
   }
