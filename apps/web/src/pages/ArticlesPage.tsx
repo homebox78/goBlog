@@ -42,6 +42,8 @@ interface ArticleListItem {
   keyword: { id: number; text: string } | null;
   thumbnailUrl: string | null;
   pendingImages: number;
+  wordpress: { status: string; url: string | null } | null;
+  blogger: { status: string; url: string | null } | null;
 }
 
 type ListFilter = "all" | "review" | "noimage" | "lowq" | "unpublished" | "ad";
@@ -119,6 +121,19 @@ export default function ArticlesPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "상태 변경 실패"),
   });
 
+  // WordPress·Blogger 발행 (미발행/실패 시 클릭)
+  const [publishing, setPublishing] = useState<string | null>(null); // `${id}:${platform}`
+  const publishMutation = useMutation({
+    mutationFn: ({ id, platform }: { id: number; platform: "WORDPRESS" | "BLOGGER" }) =>
+      api.post(`/api/publish-jobs`, { articleId: id, platform }),
+    onSuccess: (_r, v) => {
+      toast.success(`${v.platform === "WORDPRESS" ? "워드프레스" : "Blogger"} 발행을 시작했습니다.`);
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["articles"] }), 1500);
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "발행 실패"),
+    onSettled: () => setPublishing(null),
+  });
+
   const runRowAction = async (id: number, kind: "images" | "improve") => {
     setBusy((prev) => ({ ...prev, [id]: kind }));
     try {
@@ -193,6 +208,7 @@ export default function ArticlesPage() {
                   <TableHead className="text-center">광고</TableHead>
                   <TableHead className="text-center">언어</TableHead>
                   <TableHead className="text-center">상태</TableHead>
+                  <TableHead className="text-center">발행처</TableHead>
                   <TableHead className="text-right">품질</TableHead>
                   <TableHead className="text-center">생성일</TableHead>
                   <TableHead className="text-center">관리</TableHead>
@@ -284,6 +300,28 @@ export default function ArticlesPage() {
                           </button>
                         )}
                       </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <PublishChip
+                            label="WP"
+                            state={article.wordpress}
+                            busy={publishing === `${article.id}:WORDPRESS`}
+                            onPublish={() => {
+                              setPublishing(`${article.id}:WORDPRESS`);
+                              publishMutation.mutate({ id: article.id, platform: "WORDPRESS" });
+                            }}
+                          />
+                          <PublishChip
+                            label="Blogger"
+                            state={article.blogger}
+                            busy={publishing === `${article.id}:BLOGGER`}
+                            onPublish={() => {
+                              setPublishing(`${article.id}:BLOGGER`);
+                              publishMutation.mutate({ id: article.id, platform: "BLOGGER" });
+                            }}
+                          />
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right font-mono">
                         {article.qualityScore ?? "—"}
                       </TableCell>
@@ -368,5 +406,54 @@ export default function ArticlesPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+/** WordPress·Blogger 발행 상태 칩 — 발행됨(링크)/발행중/실패(재시도)/미발행(발행 버튼) */
+function PublishChip({
+  label,
+  state,
+  busy,
+  onPublish,
+}: {
+  label: string;
+  state: { status: string; url: string | null } | null;
+  busy: boolean;
+  onPublish: () => void;
+}) {
+  if (busy || state?.status === "QUEUED" || state?.status === "RUNNING") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] text-muted-foreground">
+        <Loader2 className="size-3 animate-spin" /> {label}
+      </span>
+    );
+  }
+  if (state?.status === "SUCCEEDED") {
+    const chip = (
+      <span className="inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+        ✓ {label}
+      </span>
+    );
+    return state.url ? (
+      <a href={state.url} target="_blank" rel="noreferrer" title={`${label} 발행글 보기`}>
+        {chip}
+      </a>
+    ) : (
+      chip
+    );
+  }
+  // 미발행 또는 실패 → 발행 버튼
+  const failed = state?.status === "FAILED";
+  return (
+    <button
+      type="button"
+      onClick={onPublish}
+      title={failed ? `${label} 발행 실패 — 다시 시도` : `${label}에 발행`}
+      className={`rounded border px-1.5 py-0.5 text-[11px] transition-colors hover:bg-muted ${
+        failed ? "border-destructive/50 text-destructive" : "text-muted-foreground"
+      }`}
+    >
+      {failed ? `↻ ${label}` : `+ ${label}`}
+    </button>
   );
 }

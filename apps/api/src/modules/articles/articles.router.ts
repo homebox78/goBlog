@@ -36,11 +36,21 @@ articlesRouter.get(
           orderBy: { position: "asc" },
           select: { webpUrl: true, prompt: true },
         },
+        // WordPress·Blogger 발행 상태 (최신 작업 기준)
+        publishJobs: {
+          where: { platform: { in: ["WORDPRESS", "BLOGGER"] } },
+          orderBy: { id: "desc" },
+          select: { platform: true, status: true, publishedUrl: true },
+        },
       },
     });
     res.json({
       articles: articles.map((article) => {
-        const { media, contentMarkdown, adSource, adProduct, ...rest } = article;
+        const { media, contentMarkdown, adSource, adProduct, publishJobs, ...rest } = article;
+        // 플랫폼별 최신 작업 (publishJobs는 id desc 정렬이라 첫 항목이 최신)
+        const latest = (platform: string) => publishJobs.find((j) => j.platform === platform);
+        const wp = latest("WORDPRESS");
+        const blog = latest("BLOGGER");
         // 광고 감지: adProduct(자동 매칭) 없어도 본문에 수동 삽입 배너가 있으면 광고로 표시
         const md = contentMarkdown ?? "";
         const hasBanner = /link\.coupang|coupangcdn|smartstore|brandconnect|naver\.me|쿠팡에서 최저가|쇼핑하기|활동의 일환/.test(md);
@@ -52,6 +62,9 @@ articlesRouter.get(
           // 대표 썸네일 = 첫 번째 생성된 이미지, 미생성 이미지 수(원스톱 액션 버튼용)
           thumbnailUrl: media.find((m) => m.webpUrl)?.webpUrl ?? null,
           pendingImages: media.filter((m) => m.prompt && !m.webpUrl).length,
+          // 발행 상태: status(SUCCEEDED/QUEUED/RUNNING/FAILED) + url. 없으면 null(미발행)
+          wordpress: wp ? { status: wp.status, url: wp.publishedUrl } : null,
+          blogger: blog ? { status: blog.status, url: blog.publishedUrl } : null,
         };
       }),
     });
