@@ -171,10 +171,16 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
       }),
     });
 
-    // 특정 인물(연예인·스포츠 스타) 프로필·가십·근황 키워드 제외 — 홍보 가치가 낮고,
-    // 초상권 문제에 더해 외국 선수 기사에 한국인 AI 이미지가 붙는 공감 실패, 상품 매칭 불가.
+    // 제외 주제: 스포츠·연예(인물 가십/근황)·정치 — 홍보 가치 낮고, 초상권/공감 실패, 상품 매칭 불가.
     const PERSON_GOSSIP =
       /프로필|본명|열애|결혼설|이혼설?|재혼|결별설?|불화설|스캔들|근황|전참시|전지적\s*참견|나\s*혼자\s*산다|나혼산|미운\s*우리\s*새끼|런닝맨|무한도전|라디오스타|유\s*퀴즈|아는\s*형님|복면가왕|출연진|등장인물|누구인가|정체는|열애설|은퇴|이적설?|이적료|영입|방출|경질|데뷔|복귀전|발탁|맹활약|해트트릭|결승골|득점왕|선발\s*명단|라인업|국가대표|올스타|시상식|수상소감|입대|전역|병역/;
+    // 스포츠 종목·리그·경기
+    const SPORTS =
+      /축구|야구|농구|배구|골프|테니스|올림픽|월드컵|아시안게임|프리미어리그|분데스리가|라리가|챔스|챔피언스리그|kbo|mlb|epl|nba|손흥민|이강인|김민재|류현진|프로야구|프로축구|경기\s*결과|경기\s*일정|중계|하이라이트|선발\s*투수|타율|골\s*장면/i;
+    // 정치·정당·선거·정부 인사
+    const POLITICS =
+      /정치|정당|여당|야당|국회|의원|대통령|장관|총리|청와대|대통령실|선거|공천|탄핵|개헌|국정감사|여론조사|지지율|민주당|국민의힘|조국|이재명|윤석열|한동훈|대선|총선|지방선거|정상회담|외교|규탄|시위|집회|성명|브리핑/;
+    const isExcludedTopic = (kw: string) => PERSON_GOSSIP.test(kw) || SPORTS.test(kw) || POLITICS.test(kw);
 
     const cleanCandidates = (candidates ?? [])
       .map((candidate) => ({
@@ -191,6 +197,7 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
       .filter(
         (candidate, index, list) =>
           candidate.keyword.length > 1 &&
+          !isExcludedTopic(candidate.keyword) &&
           !excludedTexts.some((text) => normalizeKeyword(text) === normalizeKeyword(candidate.keyword)) &&
           list.findIndex((c) => normalizeKeyword(c.keyword) === normalizeKeyword(candidate.keyword)) === index,
       );

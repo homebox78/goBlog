@@ -214,7 +214,8 @@ articlesRouter.post(
 );
 
 /**
- * 고시 백필 — 배너(제휴 링크)가 있는데 고시가 없는 모든 글에 소스에 맞는 고시를 삽입한다.
+ * 고시 백필/갱신 — ① 배너 있는데 고시 없는 글엔 삽입 ② 이미 고시가 있는 글은 최신 디자인·문구 박스로 교체.
+ * (폰트·문구 지침 변경 시 기존 글 일괄 반영)
  */
 articlesRouter.post(
   "/backfill-disclosures",
@@ -223,14 +224,19 @@ articlesRouter.post(
       select: { id: true, title: true, contentMarkdown: true },
       take: 500,
     });
-    const { disclosureHtml, hasDisclosure } = await import("./generator.js");
-    const fixed: Array<{ id: number; title: string; source: string }> = [];
+    const { upsertDisclosure, hasDisclosure } = await import("./generator.js");
+    const fixed: Array<{ id: number; title: string; source: string; action: string }> = [];
     for (const a of articles) {
       const md = a.contentMarkdown ?? "";
+      const already = hasDisclosure(md);
       const hasBanner = /link\.coupang|coupangcdn|smartstore|brandconnect|naver\.me|쿠팡에서 최저가|쇼핑하기/.test(md);
-      if (!hasBanner || hasDisclosure(md)) continue;
-      const source = /link\.coupang|coupangcdn|쿠팡/.test(md) ? ("COUPANG" as const) : ("BRANDCONNECT" as const);
-      const next = `${disclosureHtml({ source })}\n\n${md}`;
+      if (!already && !hasBanner) continue; // 고시도 배너도 없으면 대상 아님
+      // 소스 판별: 기존 고시 문구 우선, 없으면 배너 링크로
+      const source = /쿠팡 파트너스 활동|link\.coupang|coupangcdn/.test(md)
+        ? ("COUPANG" as const)
+        : ("BRANDCONNECT" as const);
+      const next = upsertDisclosure(md, source);
+      if (next === md) continue; // 변화 없음
       const contentHtml = await renderContentHtml(next);
       const last = await prisma.articleVersion.findFirst({ where: { articleId: a.id }, orderBy: { version: "desc" } });
       await prisma.article.update({
@@ -244,12 +250,12 @@ articlesRouter.post(
               title: a.title,
               contentMarkdown: next,
               contentHtml,
-              changeNote: "대가성 고시 백필",
+              changeNote: already ? "대가성 고시 갱신(디자인·문구)" : "대가성 고시 삽입",
             },
           },
         },
       });
-      fixed.push({ id: a.id, title: a.title.slice(0, 40), source });
+      fixed.push({ id: a.id, title: a.title.slice(0, 40), source, action: already ? "갱신" : "삽입" });
     }
     res.json({ scanned: articles.length, fixedCount: fixed.length, fixed });
   }),

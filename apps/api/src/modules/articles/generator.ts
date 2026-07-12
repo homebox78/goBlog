@@ -109,12 +109,20 @@ export function disclosureText(product: Pick<ProductInput, "source">): string {
  *  · 표현: 플랫폼 지정 원문 + "광고" 명시(추천·보증의 경제적 이해관계임을 분명히)
  */
 export function disclosureHtml(product: Pick<ProductInput, "source">): string {
-  return `<p style="font-size:13px;color:#222;background:#f5f6f8;border:1px solid #e2e5ea;border-radius:6px;padding:11px 13px;margin:0 0 18px;line-height:1.6;"><strong style="color:#c0392b;">[광고]</strong> ${disclosureText(product)}</p>`;
+  return `<p style="font-size:15px;color:#222;background:#f5f6f8;border:1px solid #e2e5ea;border-radius:6px;padding:12px 14px;margin:0 0 18px;line-height:1.6;"><strong style="color:#c0392b;">[광고]</strong> ${disclosureText(product)}</p>`;
 }
 
 /** 본문에 이미 대가성 문구가 있는가 (중복 삽입 방지·백필 판별용) */
 export function hasDisclosure(markdown: string): boolean {
   return /활동의 일환/.test(markdown);
+}
+
+/** 기존 대가성 고시 <p> 박스(옛 스타일 포함)를 제거하고 최신 박스를 최상단에 넣는다(디자인·문구 일괄 갱신용). */
+export function upsertDisclosure(markdown: string, source: "COUPANG" | "BRANDCONNECT"): string {
+  const stripped = markdown
+    .replace(/<p\b[^>]*>(?:(?!<\/p>)[\s\S])*?활동의 일환(?:(?!<\/p>)[\s\S])*?<\/p>\s*/g, "")
+    .replace(/^\s+/, "");
+  return `${disclosureHtml({ source })}\n\n${stripped}`;
 }
 
 /** 네이버·쿠팡 CDN 이미지는 blogspot 등에서 hotlink가 막히므로 서버에 재호스팅한다. */
