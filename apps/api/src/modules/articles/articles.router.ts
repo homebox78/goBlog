@@ -125,6 +125,15 @@ articlesRouter.post(
   }),
 );
 
+/** 업로드 이미지(미디어) 삭제 */
+articlesRouter.delete(
+  "/:id/images/:mediaId",
+  asyncHandler(async (req, res) => {
+    const { deleteArticleImage } = await import("../images/image-service.js");
+    res.json(await deleteArticleImage(Number(req.params.id), Number(req.params.mediaId)));
+  }),
+);
+
 /** 글 상세 */
 articlesRouter.get(
   "/:id",

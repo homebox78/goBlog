@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, Save, Send, Sparkles, Upload, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, Save, Send, Sparkles, Trash2, Upload, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,14 +119,45 @@ export default function ArticleDetailPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 생성 실패"),
   });
 
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+
   const uploadImageMutation = useMutation({
     mutationFn: (dataUrl: string) =>
-      api.post(`/api/articles/${id}/images/upload`, { dataUrl, kind: "CONTENT" }),
-    onSuccess: () => {
-      toast.success("이미지를 본문에 추가했습니다.");
+      api.post<{ figure: string }>(`/api/articles/${id}/images/upload`, { dataUrl, kind: "CONTENT" }),
+    onSuccess: async (r) => {
+      // 본문 소스에서 커서(클릭) 위치에 삽입하고 즉시 저장 (미디어목록·미리보기 반영)
+      const ta = contentRef.current;
+      const md = ta?.value ?? form.contentMarkdown;
+      const pos = ta ? ta.selectionStart : md.length;
+      const next = `${md.slice(0, pos)}\n\n${r.figure}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
+      setForm((prev) => ({ ...prev, contentMarkdown: next }));
+      await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "이미지 삽입" });
       queryClient.invalidateQueries({ queryKey: ["article", id] });
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      toast.success("커서 위치에 이미지를 삽입했습니다.");
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 업로드 실패"),
+  });
+
+  const deleteImageMutation = useMutation({
+    mutationFn: (media: { id: number; webpUrl: string | null }) =>
+      api.delete(`/api/articles/${id}/images/${media.id}`).then(() => media),
+    onSuccess: async (media) => {
+      // 본문에서 해당 이미지 figure 제거 후 저장
+      if (media.webpUrl) {
+        const ta = contentRef.current;
+        const md = ta?.value ?? form.contentMarkdown;
+        const esc = media.webpUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const cleaned = md
+          .replace(new RegExp(`<figure[^>]*>(?:(?!</figure>)[\\s\\S])*?${esc}(?:(?!</figure>)[\\s\\S])*?</figure>`, "g"), "")
+          .replace(/\n{3,}/g, "\n\n");
+        setForm((prev) => ({ ...prev, contentMarkdown: cleaned }));
+        await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: cleaned, changeNote: "이미지 삭제" });
+      }
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+      toast.success("이미지를 삭제했습니다.");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 삭제 실패"),
   });
 
   const onPickImage = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -306,6 +337,7 @@ export default function ArticleDetailPage() {
                 </TabsList>
                 <TabsContent value="edit">
                   <Textarea
+                    ref={contentRef}
                     rows={24}
                     className="font-mono text-sm"
                     value={form.contentMarkdown}
@@ -313,6 +345,9 @@ export default function ArticleDetailPage() {
                       setForm((prev) => ({ ...prev, contentMarkdown: event.target.value }))
                     }
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    본문에서 이미지를 넣을 위치를 클릭한 뒤 우측 <b>직접 업로드</b>를 누르면 그 자리에 삽입됩니다.
+                  </p>
                 </TabsContent>
                 <TabsContent value="preview">
                   <div
@@ -442,6 +477,16 @@ export default function ArticleDetailPage() {
                       {asset.kind === "FEATURED" ? "대표" : `본문 ${asset.position ?? ""}`}
                     </Badge>
                     {asset.webpUrl && <Badge className="text-[10px]">생성됨</Badge>}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="ml-auto size-6"
+                      aria-label="이미지 삭제"
+                      disabled={deleteImageMutation.isPending}
+                      onClick={() => deleteImageMutation.mutate({ id: asset.id, webpUrl: asset.webpUrl })}
+                    >
+                      <Trash2 className="size-3.5 text-destructive" />
+                    </Button>
                   </div>
                   {asset.webpUrl ? (
                     <img

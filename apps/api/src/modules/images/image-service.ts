@@ -147,7 +147,7 @@ export async function uploadArticleImage(
   articleId: number,
   dataUrl: string,
   opts: { kind?: string; caption?: string; altText?: string } = {},
-): Promise<{ id: number; webpUrl: string; kind: string; width: number | null; height: number | null }> {
+): Promise<{ id: number; webpUrl: string; kind: string; figure: string; width: number | null; height: number | null }> {
   const match = /^data:(image\/[\w.+-]+);base64,(.+)$/s.exec(dataUrl.trim());
   if (!match) throw new HttpError(400, "이미지 파일이 올바르지 않습니다. (jpg/png/webp 등)");
   const raw = Buffer.from(match[2], "base64");
@@ -189,15 +189,20 @@ export async function uploadArticleImage(
     },
   });
 
-  // 본문 이미지면 글 끝에 figure로 삽입 (대표 이미지는 썸네일로만 사용)
-  if (kind === "CONTENT") {
-    const figure = contentFigure({ webpUrl, altText, caption }, position);
-    const markdown = `${article.contentMarkdown ?? ""}\n\n${figure}`;
-    const contentHtml = await renderContentHtml(markdown);
-    await prisma.article.update({ where: { id: articleId }, data: { contentMarkdown: markdown, contentHtml } });
-  }
+  // figure(본문 삽입용 HTML)는 프론트가 커서 위치에 넣도록 반환만 한다 (자동으로 끝에 붙이지 않음).
+  const figure = contentFigure({ webpUrl, altText, caption }, position);
+  return { id: asset.id, webpUrl, kind, figure, width: meta.width ?? null, height: meta.height ?? null };
+}
 
-  return { id: asset.id, webpUrl, kind, width: meta.width ?? null, height: meta.height ?? null };
+/** 업로드 이미지(미디어) 삭제 + 파일 제거. 본문의 figure 제거는 프론트가 담당(편집 중 폼 기준). */
+export async function deleteArticleImage(articleId: number, mediaId: number): Promise<{ ok: boolean }> {
+  const asset = await prisma.mediaAsset.findFirst({ where: { id: mediaId, articleId } });
+  if (!asset) throw new HttpError(404, "이미지를 찾을 수 없습니다.");
+  if (asset.fileName) {
+    await fs.unlink(path.join(mediaDir(), asset.fileName)).catch(() => undefined);
+  }
+  await prisma.mediaAsset.delete({ where: { id: mediaId } });
+  return { ok: true };
 }
 
 function contentFigure(image: { webpUrl: string; altText: string; caption: string | null }, slot: number): string {

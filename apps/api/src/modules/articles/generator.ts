@@ -603,11 +603,17 @@ export async function improveArticle(
   let quality = runCheck(title, meta, excerpt, markdown);
   const before = article.qualityScore ?? quality.score;
 
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const curYear = kstNow.getUTCFullYear();
+  const curMonth = kstNow.getUTCMonth() + 1;
+  const curDay = kstNow.getUTCDate();
+
   const system = [
     "당신은 한국어 SEO 블로그 에디터입니다. 기존 글의 품질 부족 항목만 보강해 완성도를 85점 이상으로 올립니다.",
     "규칙 ① 본문의 기존 HTML 블록(<a> 상품 배너, <p> 대가성 안내 문구, <figure> 이미지, 맨 끝 #해시태그 줄, 인용문)은 절대 삭제·변형하지 말고 그대로 보존한다.",
     "규칙 ② qualityIssues의 각 항목을 해결한다 — 특히 본문 끝 #해시태그가 20개 미만이면 관련 SEO 태그를 20~30개로 늘리고, 소제목(H2)에 핵심 키워드를 자연스럽게 넣고, 키워드를 본문 전반에 고르게 분포시키며, 부족한 분량은 유용한 정보로 보강한다.",
     "규칙 ③ 과장·보장성·광고클릭 유도 문구 금지. 사람이 쓴 자연스러운 문체·이모지를 유지한다.",
+    `규칙 ④ 오늘은 ${curYear}년 ${curMonth}월 ${curDay}일이다. 제목·본문의 연도·시점 표현이 현재와 안 맞으면(예: 지난 연도를 '최신'·'올해'로 표기) 반드시 현재 연도(${curYear}) 기준으로 바로잡는다. 시점을 모르면 연도를 지어내지 말고 표현을 뺀다.`,
     "출력은 JSON만: {\"title\":\"\",\"metaDescription\":\"\",\"excerpt\":\"\",\"contentMarkdown\":\"\"}",
   ].join("\n");
 
