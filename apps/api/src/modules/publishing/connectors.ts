@@ -132,9 +132,51 @@ export async function publishToWordpress(article: {
     }
   }
 
+  // SEO: 태그·카테고리를 워드프레스 텀으로 등록(없으면 생성)해 붙인다.
+  const authHeaders = { Authorization: `Basic ${credentials}`, "Content-Type": "application/json" };
+  const resolveTerms = async (taxonomy: "tags" | "categories", names: string[]): Promise<number[]> => {
+    const ids: number[] = [];
+    for (const name of names.slice(0, 15)) {
+      try {
+        const r = await fetch(rest(`/wp/v2/${taxonomy}`), { method: "POST", headers: authHeaders, body: JSON.stringify({ name }) });
+        const j = (await r.json()) as { id?: number; code?: string; data?: { term_id?: number } };
+        if (j.id) ids.push(j.id);
+        else if (j.code === "term_exists" && j.data?.term_id) ids.push(j.data.term_id); // 이미 있으면 그 ID
+      } catch {
+        // 개별 텀 실패는 무시
+      }
+    }
+    return ids;
+  };
+
+  // 카테고리: 키워드 카테고리 → 네이버 카테고리 매핑 함수 재사용 (IT·디지털 등)
+  const meta = await prisma.article.findUnique({
+    where: { id: article.id },
+    select: { contentMarkdown: true, keyword: { select: { category: true, text: true } } },
+  });
+  // 태그: 저장된 ArticleTag 우선, 없으면 본문 끝 해시태그에서 추출 (옛 글 대응)
+  let tagNames = await getArticleTags(article.id).catch(() => [] as string[]);
+  if (tagNames.length === 0) {
+    const md = meta?.contentMarkdown ?? "";
+    tagNames = [
+      ...new Set(
+        (md.match(/#[0-9A-Za-z가-힣_]{1,30}/g) ?? [])
+          .filter((h) => !/^#[0-9a-fA-F]{3,8}$/.test(h))
+          .map((h) => h.slice(1)),
+      ),
+    ].slice(0, 15);
+  }
+  const { suggestNaverCategory } = await import("../articles/naver-category.js");
+  const categoryName = suggestNaverCategory(meta?.keyword?.category, meta?.keyword?.text ?? article.title);
+
+  const [tagIds, categoryIds] = await Promise.all([
+    tagNames.length ? resolveTerms("tags", tagNames) : Promise.resolve([]),
+    categoryName ? resolveTerms("categories", [categoryName]) : Promise.resolve([]),
+  ]);
+
   const res = await fetch(rest("/wp/v2/posts"), {
     method: "POST",
-    headers: { Authorization: `Basic ${credentials}`, "Content-Type": "application/json" },
+    headers: authHeaders,
     body: JSON.stringify({
       title: article.title,
       content: article.contentHtml ?? "",
@@ -142,6 +184,8 @@ export async function publishToWordpress(article: {
       slug: article.slug ?? undefined,
       status: "publish",
       ...(featuredMediaId ? { featured_media: featuredMediaId } : {}),
+      ...(tagIds.length ? { tags: tagIds } : {}),
+      ...(categoryIds.length ? { categories: categoryIds } : {}),
     }),
   });
   const post = (await res.json()) as { link?: string; message?: string };
