@@ -130,6 +130,36 @@ if (!window.__goblogAdapterListener) {
         sendResponse({ ok: true, platform: detectPlatform(), restricted: restrictedChannel() });
         return;
       }
+      // 네이버 자동 입력용 — 제목·본문 모듈의 뷰포트 절대 좌표(에디터 iframe 오프셋 합산).
+      // 에디터가 없는 프레임(최상위)은 응답하지 않아 에디터 프레임에 양보한다.
+      if (message?.type === "GET_RECTS") {
+        const titleEl = document.querySelector(".se-title-text");
+        const bodyEl = document.querySelector(".se-component.se-text .se-module-text");
+        if (!titleEl || !bodyEl) return; // 응답하지 않음
+        titleEl.scrollIntoView({ block: "center" });
+        const absCenter = (el) => {
+          const r = el.getBoundingClientRect();
+          let x = r.left + r.width / 2;
+          let y = r.top + r.height / 2;
+          // 같은 출처(blog.naver.com) iframe 체인 오프셋 합산 → 최상위 뷰포트 좌표
+          let win = window;
+          while (win !== win.top) {
+            try {
+              const fe = win.frameElement;
+              if (!fe) break;
+              const fr = fe.getBoundingClientRect();
+              x += fr.left;
+              y += fr.top;
+              win = win.parent;
+            } catch {
+              break; // 교차 출처면 중단 (좌표 부정확 가능)
+            }
+          }
+          return { x: Math.round(x), y: Math.round(y) };
+        };
+        sendResponse({ ok: true, title: absCenter(titleEl), body: absCenter(bodyEl) });
+        return;
+      }
       if (message?.type === "APPLY") {
         const platform = detectPlatform();
         if (platform === "TISTORY") {

@@ -261,16 +261,38 @@ async function applyToForm() {
   const title = naverTitle();
   const html = buildBodyHtml();
 
-  // 스마트에디터 ONE은 내부 모델형 에디터라 DOM 직접 입력이 안 된다(제목/본문 문단이 contenteditable이 아님).
-  // → 제목을 먼저 클립보드에 담고, 본문은 '본문 복사'로 이어서 붙여넣는 2단계 방식이 유일하게 안정적이다.
+  // 네이버 스마트에디터: debugger(CDP) 신뢰 이벤트로 완전 자동 입력. 실패하면 기존 2단계 수동 폴백.
   if (currentPlatform === "NAVER_BLOG") {
-    await navigator.clipboard.writeText(title);
-    showNotes([
-      "제목을 클립보드에 복사했습니다.",
-      "① 네이버 제목칸을 클릭하고 Ctrl+V로 붙여넣으세요.",
-      "② 아래 '본문 복사'를 누른 뒤 본문칸을 클릭하고 Ctrl+V로 붙여넣으세요.",
-      "쇼핑커넥트 글은 대가성 문구가 제목 앞·본문 최상단에 있어야 합니다.",
-    ]);
+    try {
+      showNotes(["⏳ 자동 입력 중... (탭 상단 '디버깅' 표시줄은 정상이며 곧 사라집니다)"]);
+      // 본문 HTML을 미리 클립보드에 담는다 — 패널이 포커스를 잃기 전에 해야 함
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([plainText(html)], { type: "text/plain" }),
+        }),
+      ]);
+      const rects = await chrome.runtime.sendMessage({ relay: true, payload: { type: "GET_RECTS" } });
+      if (!rects?.ok) throw new Error(rects?.error || "작성폼 좌표를 찾지 못했습니다");
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) throw new Error("활성 탭 없음");
+      const res = await chrome.runtime.sendMessage({ type: "NAVER_AUTO", tabId: tab.id, title, rects });
+      if (!res?.ok) throw new Error(res?.error || "자동 입력 실패");
+      showNotes([
+        "✅ 제목·본문 자동 입력 완료!",
+        "내용 확인 후 우측 상단 '발행'에서 카테고리·태그 확인하고 발행하세요.",
+        "혹시 일부만 들어갔다면 '본문 복사' 버튼으로 수동 붙여넣기 하세요.",
+      ]);
+    } catch (error) {
+      // 수동 폴백 — 기존 2단계 클립보드 방식
+      await navigator.clipboard.writeText(title);
+      showNotes([
+        `⚠ 자동 입력 실패(${error.message}) — 수동 모드로 전환합니다.`,
+        "제목을 클립보드에 복사했습니다.",
+        "① 네이버 제목칸을 클릭하고 Ctrl+V로 붙여넣으세요.",
+        "② 아래 '본문 복사'를 누른 뒤 본문칸을 클릭하고 Ctrl+V로 붙여넣으세요.",
+      ]);
+    }
     return;
   }
 
