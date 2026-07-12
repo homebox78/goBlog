@@ -500,37 +500,62 @@ articlesRouter.put(
       },
     });
 
-    // 검수 완료(→APPROVED) 시 Blogger 자동 발행 — 설정돼 있고 아직 Blogger 발행 이력이 없을 때만.
-    let bloggerQueued = false;
+    // 검수 완료(→APPROVED) 시 API 자동발행 플랫폼(Blogger·워드프레스)에 발행 — 설정된 것만, 중복 없이.
+    let autoPublished: string[] = [];
     if (body.status === "APPROVED" && article.status !== "APPROVED") {
-      bloggerQueued = await maybeAutoPublishBlogger(id);
+      autoPublished = await maybeAutoPublishApi(id);
     }
 
-    res.json({ id: updated.id, qualityScore: updated.qualityScore, status: updated.status, bloggerQueued });
+    res.json({
+      id: updated.id,
+      qualityScore: updated.qualityScore,
+      status: updated.status,
+      autoPublished,
+      bloggerQueued: autoPublished.includes("BLOGGER"), // 하위호환
+    });
   }),
 );
 
 /**
- * 검수 완료 시 Blogger 자동 발행 큐잉.
- * Blogger OAuth·BlogId가 모두 설정돼 있고, 같은 글의 Blogger 발행(성공/대기)이 없을 때만 작업을 만든다.
+ * 검수 완료 시 API 기반 플랫폼(Blogger·워드프레스) 자동 발행 큐잉.
+ * 각 플랫폼은 필수 설정이 모두 있고, 같은 글에 해당 플랫폼 발행(성공/대기)이 없을 때만 작업을 만든다.
+ * (네이버·티스토리는 공개 API가 없어 확장에서만 발행 — 여기서 제외)
  */
-async function maybeAutoPublishBlogger(articleId: number): Promise<boolean> {
+async function maybeAutoPublishApi(articleId: number): Promise<string[]> {
   const { getSettingValues } = await import("../settings/settings.service.js");
-  const cfg = await getSettingValues(["blogger.blogId", "blogger.clientId", "blogger.clientSecret", "blogger.refreshToken"]);
-  if (!cfg["blogger.blogId"] || !cfg["blogger.clientId"] || !cfg["blogger.clientSecret"] || !cfg["blogger.refreshToken"]) {
-    return false; // Blogger 미설정 → 자동 발행 안 함
-  }
-  const existing = await prisma.publishJob.findFirst({
-    where: { articleId, platform: "BLOGGER", status: { in: ["QUEUED", "RUNNING", "SUCCEEDED"] } },
-  });
-  if (existing) return false; // 이미 발행됐거나 대기 중
+  const cfg = await getSettingValues([
+    "blogger.blogId",
+    "blogger.clientId",
+    "blogger.clientSecret",
+    "blogger.refreshToken",
+    "wordpress.url",
+    "wordpress.username",
+    "wordpress.appPassword",
+  ]);
 
-  await prisma.publishJob.create({
-    data: { articleId, platform: "BLOGGER", status: "QUEUED" },
-  });
-  const { processQueue } = await import("../publishing/publish-runner.js");
-  void processQueue(); // 비동기 즉시 처리
-  return true;
+  const targets: string[] = [];
+  if (cfg["blogger.blogId"] && cfg["blogger.clientId"] && cfg["blogger.clientSecret"] && cfg["blogger.refreshToken"]) {
+    targets.push("BLOGGER");
+  }
+  if (cfg["wordpress.url"] && cfg["wordpress.username"] && cfg["wordpress.appPassword"]) {
+    targets.push("WORDPRESS");
+  }
+  if (targets.length === 0) return [];
+
+  const queued: string[] = [];
+  for (const platform of targets) {
+    const existing = await prisma.publishJob.findFirst({
+      where: { articleId, platform: platform as "BLOGGER" | "WORDPRESS", status: { in: ["QUEUED", "RUNNING", "SUCCEEDED"] } },
+    });
+    if (existing) continue; // 이미 발행됐거나 대기 중
+    await prisma.publishJob.create({ data: { articleId, platform: platform as "BLOGGER" | "WORDPRESS", status: "QUEUED" } });
+    queued.push(platform);
+  }
+  if (queued.length > 0) {
+    const { processQueue } = await import("../publishing/publish-runner.js");
+    void processQueue();
+  }
+  return queued;
 }
 
 /** 버전 복원 */

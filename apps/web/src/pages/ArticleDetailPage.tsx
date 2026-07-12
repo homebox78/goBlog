@@ -97,16 +97,20 @@ export default function ArticleDetailPage() {
   // 검수 완료 → status APPROVED. Blogger 설정돼 있으면 서버가 자동 발행 큐잉(bloggerQueued).
   const approveMutation = useMutation({
     mutationFn: () =>
-      api.put<{ id: number; status: string; bloggerQueued: boolean }>(`/api/articles/${id}`, {
+      api.put<{ id: number; status: string; autoPublished: string[] }>(`/api/articles/${id}`, {
         ...form,
         status: "APPROVED",
         changeNote: "검수 완료",
       }),
     onSuccess: (r) => {
-      if (r.bloggerQueued) toast.success("검수 완료 → Blogger 자동 발행을 시작했습니다.");
-      else toast.success("검수 완료로 표시했습니다. (Blogger 미설정 시 자동 발행 안 함)");
+      const names = (r.autoPublished ?? [])
+        .map((p) => (p === "BLOGGER" ? "Blogger" : p === "WORDPRESS" ? "워드프레스" : p))
+        .join(" · ");
+      if (names) toast.success(`검수 완료 → ${names} 자동 발행을 시작했습니다.`);
+      else toast.success("검수 완료로 표시했습니다. (Blogger·워드프레스 미설정 시 자동 발행 안 함)");
       queryClient.invalidateQueries({ queryKey: ["article", id] });
       queryClient.invalidateQueries({ queryKey: ["articles"] });
+      queryClient.invalidateQueries({ queryKey: ["publish-jobs", id] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "검수 완료 실패"),
   });
