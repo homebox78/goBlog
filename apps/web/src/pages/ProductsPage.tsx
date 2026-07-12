@@ -508,11 +508,13 @@ function UrlAnalyzer({
   const analyzeMutation = useMutation({
     mutationFn: async (link: string) => {
       // 스마트스토어 URL이 있으면 크롬 확장으로 상품명·이미지를 먼저 추출해 입력 보강 (서버는 네이버 차단)
-      const { enrichNaverInput } = await import("@/lib/naver-bridge");
-      const { input } = await enrichNaverInput(link);
+      const { enrichNaverInput, enrichFailureMessage } = await import("@/lib/naver-bridge");
+      const r = await enrichNaverInput(link);
+      const warn = enrichFailureMessage(r.reason);
+      if (warn) toast.info(warn, { duration: 8000 });
       return api.post<{ product: Omit<ProductPayload, "price"> & { price: number | null } }>(
         "/api/products/analyze",
-        { input },
+        { input: r.input },
       );
     },
     onSuccess: (result) => {

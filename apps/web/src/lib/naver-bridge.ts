@@ -63,20 +63,40 @@ const STORE_URL = /^https?:\/\/(m\.)?(smartstore|shopping|brand)\.naver\.com\//i
  * 확장으로 페이지를 가져와 상품명·이미지 줄을 자동으로 붙인다.
  * (서버의 analyzeNaverPaste가 그 줄들을 그대로 사용 — 링크는 naver.me 유지)
  */
-export async function enrichNaverInput(raw: string): Promise<{ input: string; extracted: NaverProductInfo | null }> {
+export type EnrichReason = "no-store-url" | "has-name" | "no-extension" | "blocked" | "failed" | null;
+
+export async function enrichNaverInput(
+  raw: string,
+): Promise<{ input: string; extracted: NaverProductInfo | null; reason: EnrichReason }> {
   const lines = raw
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
   const store = lines.find((l) => STORE_URL.test(l));
   const hasName = lines.some((l) => !/^https?:\/\//i.test(l) && l.length >= 2);
-  if (!store || hasName || !hasGoblogExtension()) return { input: raw, extracted: null };
+  if (!store) return { input: raw, extracted: null, reason: "no-store-url" };
+  if (hasName) return { input: raw, extracted: null, reason: "has-name" };
+  if (!hasGoblogExtension()) return { input: raw, extracted: null, reason: "no-extension" };
   try {
     const info = parseNaverProductHtml(await fetchNaverHtmlViaExtension(store));
-    if (!info.name) return { input: raw, extracted: null };
+    if (!info.name) return { input: raw, extracted: null, reason: "blocked" };
     const extra = [info.name, ...(info.imageUrl ? [info.imageUrl] : [])];
-    return { input: [...lines, ...extra].join("\n"), extracted: info };
+    return { input: [...lines, ...extra].join("\n"), extracted: info, reason: null };
   } catch {
-    return { input: raw, extracted: null };
+    return { input: raw, extracted: null, reason: "failed" };
+  }
+}
+
+/** 스마트스토어 추출 실패 사유 → 사용자 안내 문구 (실패해도 서버 폴백은 계속 진행) */
+export function enrichFailureMessage(reason: EnrichReason): string | null {
+  switch (reason) {
+    case "no-extension":
+      return "goBlog 크롬 확장이 감지되지 않습니다. chrome://extensions에서 확장을 새로고침(v0.1.11+)한 뒤, 이 페이지도 새로고침해주세요.";
+    case "blocked":
+      return "확장이 페이지를 열었지만 네이버가 차단했습니다. 상품명을 한 줄 추가해주세요.";
+    case "failed":
+      return "확장이 스마트스토어 페이지를 가져오지 못했습니다. 확장 새로고침 후 재시도하거나 상품명을 한 줄 추가해주세요.";
+    default:
+      return null;
   }
 }

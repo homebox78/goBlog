@@ -207,9 +207,11 @@ export default function ArticleDetailPage() {
   const bannerMutation = useMutation({
     mutationFn: async () => {
       // 스마트스토어 URL이 있으면 크롬 확장으로 상품명·이미지를 먼저 추출해 입력을 보강 (서버는 네이버 차단)
-      const { enrichNaverInput } = await import("@/lib/naver-bridge");
-      const { input } = await enrichNaverInput(bannerInput);
-      return api.post<{ banner: string; disclosure: string }>(`/api/articles/${id}/banner`, { input });
+      const { enrichNaverInput, enrichFailureMessage } = await import("@/lib/naver-bridge");
+      const r = await enrichNaverInput(bannerInput);
+      const warn = enrichFailureMessage(r.reason);
+      if (warn) toast.info(warn, { duration: 8000 });
+      return api.post<{ banner: string; disclosure: string }>(`/api/articles/${id}/banner`, { input: r.input });
     },
     onSuccess: async (r) => {
       // 본문 소스에서 커서(클릭) 위치에 배너 삽입 후 저장 (중복 삽입 가능)
@@ -233,8 +235,20 @@ export default function ArticleDetailPage() {
 
   // ── 미리보기에서 배너·이미지 클릭 선택 → 삭제/위·아래 이동/드래그 재배치 ──────────
   const previewRef = useRef<HTMLDivElement>(null);
-  const [selBanner, setSelBanner] = useState<{ needle: string; nth: number; kind: "배너" | "이미지" } | null>(null);
+  const [selBanner, setSelBanner] = useState<{
+    needle: string;
+    nth: number;
+    kind: "배너" | "이미지";
+    top: number; // 미리보기 컨테이너 기준 선택 요소의 y — 툴바를 요소 바로 위에 띄운다
+  } | null>(null);
   const dropTargetRef = useRef<{ el: HTMLElement; before: boolean } | null>(null);
+
+  // 선택 요소 바로 위 툴바 위치 계산 (relative 래퍼 기준)
+  const selTopOf = (el: HTMLElement): number => {
+    const wrapper = previewRef.current?.parentElement;
+    if (!wrapper) return 0;
+    return el.getBoundingClientRect().top - wrapper.getBoundingClientRect().top;
+  };
 
   const isBannerAnchor = (el: Element | null): el is HTMLAnchorElement =>
     !!el &&
@@ -342,7 +356,7 @@ export default function ArticleDetailPage() {
       info.el.style.outline = "3px dashed #e52528";
       info.el.style.cursor = "grab";
       info.el.setAttribute("draggable", "true");
-      setSelBanner({ needle: info.needle, nth: info.nth, kind: info.kind });
+      setSelBanner({ needle: info.needle, nth: info.nth, kind: info.kind, top: selTopOf(info.el) });
     } else {
       clearBannerSelection();
     }
@@ -358,7 +372,8 @@ export default function ArticleDetailPage() {
   const onPreviewDragStart = (e: React.DragEvent) => {
     const info = selectableInfo(e.target as HTMLElement);
     if (!info) return;
-    setSelBanner({ needle: info.needle, nth: info.nth, kind: info.kind }); // 드래그 시작 시 자동 선택
+    // 드래그 시작 시 자동 선택
+    setSelBanner({ needle: info.needle, nth: info.nth, kind: info.kind, top: selTopOf(info.el) });
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", "goblog-block");
   };
@@ -591,33 +606,42 @@ export default function ArticleDetailPage() {
                   </p>
                 </TabsContent>
                 <TabsContent value="preview">
-                  {selBanner && (
-                    <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs dark:border-red-900 dark:bg-red-950">
-                      <span className="font-medium">🎯 {selBanner.kind} 선택됨 — 드래그해서 원하는 위치에 놓거나:</span>
-                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => moveSelectedBanner(-1)}>
-                        ▲ 위로
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => moveSelectedBanner(1)}>
-                        ▼ 아래로
-                      </Button>
-                      <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" onClick={deleteSelectedBanner}>
-                        🗑 삭제
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={clearBannerSelection}>
-                        취소
-                      </Button>
-                    </div>
-                  )}
-                  <div
-                    ref={previewRef}
-                    onClick={onPreviewClick}
-                    onDragStart={onPreviewDragStart}
-                    onDragOver={onPreviewDragOver}
-                    onDrop={onPreviewDrop}
-                    onDragEnd={clearDropIndicator}
-                    className="prose prose-sm max-w-none rounded-lg border p-4 dark:prose-invert [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-4 [&_h3]:font-semibold [&_table]:w-full [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:bg-muted [&_th]:p-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2"
-                    dangerouslySetInnerHTML={{ __html: article.contentHtml ?? "" }}
-                  />
+                  <div className="relative">
+                    {selBanner && (
+                      <div
+                        className="absolute left-2 z-10 flex flex-wrap items-center gap-1.5 rounded-md border border-red-300 bg-red-50 p-1.5 text-xs shadow-lg dark:border-red-900 dark:bg-red-950"
+                        style={{
+                          top: Math.max(selBanner.top, 42),
+                          transform: "translateY(calc(-100% - 6px))",
+                        }}
+                      >
+                        <span className="font-medium">🎯 {selBanner.kind}</span>
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => moveSelectedBanner(-1)}>
+                          ▲ 위로
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => moveSelectedBanner(1)}>
+                          ▼ 아래로
+                        </Button>
+                        <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" onClick={deleteSelectedBanner}>
+                          🗑 삭제
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={clearBannerSelection}>
+                          취소
+                        </Button>
+                        <span className="text-[10px] text-muted-foreground">드래그로 이동 가능</span>
+                      </div>
+                    )}
+                    <div
+                      ref={previewRef}
+                      onClick={onPreviewClick}
+                      onDragStart={onPreviewDragStart}
+                      onDragOver={onPreviewDragOver}
+                      onDrop={onPreviewDrop}
+                      onDragEnd={clearDropIndicator}
+                      className="prose prose-sm max-w-none rounded-lg border p-4 dark:prose-invert [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-4 [&_h3]:font-semibold [&_table]:w-full [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:bg-muted [&_th]:p-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2"
+                      dangerouslySetInnerHTML={{ __html: article.contentHtml ?? "" }}
+                    />
+                  </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     미리보기는 마지막 저장 시점 기준입니다. 배너·이미지를 클릭하면 삭제·이동(드래그)할 수 있습니다.
                   </p>
