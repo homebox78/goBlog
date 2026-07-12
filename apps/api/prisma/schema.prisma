@@ -168,6 +168,7 @@ model Product {
   isRocket         Boolean  @default(false)
   status           String   @default("ACTIVE") // ACTIVE | USED | DISABLED
   matchedKeywordId Int?
+  matchedAt        DateTime? // 키워드에 매칭된 시각 (미매칭→매칭 전환 시 갱신, 알림·뱃지용)
   matchedKeyword   Keyword? @relation(fields: [matchedKeywordId], references: [id], onDelete: SetNull)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

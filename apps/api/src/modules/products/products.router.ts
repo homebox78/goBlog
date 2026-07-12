@@ -68,6 +68,7 @@ productsRouter.post(
         description: input.description ?? null,
         isRocket: input.isRocket ?? false,
         matchedKeywordId: match?.keyword.id ?? null,
+        matchedAt: match ? new Date() : null,
       },
       include: { matchedKeyword: { select: { id: true, text: true } } },
     });

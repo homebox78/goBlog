@@ -122,7 +122,7 @@ export default function AppLayout() {
       </aside>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-8 py-8">
+        <div className="px-8 py-8">
           <Outlet />
         </div>
       </main>

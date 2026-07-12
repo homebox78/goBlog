@@ -10,6 +10,33 @@ import {
   type KeywordMetricData,
 } from "./metrics.js";
 import { fetchNaverBlogCompetition, lowCompetitionScore } from "./competition.js";
+import { bestKeywordForProduct } from "../products/product-match.js";
+
+/**
+ * 아직 키워드에 매칭 안 된 등록 상품을, 현재 키워드 풀 기준으로 다시 매칭한다.
+ * 새로 매칭되면 matchedAt을 갱신해 프론트에서 '매칭완료' 알림·뱃지를 띄운다.
+ */
+async function rematchUnmatchedProducts(): Promise<void> {
+  const unmatched = await prisma.product.findMany({
+    where: { status: "ACTIVE", matchedKeywordId: null },
+    select: { id: true, name: true, brand: true },
+  });
+  if (unmatched.length === 0) return;
+  const pool = await prisma.keyword.findMany({
+    where: { status: { in: ["RECOMMENDED", "SAVED"] } },
+    orderBy: { updatedAt: "desc" },
+    take: 500,
+    select: { id: true, text: true },
+  });
+  for (const product of unmatched) {
+    const match = bestKeywordForProduct({ name: product.name, brand: product.brand }, pool);
+    if (match) {
+      await prisma.product
+        .update({ where: { id: product.id }, data: { matchedKeywordId: match.keyword.id, matchedAt: new Date() } })
+        .catch(() => undefined);
+    }
+  }
+}
 
 interface Candidate {
   keyword: string;
@@ -361,6 +388,9 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
         })
         .catch(() => undefined);
     }
+
+    // 미매칭 상품 재매칭 — 키워드 풀이 늘면 뒤늦게 어울리는 키워드가 생길 수 있다.
+    await rematchUnmatchedProducts();
 
     return {
       date: kstToday().ymd,

@@ -99,6 +99,23 @@ articlesRouter.post(
   }),
 );
 
+/** 사용자 이미지 직접 업로드 (Gemini로 못 만드는 사진용) — base64 dataUrl */
+articlesRouter.post(
+  "/:id/images/upload",
+  asyncHandler(async (req, res) => {
+    const dataUrl = req.body?.dataUrl;
+    if (!dataUrl || typeof dataUrl !== "string") throw new HttpError(400, "이미지 데이터(dataUrl)가 필요합니다.");
+    const { uploadArticleImage } = await import("../images/image-service.js");
+    res.json(
+      await uploadArticleImage(Number(req.params.id), dataUrl, {
+        kind: req.body?.kind,
+        caption: req.body?.caption,
+        altText: req.body?.altText,
+      }),
+    );
+  }),
+);
+
 /** 글 상세 */
 articlesRouter.get(
   "/:id",

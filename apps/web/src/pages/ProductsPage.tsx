@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Link2, Loader2, PenLine, Sparkles, Save, Trash2, Tag, ExternalLink } from "lucide-react";
@@ -30,7 +30,13 @@ interface RegisteredProduct {
   description: string | null;
   isRocket: boolean;
   status: string;
+  matchedAt: string | null;
   matchedKeyword: { id: number; text: string } | null;
+}
+
+/** 최근(3일 내) 매칭된 상품인가 — 반짝이는 '매칭완료' 뱃지 표시용 */
+function isRecentMatch(p: RegisteredProduct): boolean {
+  return !!(p.matchedKeyword && p.matchedAt && Date.now() - new Date(p.matchedAt).getTime() < 3 * 86400000);
 }
 
 function toPayload(p: RegisteredProduct): ProductPayload {
@@ -128,6 +134,25 @@ function RegisteredProducts({
 
   const products = data?.products ?? [];
 
+  // 새로 매칭된 상품(직전 확인 이후)이 생기면 우측 상단 알림
+  useEffect(() => {
+    if (!products.length) return;
+    const seenKey = "goblog:lastMatchSeen";
+    const lastSeen = Number(localStorage.getItem(seenKey) ?? 0);
+    const matchTimes = products
+      .filter((p) => p.matchedKeyword && p.matchedAt)
+      .map((p) => new Date(p.matchedAt as string).getTime());
+    if (matchTimes.length === 0) return;
+    const newest = Math.max(...matchTimes);
+    const fresh = matchTimes.filter((t) => t > lastSeen).length;
+    if (fresh > 0 && lastSeen > 0) {
+      toast.success(`상품 ${fresh}개가 키워드에 매칭됐습니다! 클릭해 글을 작성하세요.`, {
+        position: "top-right",
+      });
+    }
+    localStorage.setItem(seenKey, String(newest));
+  }, [products]);
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -163,6 +188,11 @@ function RegisteredProducts({
                       </Badge>
                       {product.status === "USED" && (
                         <Badge variant="outline" className="text-[10px]">발행에 사용됨</Badge>
+                      )}
+                      {isRecentMatch(product) && (
+                        <Badge className="animate-pulse bg-emerald-500 text-[10px] text-white hover:bg-emerald-500">
+                          ✨ 매칭완료
+                        </Badge>
                       )}
                       {product.matchedKeyword ? (
                         <span className="inline-flex items-center gap-1 text-xs text-emerald-600">

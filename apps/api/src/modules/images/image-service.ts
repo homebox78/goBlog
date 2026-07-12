@@ -50,7 +50,12 @@ async function generateOneImage(prompt: string, fileBase: string, characterKeys:
   const STYLE_GUIDE =
     "Style: bright, warm, clean and positive mood — never dark, gloomy, or depressing. " +
     "All people must be Korean (East Asian) — absolutely no Western or foreign-looking faces. " +
-    "Avoid any visible text, letters, words, or captions in the image. " +
+    "Absolutely NO text, letters, words, numbers, captions, logos, brand marks, trademarks, or brand names anywhere in the image " +
+    "(no Apple logo, no Samsung/Nike/etc. marks, no product packaging text) — this avoids copyright/trademark problems. " +
+    "Do NOT depict a specific branded product close-up (product renders come out inaccurate and misleading). " +
+    "Instead show the SCENE or lifestyle around it — e.g. for ramen, a person happily eating ramen, not a ramen package. " +
+    "Use only generic, unbranded, logo-free objects and devices. " +
+    "If a product must appear, keep it far away as a small unbranded element in a long/wide shot, never the focus. " +
     "Wide 4:3 landscape composition, natural lighting, clean modern look.";
   const REFERENCE_GUIDE =
     references.length > 0
@@ -132,6 +137,67 @@ async function generateOneImage(prompt: string, fileBase: string, characterKeys:
     height: meta.height ?? 0,
     bytes: webp.length,
   };
+}
+
+/**
+ * 사용자가 직접 올린 이미지를 저장(webp)하고 본문에 삽입한다.
+ * Gemini로 만들 수 없는 특정 사진(초상권 등)을 직접 편집해 올릴 때 사용.
+ */
+export async function uploadArticleImage(
+  articleId: number,
+  dataUrl: string,
+  opts: { kind?: string; caption?: string; altText?: string } = {},
+): Promise<{ id: number; webpUrl: string; kind: string; width: number | null; height: number | null }> {
+  const match = /^data:(image\/[\w.+-]+);base64,(.+)$/s.exec(dataUrl.trim());
+  if (!match) throw new HttpError(400, "이미지 파일이 올바르지 않습니다. (jpg/png/webp 등)");
+  const raw = Buffer.from(match[2], "base64");
+  if (raw.length === 0) throw new HttpError(400, "빈 이미지입니다.");
+
+  const article = await prisma.article.findUnique({ where: { id: articleId } });
+  if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
+
+  const dir = mediaDir();
+  await fs.mkdir(dir, { recursive: true });
+  const webpName = `upload-${articleId}-${Date.now()}.webp`;
+  const webp = await sharp(raw)
+    .rotate() // EXIF 방향 정규화
+    .resize({ width: 1600, withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
+  await fs.writeFile(path.join(dir, webpName), webp);
+  const meta = await sharp(webp).metadata();
+
+  const kind = opts.kind === "FEATURED" ? "FEATURED" : "CONTENT";
+  const last = await prisma.mediaAsset.findFirst({ where: { articleId }, orderBy: { position: "desc" } });
+  const position = (last?.position ?? 0) + 1;
+  const altText = (opts.altText ?? "").trim() || article.title;
+  const caption = opts.caption?.trim() || null;
+  const webpUrl = `${mediaPublicUrl()}/${webpName}`;
+
+  const asset = await prisma.mediaAsset.create({
+    data: {
+      articleId,
+      kind,
+      webpUrl,
+      fileName: webpName,
+      altText,
+      caption,
+      width: meta.width ?? null,
+      height: meta.height ?? null,
+      bytes: webp.length,
+      position,
+    },
+  });
+
+  // 본문 이미지면 글 끝에 figure로 삽입 (대표 이미지는 썸네일로만 사용)
+  if (kind === "CONTENT") {
+    const figure = contentFigure({ webpUrl, altText, caption }, position);
+    const markdown = `${article.contentMarkdown ?? ""}\n\n${figure}`;
+    const contentHtml = await renderContentHtml(markdown);
+    await prisma.article.update({ where: { id: articleId }, data: { contentMarkdown: markdown, contentHtml } });
+  }
+
+  return { id: asset.id, webpUrl, kind, width: meta.width ?? null, height: meta.height ?? null };
 }
 
 function contentFigure(image: { webpUrl: string; altText: string; caption: string | null }, slot: number): string {

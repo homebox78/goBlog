@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, Save, Send, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, Save, Send, Upload, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,6 +107,33 @@ export default function ArticleDetailPage() {
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 생성 실패"),
   });
+
+  const uploadImageMutation = useMutation({
+    mutationFn: (dataUrl: string) =>
+      api.post(`/api/articles/${id}/images/upload`, { dataUrl, kind: "CONTENT" }),
+    onSuccess: () => {
+      toast.success("이미지를 본문에 추가했습니다.");
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 업로드 실패"),
+  });
+
+  const onPickImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // 같은 파일 재선택 허용
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("이미지 파일만 업로드할 수 있습니다.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("10MB 이하 이미지만 업로드할 수 있습니다.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => uploadImageMutation.mutate(String(reader.result));
+    reader.readAsDataURL(file);
+  };
 
   const [scheduleAt, setScheduleAt] = useState("");
 
@@ -342,19 +369,41 @@ export default function ArticleDetailPage() {
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm">이미지 ({article.media.length})</CardTitle>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={imagesMutation.isPending}
-                onClick={() => imagesMutation.mutate()}
-              >
-                {imagesMutation.isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <ImagePlus className="size-3.5" />
-                )}
-                Gemini 생성
-              </Button>
+              <div className="flex gap-2">
+                <input
+                  id="image-upload-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onPickImage}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={uploadImageMutation.isPending}
+                  onClick={() => document.getElementById("image-upload-input")?.click()}
+                >
+                  {uploadImageMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="size-3.5" />
+                  )}
+                  직접 업로드
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={imagesMutation.isPending}
+                  onClick={() => imagesMutation.mutate()}
+                >
+                  {imagesMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <ImagePlus className="size-3.5" />
+                  )}
+                  Gemini 생성
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {imagesMutation.isPending && (
