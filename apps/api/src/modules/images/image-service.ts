@@ -194,6 +194,86 @@ export async function uploadArticleImage(
   return { id: asset.id, webpUrl, kind, figure, width: meta.width ?? null, height: meta.height ?? null };
 }
 
+/**
+ * 이미지 URL을 크롤링(다운로드)해 서버에 재호스팅하고 '이미지 출처: XXX' 캡션과 함께 본문 figure를 반환한다.
+ * 특정 차종·제품·뉴스처럼 AI 이미지가 부적절한 기사에서 실제 출처 이미지를 넣을 때 사용.
+ */
+export async function insertImageFromUrl(
+  articleId: number,
+  imageUrl: string,
+  source: string,
+): Promise<{ id: number; webpUrl: string; figure: string }> {
+  const article = await prisma.article.findUnique({ where: { id: articleId } });
+  if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
+
+  let url: URL;
+  try {
+    url = new URL(imageUrl);
+  } catch {
+    throw new HttpError(400, "올바른 이미지 URL이 아닙니다.");
+  }
+  if (!/^https?:$/.test(url.protocol)) throw new HttpError(400, "http(s) 이미지 URL만 지원합니다.");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  let raw: Buffer;
+  try {
+    const res = await fetch(imageUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+        Referer: `${url.protocol}//${url.host}/`,
+        Accept: "image/*",
+      },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new HttpError(502, `이미지를 가져오지 못했습니다 (HTTP ${res.status}).`);
+    raw = Buffer.from(await res.arrayBuffer());
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    throw new HttpError(502, `이미지 다운로드 실패: ${(error as Error).message}`);
+  } finally {
+    clearTimeout(timer);
+  }
+  if (raw.length === 0) throw new HttpError(400, "빈 이미지입니다.");
+
+  const dir = mediaDir();
+  await fs.mkdir(dir, { recursive: true });
+  const webpName = `src-${articleId}-${Date.now()}.webp`;
+  let webp: Buffer;
+  try {
+    webp = await sharp(raw).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+  } catch {
+    throw new HttpError(400, "이미지 형식을 처리할 수 없습니다. (jpg/png/webp 등만 지원)");
+  }
+  await fs.writeFile(path.join(dir, webpName), webp);
+  const meta = await sharp(webp).metadata();
+  const webpUrl = `${mediaPublicUrl()}/${webpName}`;
+
+  const cleanSource = source.trim().replace(/[<>]/g, "").slice(0, 80) || "출처 표기";
+  const caption = `이미지 출처: ${cleanSource}`;
+  const last = await prisma.mediaAsset.findFirst({ where: { articleId }, orderBy: { position: "desc" } });
+  const position = (last?.position ?? 0) + 1;
+
+  const asset = await prisma.mediaAsset.create({
+    data: {
+      articleId,
+      kind: "CONTENT",
+      webpUrl,
+      fileName: webpName,
+      altText: article.title,
+      caption,
+      width: meta.width ?? null,
+      height: meta.height ?? null,
+      bytes: webp.length,
+      position,
+    },
+  });
+
+  const figure = contentFigure({ webpUrl, altText: article.title, caption }, position);
+  return { id: asset.id, webpUrl, figure };
+}
+
 /** 업로드 이미지(미디어) 삭제 + 파일 제거. 본문의 figure 제거는 프론트가 담당(편집 중 폼 기준). */
 export async function deleteArticleImage(articleId: number, mediaId: number): Promise<{ ok: boolean }> {
   const asset = await prisma.mediaAsset.findFirst({ where: { id: mediaId, articleId } });

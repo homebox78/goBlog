@@ -144,6 +144,27 @@ export default function ArticleDetailPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 업로드 실패"),
   });
 
+  // 출처 이미지 URL 크롤링 삽입 — 특정 차종·제품·뉴스에 실제 출처 이미지 + '이미지 출처' 캡션
+  const [srcImgUrl, setSrcImgUrl] = useState("");
+  const [srcImgSource, setSrcImgSource] = useState("");
+  const urlImageMutation = useMutation({
+    mutationFn: () =>
+      api.post<{ figure: string }>(`/api/articles/${id}/images/from-url`, { url: srcImgUrl.trim(), source: srcImgSource.trim() }),
+    onSuccess: async (r) => {
+      const ta = contentRef.current;
+      const md = ta?.value ?? form.contentMarkdown;
+      const pos = ta ? ta.selectionStart : md.length;
+      const next = `${md.slice(0, pos)}\n\n${r.figure}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
+      setForm((prev) => ({ ...prev, contentMarkdown: next }));
+      await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "출처 이미지 삽입" });
+      setSrcImgUrl("");
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      toast.success("출처 이미지를 삽입했습니다. (이미지 출처 캡션 자동 표기)");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 크롤링 실패"),
+  });
+
   // 마음에 안 드는 이미지 1장만 같은 프롬프트로 재생성 (본문 src 자동 교체)
   const regenImageMutation = useMutation({
     mutationFn: (mediaId: number) =>
@@ -769,6 +790,34 @@ export default function ArticleDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
+              {/* 출처 이미지 URL 크롤링 삽입 — 차종·제품·뉴스처럼 실제 이미지가 필요할 때 */}
+              <div className="space-y-1.5 rounded-md border border-dashed p-2">
+                <p className="text-[11px] text-muted-foreground">
+                  🔗 출처 이미지 삽입 — 이미지 URL과 출처를 넣으면 크롤링해 <b>“이미지 출처: …”</b> 캡션과 함께 커서 위치에 삽입
+                </p>
+                <Input
+                  className="h-8 text-xs"
+                  placeholder="이미지 URL (https://...jpg)"
+                  value={srcImgUrl}
+                  onChange={(e) => setSrcImgUrl(e.target.value)}
+                />
+                <div className="flex gap-1.5">
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="출처 (예: 기아차 뉴스룸)"
+                    value={srcImgSource}
+                    onChange={(e) => setSrcImgSource(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8 shrink-0 text-xs"
+                    disabled={!srcImgUrl.trim() || !srcImgSource.trim() || urlImageMutation.isPending}
+                    onClick={() => urlImageMutation.mutate()}
+                  >
+                    {urlImageMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : "삽입"}
+                  </Button>
+                </div>
+              </div>
               {imagesMutation.isPending && (
                 <p className="text-xs text-muted-foreground">이미지 생성 중... (장당 10~20초)</p>
               )}

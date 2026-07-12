@@ -362,6 +362,20 @@ articlesRouter.post(
   }),
 );
 
+/** 이미지 URL 크롤링 삽입 — 실제 출처 이미지를 재호스팅하고 '이미지 출처: XXX' 캡션 포함 figure 반환 */
+articlesRouter.post(
+  "/:id/images/from-url",
+  asyncHandler(async (req, res) => {
+    const imageUrl = req.body?.url;
+    const source = req.body?.source;
+    if (!imageUrl || typeof imageUrl !== "string") throw new HttpError(400, "이미지 URL이 필요합니다.");
+    if (!source || typeof source !== "string" || !source.trim())
+      throw new HttpError(400, "이미지 출처(예: 기아차 뉴스룸)를 입력해주세요.");
+    const { insertImageFromUrl } = await import("../images/image-service.js");
+    res.json(await insertImageFromUrl(Number(req.params.id), imageUrl, source));
+  }),
+);
+
 /** 이미지 1장 재생성 — 같은 프롬프트로 다시 뽑고 본문 src 교체 */
 articlesRouter.post(
   "/:id/images/:mediaId/regenerate",
