@@ -104,6 +104,74 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+// 티스토리 완전 자동 입력 — MAIN 월드에서 TinyMCE API를 직접 호출(모델 동기화)
+// + 제목(React 네이티브 세터) + 태그(#tagText Enter 이벤트) 자동 입력
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "TISTORY_AUTO") return false;
+  (async () => {
+    try {
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: message.tabId },
+        world: "MAIN", // 페이지 컨텍스트 — window.tinymce 접근 가능
+        func: (title, html, tags) => {
+          const done = [];
+          const nativeSet = (input, value) => {
+            const proto = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+            Object.getOwnPropertyDescriptor(proto, "value")?.set?.call(input, value);
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          };
+          // ① 제목
+          const titleEl = document.querySelector("#post-title-inp, textarea.textarea_tit");
+          if (titleEl) {
+            nativeSet(titleEl, title);
+            done.push("제목");
+          }
+          // ② 본문 — TinyMCE API로 모델까지 동기화 (기본모드)
+          const ed =
+            (window.tinymce && (window.tinymce.get("editor-tistory") || window.tinymce.activeEditor)) || null;
+          if (ed) {
+            ed.setContent(html);
+            ed.undoManager && ed.undoManager.add();
+            ed.fire && ed.fire("change");
+            ed.save && ed.save();
+            done.push("본문(TinyMCE)");
+          } else {
+            const frame = document.querySelector("#editor-tistory_ifr");
+            if (frame && frame.contentDocument && frame.contentDocument.body) {
+              frame.contentDocument.body.innerHTML = html;
+              done.push("본문(iframe)");
+            }
+          }
+          // ③ 태그 — 입력 후 Enter로 하나씩 확정 (React 핸들러는 합성 이벤트도 처리)
+          const tagInput = document.querySelector("#tagText");
+          if (tagInput && Array.isArray(tags) && tags.length) {
+            for (const tag of tags.slice(0, 10)) {
+              nativeSet(tagInput, String(tag).replace(/^#/, ""));
+              tagInput.dispatchEvent(
+                new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true }),
+              );
+            }
+            nativeSet(tagInput, "");
+            done.push(`태그 ${Math.min(tags.length, 10)}개`);
+          }
+          return done;
+        },
+        args: [message.title, message.html, message.tags ?? []],
+      });
+      const done = result?.result ?? [];
+      if (done.length === 0) {
+        sendResponse({ ok: false, error: "작성폼 요소를 찾지 못했습니다. 글쓰기 화면인지 확인해주세요." });
+      } else {
+        sendResponse({ ok: true, done });
+      }
+    } catch (error) {
+      sendResponse({ ok: false, error: String(error?.message ?? error) });
+    }
+  })();
+  return true;
+});
+
 // 사이드 패널 ↔ 활성 탭 콘텐츠 스크립트 메시지 중계
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.relay !== true) return false;

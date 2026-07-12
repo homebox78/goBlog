@@ -296,7 +296,39 @@ async function applyToForm() {
     return;
   }
 
-  // 티스토리(TinyMCE)는 iframe 본문 DOM 직접 입력이 동작하므로 기존 APPLY 경로 유지
+  // 티스토리: MAIN 월드에서 TinyMCE API 직접 호출 — 제목·본문(모델 동기화)·태그까지 완전 자동
+  if (currentPlatform === "TISTORY") {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) throw new Error("활성 탭 없음");
+      const res = await chrome.runtime.sendMessage({
+        type: "TISTORY_AUTO",
+        tabId: tab.id,
+        title,
+        html,
+        tags: currentArticle.tags || [],
+      });
+      if (!res?.ok) throw new Error(res?.error || "자동 입력 실패");
+      showNotes([
+        `✅ 자동 입력 완료: ${res.done.join(" · ")}`,
+        "내용 확인 후 '완료(발행)'에서 카테고리·공개설정 확인하고 발행하세요.",
+      ]);
+    } catch (error) {
+      // 폴백 — 기존 콘텐츠 스크립트 APPLY(iframe DOM 주입)
+      const response = await chrome.runtime.sendMessage({
+        relay: true,
+        payload: { type: "APPLY", title, html, plainText: plainText(html), tags: currentArticle.tags || [] },
+      });
+      showNotes(
+        response?.ok
+          ? [`⚠ 자동 입력 폴백(${error.message}):`, ...response.notes]
+          : [response?.error || "적용 실패"],
+      );
+    }
+    return;
+  }
+
+  // 기타 플랫폼 — 콘텐츠 스크립트 APPLY
   const response = await chrome.runtime.sendMessage({
     relay: true,
     payload: {
