@@ -733,9 +733,13 @@ export async function improveArticle(
     "규칙 ② qualityIssues의 각 항목을 해결한다 — 특히 본문 끝 #해시태그가 20개 미만이면 관련 SEO 태그를 20~30개로 늘리고, 소제목(H2)에 핵심 키워드를 자연스럽게 넣고, 키워드를 본문 전반에 고르게 분포시키며, 부족한 분량은 유용한 정보로 보강한다.",
     "규칙 ③ 과장·보장성·광고클릭 유도 문구 금지. 사람이 쓴 자연스러운 문체·이모지를 유지한다.",
     `규칙 ④ 오늘은 ${curYear}년 ${curMonth}월 ${curDay}일이다. 제목·본문의 연도·시점 표현이 현재와 안 맞으면(예: 지난 연도를 '최신'·'올해'로 표기) 반드시 현재 연도(${curYear}) 기준으로 바로잡는다. 시점을 모르면 연도를 지어내지 말고 표현을 뺀다.`,
-    "출력은 JSON만: {\"title\":\"\",\"metaDescription\":\"\",\"excerpt\":\"\",\"contentMarkdown\":\"\"}",
+    // 품질검사는 키워드 문구가 '띄어쓰기 포함 그대로' 들어갔는지 본다 — 문구를 명시해 반드시 심게 한다.
+    `규칙 ⑤ 핵심 키워드 문구는 "${topic}"이다. 이 문구를 토씨 하나 바꾸지 말고 그대로 ①도입부 첫 문단 ②본문 후반부에 각 1회 이상, 본문 전체 2~5회 자연스럽게 포함시킨다 (예: "${topic}에 대해...").`,
+    "출력은 JSON만: {\"title\":\"\",\"metaDescription\":\"\",\"excerpt\":\"\",\"contentMarkdown\":\"\",\"tags\":[\"SEO 태그 25개, # 없이\"]}",
   ].join("\n");
 
+  let lastTags: string[] = [];
+  let claudeError: string | null = null;
   for (let attempt = 0; attempt < 2 && quality.score < 85; attempt += 1) {
     const issues = quality.items
       .filter((item) => !item.ok)
@@ -743,7 +747,9 @@ export async function improveArticle(
     if (quality.policyRisks.length > 0) {
       issues.push("정책 위험 문구 제거: " + quality.policyRisks.join(", "));
     }
-    let revised: Partial<Pick<GeneratedContent, "title" | "metaDescription" | "excerpt" | "contentMarkdown">>;
+    let revised: Partial<Pick<GeneratedContent, "title" | "metaDescription" | "excerpt" | "contentMarkdown">> & {
+      tags?: string[];
+    };
     try {
       revised = await callClaudeJson({
         operation: "article-improve",
@@ -751,11 +757,14 @@ export async function improveArticle(
         system,
         user: JSON.stringify({
           topic,
+          keywordPhrase: topic,
           qualityIssues: issues,
           previousDraft: { title, metaDescription: meta, excerpt, contentMarkdown: markdown },
         }),
       });
-    } catch {
+    } catch (error) {
+      claudeError = (error as Error).message;
+      console.error(`[improve] Claude 호출 실패 (글 ${articleId}, 시도 ${attempt + 1}):`, claudeError);
       break;
     }
     if (revised.contentMarkdown) {
@@ -763,10 +772,32 @@ export async function improveArticle(
       meta = revised.metaDescription || meta;
       excerpt = revised.excerpt || excerpt;
       markdown = revised.contentMarkdown;
+      if (Array.isArray(revised.tags)) lastTags = revised.tags;
       quality = runCheck(title, meta, excerpt, markdown);
     } else {
       break;
     }
+  }
+
+  // 결정적 보정: 해시태그가 여전히 20개 미만이면 AI가 준 tags로 본문 끝에 직접 붙인다 (확실한 +10점)
+  const countHashtags = (md: string) =>
+    (md.match(/#[0-9A-Za-z가-힣_]{1,30}/g) ?? []).filter((h) => !/^#[0-9a-fA-F]{3,8}$/.test(h)).length;
+  if (countHashtags(markdown) < 20 && lastTags.length > 0) {
+    const tagLine = [
+      ...new Set(lastTags.map((t) => t.replace(/^#/, "").replace(/\s+/g, "").trim()).filter((t) => t.length > 0 && t.length <= 30)),
+    ]
+      .slice(0, 30)
+      .map((t) => `#${t}`)
+      .join(" ");
+    if (tagLine) {
+      markdown = `${markdown}\n\n${tagLine}`;
+      quality = runCheck(title, meta, excerpt, markdown);
+    }
+  }
+
+  // AI 호출이 실패해 아무것도 못 고쳤으면 조용히 같은 점수를 저장하지 말고 에러를 알린다
+  if (claudeError && quality.score <= before) {
+    throw new HttpError(502, `보정 AI 호출 실패: ${claudeError}`);
   }
 
   const contentHtml = await renderContentHtml(markdown);
