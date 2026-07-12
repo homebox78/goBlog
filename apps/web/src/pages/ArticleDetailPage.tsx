@@ -94,6 +94,23 @@ export default function ArticleDetailPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "저장 실패"),
   });
 
+  // 검수 완료 → status APPROVED. Blogger 설정돼 있으면 서버가 자동 발행 큐잉(bloggerQueued).
+  const approveMutation = useMutation({
+    mutationFn: () =>
+      api.put<{ id: number; status: string; bloggerQueued: boolean }>(`/api/articles/${id}`, {
+        ...form,
+        status: "APPROVED",
+        changeNote: "검수 완료",
+      }),
+    onSuccess: (r) => {
+      if (r.bloggerQueued) toast.success("검수 완료 → Blogger 자동 발행을 시작했습니다.");
+      else toast.success("검수 완료로 표시했습니다. (Blogger 미설정 시 자동 발행 안 함)");
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "검수 완료 실패"),
+  });
+
   const improveMutation = useMutation({
     mutationFn: () => api.post<{ before: number; after: number; passed: boolean }>(`/api/articles/${id}/improve`),
     onSuccess: (r) => {
@@ -575,6 +592,20 @@ export default function ArticleDetailPage() {
               <Save className="size-4" />
             )}
             저장
+          </Button>
+          <Button
+            variant="default"
+            className="bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => approveMutation.mutate()}
+            disabled={approveMutation.isPending || article.status === "APPROVED" || article.status === "PUBLISHED"}
+            title="검수 완료로 표시합니다. Blogger가 설정돼 있으면 자동 발행됩니다."
+          >
+            {approveMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            {article.status === "APPROVED" || article.status === "PUBLISHED" ? "검수 완료됨" : "검수 완료"}
           </Button>
         </div>
       </div>

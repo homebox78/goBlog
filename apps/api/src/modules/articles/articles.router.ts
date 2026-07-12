@@ -500,9 +500,38 @@ articlesRouter.put(
       },
     });
 
-    res.json({ id: updated.id, qualityScore: updated.qualityScore, status: updated.status });
+    // 검수 완료(→APPROVED) 시 Blogger 자동 발행 — 설정돼 있고 아직 Blogger 발행 이력이 없을 때만.
+    let bloggerQueued = false;
+    if (body.status === "APPROVED" && article.status !== "APPROVED") {
+      bloggerQueued = await maybeAutoPublishBlogger(id);
+    }
+
+    res.json({ id: updated.id, qualityScore: updated.qualityScore, status: updated.status, bloggerQueued });
   }),
 );
+
+/**
+ * 검수 완료 시 Blogger 자동 발행 큐잉.
+ * Blogger OAuth·BlogId가 모두 설정돼 있고, 같은 글의 Blogger 발행(성공/대기)이 없을 때만 작업을 만든다.
+ */
+async function maybeAutoPublishBlogger(articleId: number): Promise<boolean> {
+  const { getSettingValues } = await import("../settings/settings.service.js");
+  const cfg = await getSettingValues(["blogger.blogId", "blogger.clientId", "blogger.clientSecret", "blogger.refreshToken"]);
+  if (!cfg["blogger.blogId"] || !cfg["blogger.clientId"] || !cfg["blogger.clientSecret"] || !cfg["blogger.refreshToken"]) {
+    return false; // Blogger 미설정 → 자동 발행 안 함
+  }
+  const existing = await prisma.publishJob.findFirst({
+    where: { articleId, platform: "BLOGGER", status: { in: ["QUEUED", "RUNNING", "SUCCEEDED"] } },
+  });
+  if (existing) return false; // 이미 발행됐거나 대기 중
+
+  await prisma.publishJob.create({
+    data: { articleId, platform: "BLOGGER", status: "QUEUED" },
+  });
+  const { processQueue } = await import("../publishing/publish-runner.js");
+  void processQueue(); // 비동기 즉시 처리
+  return true;
+}
 
 /** 버전 복원 */
 articlesRouter.post(
