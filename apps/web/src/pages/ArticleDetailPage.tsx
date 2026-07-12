@@ -214,21 +214,32 @@ export default function ArticleDetailPage() {
       return api.post<{ banner: string; disclosure: string }>(`/api/articles/${id}/banner`, { input: r.input });
     },
     onSuccess: async (r) => {
-      // 본문 소스에서 커서(클릭) 위치에 배너 삽입 후 저장 (중복 삽입 가능)
+      // 상단·중단·하단 3곳에 자동 삽입 — 커서 지정 공수 제거 (원스톱)
       const ta = contentRef.current;
       const md = ta?.value ?? form.contentMarkdown;
-      const pos = ta ? ta.selectionStart : md.length;
-      let next = `${md.slice(0, pos)}\n\n${r.banner}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
-      // 대가성 안내 문구가 본문에 없으면 최상단에 자동 추가 (쿠팡/네이버 필수 표기).
-      // r.disclosure는 이미 가이드 준수 박스 HTML이므로 그대로 삽입한다.
+      const blocks = md.split(/\n{2,}/);
+      const h2Idx = blocks.map((b, i) => (/^##\s/.test(b) ? i : -1)).filter((i) => i >= 0);
+      const lastIsTags = /^#\S/.test(blocks[blocks.length - 1] ?? "");
+      // 상단 = 첫 H2 앞(도입부 다음), 중단 = 가운데 H2 앞, 하단 = 본문 끝(해시태그 줄 앞)
+      const top = h2Idx[0] ?? Math.min(1, blocks.length);
+      const mid =
+        h2Idx.length >= 2 ? h2Idx[Math.floor(h2Idx.length / 2)] : Math.floor(blocks.length / 2);
+      const bottom = blocks.length - (lastIsTags ? 1 : 0);
+      const positions = [...new Set([top, mid, bottom])].sort((a, b) => b - a); // 뒤에서부터 삽입해야 인덱스 안 밀림
+      for (const pos of positions) {
+        blocks.splice(Math.max(0, Math.min(pos, blocks.length)), 0, r.banner);
+      }
+      let next = blocks.join("\n\n").replace(/\n{3,}/g, "\n\n");
+      // 대가성 안내 문구가 본문에 없으면 최상단에 자동 추가 (쿠팡/네이버 필수 표기)
       if (r.disclosure && !next.includes("활동의 일환")) {
         next = `${r.disclosure}\n\n${next}`;
       }
       setForm((prev) => ({ ...prev, contentMarkdown: next }));
-      await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "배너 삽입" });
+      await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "배너 자동 삽입(상·중·하)" });
+      setBannerInput("");
       queryClient.invalidateQueries({ queryKey: ["article", id] });
       queryClient.invalidateQueries({ queryKey: ["articles"] });
-      toast.success("배너를 삽입했습니다. (대가성 문구 자동 확인)");
+      toast.success(`배너를 ${positions.length}곳(상·중·하)에 자동 삽입했습니다. 미리보기에서 클릭해 이동·삭제할 수 있어요.`);
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "배너 생성 실패"),
   });
@@ -882,7 +893,7 @@ export default function ArticleDetailPage() {
               )}
               <p className="text-xs text-muted-foreground">
                 쿠팡: [이미지+텍스트] HTML 또는 링크. <b>네이버: naver.me 링크 + 스마트스토어 상품 URL 두 줄</b>
-                (확장이 상품명·원본이미지 자동 추출, 없으면 상품명 한 줄 추가). 본문에서 넣을 위치 클릭 후 삽입.
+                (확장이 상품명·원본이미지 자동 추출). 붙여넣고 버튼만 누르면 <b>상단·중단·하단 3곳에 자동 삽입</b>됩니다.
               </p>
               <Textarea
                 rows={4}
@@ -898,7 +909,7 @@ export default function ArticleDetailPage() {
                 onClick={() => bannerMutation.mutate()}
               >
                 {bannerMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
-                커서 위치에 배너 삽입
+                배너 자동 삽입 (상단·중단·하단)
               </Button>
               <div className="border-t pt-2">
                 <p className="mb-1.5 text-[11px] text-muted-foreground">
