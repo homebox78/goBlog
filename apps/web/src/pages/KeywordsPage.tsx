@@ -55,6 +55,8 @@ interface TodayResponse {
   items: KeywordItem[];
 }
 
+type SortKey = "rank" | "keyword" | "naver" | "docs" | "comp" | "revenue" | "value" | "opportunity" | "final";
+
 const TYPE_LABEL: Record<string, { label: string; className: string }> = {
   ISSUE: { label: "이슈", className: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" },
   EVERGREEN: { label: "에버그린", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" },
@@ -74,6 +76,35 @@ function ScoreCell({ value, strong }: { value: number | null; strong?: boolean }
         ? "text-foreground"
         : "text-muted-foreground";
   return <span className={`font-mono text-sm ${color} ${strong ? "font-bold" : ""}`}>{value}</span>;
+}
+
+/** 정렬 가능한 테이블 헤더 — 클릭 시 정렬 토글, 현재 정렬 컬럼에 ▲▼ 표시 */
+function SortHead({
+  k,
+  sort,
+  onSort,
+  className,
+  children,
+}: {
+  k: SortKey;
+  sort: { key: SortKey; dir: "asc" | "desc" };
+  onSort: (k: SortKey) => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const active = sort.key === k;
+  return (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-0.5 hover:text-foreground ${active ? "font-bold text-foreground" : "text-muted-foreground"}`}
+      >
+        {children}
+        <span className="text-[10px]">{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </TableHead>
+  );
 }
 
 /** 순위 변동(전일 대비 ▲▼·NEW)과 연속 등장일 — 시계열 트렌드를 오늘 표에서 바로 보여준다 */
@@ -151,6 +182,33 @@ export default function KeywordsPage() {
         ? api.get<TodayResponse>("/api/keywords/today")
         : api.get<TodayResponse>("/api/keywords/saved").then((r) => ({ ...r, date: "", running: false })),
   });
+
+  // 헤더 클릭 정렬 — 기본은 종합점수 내림차순(= rank 순)
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "rank", dir: "asc" });
+  const toggleSort = (key: SortKey) =>
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
+  const sortedItems = useMemo(() => {
+    const items = [...(query.data?.items ?? [])];
+    const val = (it: KeywordItem): number | string => {
+      switch (sort.key) {
+        case "rank": return it.rank;
+        case "keyword": return it.keyword;
+        case "naver": return it.metrics.naverMonthlySearches ?? -1;
+        case "docs": return it.totalDocs ?? -1;
+        case "comp": return it.competitionScore ?? -1;
+        case "revenue": return it.scores.revenue ?? -1;
+        case "value": return it.scores.value ?? -1;
+        case "opportunity": return it.scores.opportunity ?? -1;
+        case "final": return it.scores.final ?? -1;
+      }
+    };
+    items.sort((a, b) => {
+      const va = val(a), vb = val(b);
+      const cmp = typeof va === "string" ? va.localeCompare(vb as string) : (va as number) - (vb as number);
+      return sort.dir === "asc" ? cmp : -cmp;
+    });
+    return items;
+  }, [query.data, sort]);
 
   // 이번 달 트렌드 스냅샷 → 오늘 표에 순위 변동(▲▼/NEW)·연속 등장을 표시 (직관성)
   const now = new Date();
@@ -277,22 +335,22 @@ export default function KeywordsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10 text-center">#</TableHead>
-                  <TableHead>키워드</TableHead>
+                  <SortHead k="rank" sort={sort} onSort={toggleSort} className="w-10 text-center">#</SortHead>
+                  <SortHead k="keyword" sort={sort} onSort={toggleSort}>키워드</SortHead>
                   {view === "today" && <TableHead className="w-20 text-center">트렌드</TableHead>}
                   <TableHead className="text-center">유형</TableHead>
-                  <TableHead className="text-right">검색량(N)</TableHead>
-                  <TableHead className="text-right">경쟁문서</TableHead>
-                  <TableHead className="text-right">경쟁효율</TableHead>
-                  <TableHead className="text-right">수익</TableHead>
-                  <TableHead className="text-right">가치</TableHead>
-                  <TableHead className="text-right">기회</TableHead>
-                  <TableHead className="text-right">종합</TableHead>
+                  <SortHead k="naver" sort={sort} onSort={toggleSort} className="text-right">검색량(N)</SortHead>
+                  <SortHead k="docs" sort={sort} onSort={toggleSort} className="text-right">경쟁문서</SortHead>
+                  <SortHead k="comp" sort={sort} onSort={toggleSort} className="text-right">경쟁효율</SortHead>
+                  <SortHead k="revenue" sort={sort} onSort={toggleSort} className="text-right">수익</SortHead>
+                  <SortHead k="value" sort={sort} onSort={toggleSort} className="text-right">가치</SortHead>
+                  <SortHead k="opportunity" sort={sort} onSort={toggleSort} className="text-right">기회</SortHead>
+                  <SortHead k="final" sort={sort} onSort={toggleSort} className="text-right">종합</SortHead>
                   <TableHead className="w-20 text-center">액션</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {query.data.items.map((item) => {
+                {sortedItems.map((item) => {
                   const type = TYPE_LABEL[item.type ?? ""] ?? null;
                   return (
                     <TableRow

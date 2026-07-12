@@ -66,6 +66,15 @@ const STATIC_SELECT_KEYS: Record<string, Array<{ value: string; label: string }>
   ],
 };
 
+/** 게시 플랫폼 탭 안에서 플랫폼별로 묶는 서브그룹 (키 접두사 기준 + 연결테스트 결과명 매칭) */
+const PLATFORM_SUBGROUPS: Array<{ label: string; prefixes: string[]; testName: string }> = [
+  { label: "WordPress", prefixes: ["wordpress."], testName: "WordPress" },
+  { label: "Blogger", prefixes: ["blogger."], testName: "Blogger" },
+  { label: "네이버 블로그", prefixes: ["naverBlog.", "naverBrandConnect."], testName: "네이버 블로그" },
+  { label: "티스토리", prefixes: ["tistory."], testName: "티스토리" },
+  { label: "Instagram", prefixes: ["instagram."], testName: "Instagram" },
+];
+
 const GROUPS: Array<{ id: string; label: string; description: string; testEndpoint?: string }> = [
   {
     id: "claude",
@@ -196,6 +205,54 @@ export default function SettingsPage() {
     }
   };
 
+  // 설정 필드 하나 렌더 (모델 셀렉트 / 고정 셀렉트 / 텍스트·비밀 입력)
+  const renderField = (setting: SettingView) => (
+    <div key={setting.key} className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <Label htmlFor={setting.key} className="text-xs">
+          {setting.label}
+        </Label>
+        {setting.isSecret && setting.hasValue && (
+          <Badge variant="secondary" className="text-[10px]">
+            저장됨
+          </Badge>
+        )}
+      </div>
+      {MODEL_SELECT_KEYS[setting.key] ? (
+        <ModelSelect
+          value={edited[setting.key] ?? setting.value ?? ""}
+          options={modelOptions[setting.key] ?? []}
+          onChange={(value) => setEdited((prev) => ({ ...prev, [setting.key]: value }))}
+        />
+      ) : STATIC_SELECT_KEYS[setting.key] ? (
+        <Select
+          value={edited[setting.key] ?? setting.value ?? ""}
+          onValueChange={(value) => setEdited((prev) => ({ ...prev, [setting.key]: value }))}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="선택" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATIC_SELECT_KEYS[setting.key].map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          id={setting.key}
+          type={setting.isSecret ? "password" : "text"}
+          autoComplete="off"
+          placeholder={setting.isSecret ? (setting.hasValue ? "변경하려면 새 값 입력" : "미설정") : undefined}
+          value={edited[setting.key] ?? (setting.isSecret ? "" : (setting.value ?? ""))}
+          onChange={(event) => setEdited((prev) => ({ ...prev, [setting.key]: event.target.value }))}
+        />
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between">
@@ -274,68 +331,35 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               )}
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                {settings
-                  .filter((setting) => setting.group === group.id)
-                  .map((setting) => (
-                    <div key={setting.key} className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={setting.key} className="text-xs">
-                          {setting.label}
-                        </Label>
-                        {setting.isSecret && setting.hasValue && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            저장됨
-                          </Badge>
-                        )}
+              {group.id === "platforms" ? (
+                <CardContent className="space-y-4">
+                  {PLATFORM_SUBGROUPS.map((sub) => {
+                    const subSettings = settings.filter(
+                      (s) => s.group === group.id && sub.prefixes.some((p) => s.key.startsWith(p)),
+                    );
+                    if (subSettings.length === 0) return null;
+                    const test = testResults[group.id]?.find((r) => r.name === sub.testName);
+                    return (
+                      <div key={sub.label} className="rounded-lg border p-3">
+                        <div className="mb-3 flex items-center gap-2">
+                          <h3 className="text-sm font-semibold">{sub.label}</h3>
+                          {test && !test.skipped && test.ok && (
+                            <Badge className="bg-emerald-600 text-[10px] hover:bg-emerald-600">✓ 연결됨</Badge>
+                          )}
+                          {test && !test.skipped && !test.ok && (
+                            <Badge variant="destructive" className="text-[10px]">연결 실패</Badge>
+                          )}
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">{subSettings.map(renderField)}</div>
                       </div>
-                      {MODEL_SELECT_KEYS[setting.key] ? (
-                        <ModelSelect
-                          value={edited[setting.key] ?? setting.value ?? ""}
-                          options={modelOptions[setting.key] ?? []}
-                          onChange={(value) =>
-                            setEdited((prev) => ({ ...prev, [setting.key]: value }))
-                          }
-                        />
-                      ) : STATIC_SELECT_KEYS[setting.key] ? (
-                        <Select
-                          value={edited[setting.key] ?? setting.value ?? ""}
-                          onValueChange={(value) =>
-                            setEdited((prev) => ({ ...prev, [setting.key]: value }))
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="선택" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATIC_SELECT_KEYS[setting.key].map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          id={setting.key}
-                          type={setting.isSecret ? "password" : "text"}
-                          autoComplete="off"
-                          placeholder={
-                            setting.isSecret
-                              ? setting.hasValue
-                                ? "변경하려면 새 값 입력"
-                                : "미설정"
-                              : undefined
-                          }
-                          value={edited[setting.key] ?? (setting.isSecret ? "" : (setting.value ?? ""))}
-                          onChange={(event) =>
-                            setEdited((prev) => ({ ...prev, [setting.key]: event.target.value }))
-                          }
-                        />
-                      )}
-                    </div>
-                  ))}
-              </CardContent>
+                    );
+                  })}
+                </CardContent>
+              ) : (
+                <CardContent className="grid gap-4 sm:grid-cols-2">
+                  {settings.filter((setting) => setting.group === group.id).map(renderField)}
+                </CardContent>
+              )}
             </Card>
           </TabsContent>
         ))}
