@@ -92,9 +92,9 @@ export default function ProductsPage() {
           <UrlAnalyzer
             source="BRANDCONNECT"
             placeholder={
-              "트래킹 링크(naver.me)와 상품명을 두 줄로 붙여넣으세요\n예)\nhttps://naver.me/xxxxx\n퍼니몽키 강아지 노즈워크 장난감"
+              "트래킹 링크(naver.me) + 스마트스토어 상품 URL을 두 줄로 붙여넣으세요 (goBlog 확장이 상품명·이미지 자동 추출)\n예)\nhttps://naver.me/xxxxx\nhttps://smartstore.naver.com/스토어/products/1234..."
             }
-            guide="네이버는 링크만으론 상품 정보를 못 가져옵니다(크롤링 차단). naver.me 트래킹 링크 + 상품명을 두 줄로 넣으면 쇼핑검색 API로 이미지·가격을 자동 조회하고, 링크는 트래킹 링크가 유지됩니다(수수료 집계). 규정 대가성 문구는 자동 삽입됩니다."
+            guide="naver.me 트래킹 링크 + 스마트스토어 상품 URL 두 줄이면 goBlog 크롬 확장이 상품명·원본 이미지·가격을 자동 추출합니다(링크는 트래킹 링크 유지 — 수수료 집계). 확장이 없으면 상품명을 한 줄 더 넣어주세요(쇼핑검색 API로 조회). 규정 대가성 문구는 자동 삽입됩니다."
             onSelect={(p) => setTarget({ product: p, keyword: "" })}
           />
           <BulkMatcher source="BRANDCONNECT" />
@@ -506,11 +506,15 @@ function UrlAnalyzer({
   });
 
   const analyzeMutation = useMutation({
-    mutationFn: (link: string) =>
-      api.post<{ product: Omit<ProductPayload, "price"> & { price: number | null } }>(
+    mutationFn: async (link: string) => {
+      // 스마트스토어 URL이 있으면 크롬 확장으로 상품명·이미지를 먼저 추출해 입력 보강 (서버는 네이버 차단)
+      const { enrichNaverInput } = await import("@/lib/naver-bridge");
+      const { input } = await enrichNaverInput(link);
+      return api.post<{ product: Omit<ProductPayload, "price"> & { price: number | null } }>(
         "/api/products/analyze",
-        { input: link },
-      ),
+        { input },
+      );
+    },
     onSuccess: (result) => {
       setForm({ ...result.product, source, price: result.product.price ?? undefined });
       toast.success("상품 정보를 불러왔습니다. 확인 후 홍보 글을 생성하세요.");

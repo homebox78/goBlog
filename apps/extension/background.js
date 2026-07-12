@@ -35,6 +35,28 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   });
 });
 
+// goBlog 웹앱 → 네이버 상품 페이지 대리 요청 (서버는 네이버가 429로 차단하므로,
+// 사용자 브라우저 IP로 스마트스토어 HTML을 가져와 상품명·이미지·가격 og 태그를 읽는다)
+const NAVER_FETCH_ALLOWED = /^https:\/\/(smartstore|shopping|brand|m\.smartstore)\.naver\.com\//;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "NAVER_FETCH" || typeof message.url !== "string") return false;
+  (async () => {
+    if (!NAVER_FETCH_ALLOWED.test(message.url)) {
+      sendResponse({ ok: false, error: "허용되지 않은 URL입니다." });
+      return;
+    }
+    try {
+      const res = await fetch(message.url, { credentials: "omit" });
+      const html = (await res.text()).slice(0, 400_000); // og 태그는 head에 있음 — 크기 제한
+      sendResponse({ ok: res.ok, status: res.status, html });
+    } catch (error) {
+      sendResponse({ ok: false, error: String(error?.message || error) });
+    }
+  })();
+  return true;
+});
+
 // 사이드 패널 ↔ 활성 탭 콘텐츠 스크립트 메시지 중계
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.relay !== true) return false;

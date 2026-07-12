@@ -205,8 +205,12 @@ export default function ArticleDetailPage() {
   });
 
   const bannerMutation = useMutation({
-    mutationFn: () =>
-      api.post<{ banner: string; disclosure: string }>(`/api/articles/${id}/banner`, { input: bannerInput }),
+    mutationFn: async () => {
+      // 스마트스토어 URL이 있으면 크롬 확장으로 상품명·이미지를 먼저 추출해 입력을 보강 (서버는 네이버 차단)
+      const { enrichNaverInput } = await import("@/lib/naver-bridge");
+      const { input } = await enrichNaverInput(bannerInput);
+      return api.post<{ banner: string; disclosure: string }>(`/api/articles/${id}/banner`, { input });
+    },
     onSuccess: async (r) => {
       // 본문 소스에서 커서(클릭) 위치에 배너 삽입 후 저장 (중복 삽입 가능)
       const ta = contentRef.current;
@@ -853,13 +857,13 @@ export default function ArticleDetailPage() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                쿠팡: [이미지+텍스트] HTML 또는 링크. <b>네이버: naver.me 링크 + 상품명을 두 줄로</b> 붙여넣으세요
-                (쇼핑검색으로 이미지·가격 자동 조회). 본문에서 넣을 위치 클릭 후 삽입.
+                쿠팡: [이미지+텍스트] HTML 또는 링크. <b>네이버: naver.me 링크 + 스마트스토어 상품 URL 두 줄</b>
+                (확장이 상품명·원본이미지 자동 추출, 없으면 상품명 한 줄 추가). 본문에서 넣을 위치 클릭 후 삽입.
               </p>
               <Textarea
                 rows={4}
                 className="font-mono text-xs"
-                placeholder={'쿠팡: <a href="https://link.coupang.com/a/..."><img ...></a>\n네이버:\nhttps://naver.me/xxxxx\n상품명 (한 줄 더)'}
+                placeholder={'쿠팡: <a href="https://link.coupang.com/a/..."><img ...></a>\n네이버:\nhttps://naver.me/xxxxx\nhttps://smartstore.naver.com/스토어/products/123...'}
                 value={bannerInput}
                 onChange={(event) => setBannerInput(event.target.value)}
               />
