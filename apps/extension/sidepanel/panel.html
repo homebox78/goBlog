@@ -19,16 +19,21 @@
       <input id="apiBase" placeholder="https://hom2box.com/goBlog" />
       <label>확장 토큰 (.env의 EXTENSION_TOKEN)</label>
       <input id="token" type="password" />
+      <label>티스토리 블로그 이름 (xxx.tistory.com의 xxx)</label>
+      <input id="tistoryBlog" placeholder="hom2box" />
       <button id="saveSetup">저장</button>
     </section>
 
     <section class="card">
       <div class="row">
         <h2>발행 대기 글</h2>
-        <span class="row-btns">
-          <button id="openNaverWrite" class="ghost" title="내 네이버 블로그 글쓰기 화면을 새 탭으로 엽니다">✏️ 네이버 글쓰기</button>
-          <button id="refresh" class="ghost">새로고침</button>
-        </span>
+        <button id="refresh" class="ghost">새로고침</button>
+      </div>
+      <div class="write-btns">
+        <button id="openNaverWrite" class="ghost" title="내 네이버 블로그 글쓰기 (자동 입력 지원)">✏️ 네이버</button>
+        <button id="openTistoryWrite" class="ghost" title="티스토리 글쓰기 (자동 입력 지원)">✏️ 티스토리</button>
+        <button id="openInstagram" class="ghost" title="인스타그램 (캐러셀 캡션 복사 지원)">📷 인스타</button>
+        <span class="write-note" title="워드프레스·Blogger는 goBlog 웹의 '발행' 버튼에서 자동 발행됩니다">WP·Blogger는 웹에서 자동발행</span>
       </div>
       <p id="catList" class="muted"></p>
       <div id="list"><p class="muted">불러오는 중...</p></div>

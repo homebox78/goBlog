@@ -8,11 +8,13 @@ let currentRestricted = null; // 쇼핑 커넥트 활동 제한 채널명(있으
 init();
 
 async function init() {
-  const stored = await chrome.storage.local.get(["apiBase", "token"]);
+  const stored = await chrome.storage.local.get(["apiBase", "token", "tistoryBlog"]);
   config.apiBase = stored.apiBase || "https://hom2box.com/goBlog";
   config.token = stored.token || "";
+  config.tistoryBlog = stored.tistoryBlog || "hom2box";
   $("#apiBase").value = config.apiBase;
   $("#token").value = config.token;
+  $("#tistoryBlog").value = config.tistoryBlog;
 
   $("#version").textContent = "v" + chrome.runtime.getManifest().version;
 
@@ -29,9 +31,15 @@ async function init() {
   $("#saveSetup").addEventListener("click", saveSetup);
   $("#openSetup").addEventListener("click", () => $("#setup").classList.toggle("hidden"));
   $("#refresh").addEventListener("click", loadArticles);
-  // 네이버 글쓰기 원스톱 — GoBlogWrite는 로그인된 내 블로그의 글쓰기 화면으로 리다이렉트된다
+  // 플랫폼별 글쓰기 바로가기 — 네이버·티스토리는 자동 입력, 인스타는 캐러셀 캡션 복사 지원
   $("#openNaverWrite").addEventListener("click", () => {
-    chrome.tabs.create({ url: "https://blog.naver.com/GoBlogWrite.naver" });
+    chrome.tabs.create({ url: "https://blog.naver.com/GoBlogWrite.naver" }); // 내 블로그 글쓰기로 리다이렉트
+  });
+  $("#openTistoryWrite").addEventListener("click", () => {
+    chrome.tabs.create({ url: `https://${config.tistoryBlog || "hom2box"}.tistory.com/manage/newpost` });
+  });
+  $("#openInstagram").addEventListener("click", () => {
+    chrome.tabs.create({ url: "https://www.instagram.com/" });
   });
   $("#applyBtn").addEventListener("click", applyToForm);
   $("#copyBtn").addEventListener("click", copyBody);
@@ -55,6 +63,7 @@ async function init() {
 async function saveSetup() {
   config.apiBase = $("#apiBase").value.trim().replace(/\/+$/, "");
   config.token = $("#token").value.trim();
+  config.tistoryBlog = $("#tistoryBlog").value.trim().replace(/\.tistory\.com.*$/i, "") || "hom2box";
   await chrome.storage.local.set(config);
   $("#setup").classList.add("hidden");
   loadArticles();
