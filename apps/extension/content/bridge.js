@@ -31,6 +31,8 @@ if (!window.__goblogBridge) {
           ok: !!res?.ok,
           status: res?.status ?? 0,
           html: res?.html ?? null,
+          title: res?.title ?? null,
+          image: res?.image ?? null,
           error: res?.error ?? (chrome.runtime.lastError ? chrome.runtime.lastError.message : null),
         },
         "*",

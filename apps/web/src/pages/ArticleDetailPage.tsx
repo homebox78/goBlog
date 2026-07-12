@@ -183,11 +183,14 @@ export default function ArticleDetailPage() {
   const matchedHitsQuery = useQuery({
     queryKey: ["article-matched-hits", id],
     queryFn: () =>
-      api.get<{ keyword: string; hits: Array<{ id: number; source: string; name: string; keyword: string }> }>(
-        `/api/articles/${id}/matched-hits`,
-      ),
+      api.get<{
+        keyword: string;
+        hits: Array<{ id: number; source: string; name: string; keyword: string }>;
+        naverSearchBase: string | null;
+      }>(`/api/articles/${id}/matched-hits`),
   });
   const matchedHits = matchedHitsQuery.data?.hits ?? [];
+  const naverSearchBase = matchedHitsQuery.data?.naverSearchBase ?? null;
 
   // 대가성 고시 수동 삽입 — 이미 있으면 서버가 중복 삽입하지 않는다
   const disclosureMutation = useMutation({
@@ -866,12 +869,18 @@ export default function ArticleDetailPage() {
                           href={
                             h.source === "COUPANG"
                               ? `https://partners.coupang.com/#affiliate/ws/link/0/${encodeURIComponent(h.name)}`
-                              : "https://brandconnect.naver.com/"
+                              : naverSearchBase
+                                ? `${naverSearchBase}?query=${encodeURIComponent(h.name)}&tab=product`
+                                : `https://brandconnect.naver.com/`
                           }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1.5 rounded px-1 py-0.5 text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900"
-                          title="새창에서 제휴 링크를 발급한 뒤 아래에 붙여넣으세요"
+                          title={
+                            h.source === "BRANDCONNECT" && !naverSearchBase
+                              ? "설정 > 네이버 > 브랜드커넥트 회원 ID를 입력하면 상품명이 채워진 검색으로 열립니다"
+                              : "새창에서 제휴 링크를 발급한 뒤 아래에 붙여넣으세요"
+                          }
                         >
                           <span
                             className="shrink-0 rounded px-1 text-[10px] font-bold"

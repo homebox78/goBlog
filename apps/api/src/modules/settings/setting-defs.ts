@@ -48,6 +48,8 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "naver.searchAdApiKey", group: "naver", label: "검색광고 API Key", secret: true },
   { key: "naver.searchAdSecret", group: "naver", label: "검색광고 Secret", secret: true },
   { key: "naver.searchAdCustomerId", group: "naver", label: "검색광고 Customer ID", secret: false },
+  // 브랜드커넥트 상품검색 URL의 회원 ID (brandconnect.naver.com/{이 값}/affiliate/products/search)
+  { key: "naver.brandconnectMemberId", group: "naver", label: "브랜드커넥트 회원 ID (URL 숫자)", secret: false },
 
   // 쿠팡 파트너스 (Open API — 상품 검색·골드박스·딥링크)
   { key: "coupang.accessKey", group: "coupang", label: "쿠팡 파트너스 Access Key", secret: false },

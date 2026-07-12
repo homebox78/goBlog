@@ -10,7 +10,14 @@ export function hasGoblogExtension(): boolean {
   return document.documentElement.hasAttribute("data-goblog-ext");
 }
 
-export function fetchNaverHtmlViaExtension(url: string, timeoutMs = 8000): Promise<string> {
+interface BridgeResult {
+  html: string | null;
+  title: string | null;
+  image: string | null;
+  ping?: boolean;
+}
+
+export function fetchNaverViaExtension(url: string, timeoutMs = 13000): Promise<BridgeResult> {
   return new Promise((resolve, reject) => {
     const id = Math.random().toString(36).slice(2);
     const onMsg = (event: MessageEvent) => {
@@ -18,8 +25,8 @@ export function fetchNaverHtmlViaExtension(url: string, timeoutMs = 8000): Promi
       if (!d || d.type !== "GOBLOG_NAVER_FETCH_RESULT" || d.id !== id) return;
       clearTimeout(timer);
       window.removeEventListener("message", onMsg);
-      if (d.ping) resolve(""); // 감지용 핑 응답
-      else if (d.ok && d.html) resolve(d.html as string);
+      if (d.ping) resolve({ html: null, title: null, image: null, ping: true });
+      else if (d.ok) resolve({ html: d.html ?? null, title: d.title ?? null, image: d.image ?? null });
       else reject(new Error(d.error || `HTTP ${d.status}`));
     };
     const timer = setTimeout(() => {
@@ -34,7 +41,7 @@ export function fetchNaverHtmlViaExtension(url: string, timeoutMs = 8000): Promi
 /** 확장 다리가 실제로 응답하는지 핑으로 확인 (마커 속성보다 신뢰적) */
 export async function pingExtension(timeoutMs = 1500): Promise<boolean> {
   try {
-    await fetchNaverHtmlViaExtension("__ping__", timeoutMs);
+    await fetchNaverViaExtension("__ping__", timeoutMs);
     return true;
   } catch {
     return false;
@@ -90,13 +97,30 @@ export async function enrichNaverInput(
   if (hasName) return { input: raw, extracted: null, reason: "has-name" };
   if (!(await pingExtension())) return { input: raw, extracted: null, reason: "no-extension" };
   try {
-    const info = parseNaverProductHtml(await fetchNaverHtmlViaExtension(store));
-    if (!info.name) return { input: raw, extracted: null, reason: "blocked" };
-    const extra = [info.name, ...(info.imageUrl ? [info.imageUrl] : [])];
+    const r = await fetchNaverViaExtension(store);
+    // 백그라운드 탭이 읽은 og:title/og:image를 우선 사용, 없으면 html 파싱 폴백
+    const parsed = r.html ? parseNaverProductHtml(r.html) : { name: null, imageUrl: null, price: null };
+    const name = cleanNaverTitle(r.title) ?? parsed.name;
+    const imageUrl = r.image ?? parsed.imageUrl;
+    if (!name) return { input: raw, extracted: null, reason: "blocked" };
+    const info: NaverProductInfo = { name, imageUrl, price: parsed.price };
+    const extra = [name, ...(imageUrl ? [imageUrl] : [])];
     return { input: [...lines, ...extra].join("\n"), extracted: info, reason: null };
   } catch {
     return { input: raw, extracted: null, reason: "failed" };
   }
+}
+
+/** og:title "상품명 : 스토어명" → 상품명만 */
+function cleanNaverTitle(raw: string | null): string | null {
+  if (!raw) return null;
+  if (/에러\s*페이지|시스템\s*오류|접근이\s*제한|잘못된\s*접근/.test(raw)) return null;
+  return (
+    raw
+      .replace(/\s*:\s*[^:]+$/, "")
+      .replace(/\s*[|-]\s*(네이버|스마트스토어|naver).*$/i, "")
+      .trim() || null
+  );
 }
 
 /** 스마트스토어 추출 실패 사유 → 사용자 안내 문구 (실패해도 서버 폴백은 계속 진행) */

@@ -56,12 +56,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: false, error: "허용되지 않은 URL입니다." });
       return;
     }
+    // 맨몸 fetch는 네이버가 429로 막으므로, 백그라운드 탭으로 실제 렌더 후 og 태그를 읽는다.
+    let tabId = null;
     try {
-      const res = await fetch(message.url, { credentials: "omit" });
-      const html = (await res.text()).slice(0, 400_000); // og 태그는 head에 있음 — 크기 제한
-      sendResponse({ ok: res.ok, status: res.status, html });
+      const tab = await chrome.tabs.create({ url: message.url, active: false });
+      tabId = tab.id;
+      // 로딩 완료 대기 (최대 10초)
+      await new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }, 10000);
+        const listener = (id, info) => {
+          if (id === tabId && info.status === "complete") {
+            clearTimeout(timer);
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+      });
+      // 렌더된 DOM에서 상품 정보 추출
+      const [res] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          const meta = (p) =>
+            document.querySelector(`meta[property="${p}"], meta[name="${p}"]`)?.getAttribute("content") ?? null;
+          return {
+            title: meta("og:title") || document.title || null,
+            image: meta("og:image"),
+            html: document.documentElement.outerHTML.slice(0, 300000),
+          };
+        },
+      });
+      const info = res?.result ?? {};
+      sendResponse({ ok: true, status: 200, title: info.title, image: info.image, html: info.html });
     } catch (error) {
       sendResponse({ ok: false, error: String(error?.message || error) });
+    } finally {
+      if (tabId != null) chrome.tabs.remove(tabId).catch(() => {});
     }
   })();
   return true;

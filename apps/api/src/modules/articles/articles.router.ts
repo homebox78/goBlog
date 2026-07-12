@@ -149,7 +149,16 @@ articlesRouter.get(
           .sort((a, b) => b.matchScore - a.matchScore)
       : [];
     const hits = [...exact, ...fuzzy].slice(0, 10);
-    res.json({ keyword: keywordText, hits });
+
+    // 네이버 배너: 클릭 시 브랜드커넥트 상품검색(상품명 채움)으로 열 URL 프리픽스
+    const { getSettingValues } = await import("../settings/settings.service.js");
+    const values = await getSettingValues(["naver.brandconnectMemberId"]);
+    const memberId = (values["naver.brandconnectMemberId"] ?? "").trim();
+    const naverSearchBase = memberId
+      ? `https://brandconnect.naver.com/${memberId}/affiliate/products/search`
+      : null;
+
+    res.json({ keyword: keywordText, hits, naverSearchBase });
   }),
 );
 
