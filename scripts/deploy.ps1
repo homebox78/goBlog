@@ -37,8 +37,12 @@ $stage = Join-Path $env:TEMP "goblog_deploy"
 Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $stage | Out-Null
 
-tar -czf "$stage\api.tar.gz" -C "$root\apps\api" src prisma package.json tsconfig.json
-tar -czf "$stage\web.tar.gz" -C "$root\apps\web\dist" .
+# Always use Windows bsdtar — bash-invoked runs can pick up MSYS tar which mangles -C backslash paths
+$tar = Join-Path $env:SystemRoot "System32\tar.exe"
+& $tar -czf "$stage\api.tar.gz" -C "$root\apps\api" src prisma package.json tsconfig.json
+if ($LASTEXITCODE -ne 0) { throw "api tar failed" }
+& $tar -czf "$stage\web.tar.gz" -C "$root\apps\web\dist" .
+if ($LASTEXITCODE -ne 0) { throw "web tar failed" }
 
 # ---- 3) server .env (same secrets as local, server-local DB) ----
 function Get-EnvValue([string]$file, [string]$name) {
