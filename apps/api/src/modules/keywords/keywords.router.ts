@@ -132,15 +132,28 @@ keywordsRouter.get(
       ...(day ? { day } : {}),
       ...(text ? { keywordText: { contains: text } } : {}),
     };
-    const [total, items] = await Promise.all([
-      prisma.keywordTrend.count({ where }),
-      prisma.keywordTrend.findMany({
-        where,
-        orderBy: [{ collectedAt: "desc" }, { rank: "asc" }],
-        take: 500,
-      }),
-    ]);
-    res.json({ total, items });
+    // 하루 4회 수집을 취합: 같은 날 같은 키워드는 최고 종합점수 1건으로 합치고, 일자별 종합점수 순 재랭크 후 상위 10만.
+    const rows = await prisma.keywordTrend.findMany({
+      where,
+      orderBy: [{ date: "desc" }, { finalScore: "desc" }],
+      take: 4000,
+    });
+    const byDay = new Map<string, Map<string, (typeof rows)[number]>>();
+    for (const r of rows) {
+      const dayKey = `${r.year}-${String(r.month).padStart(2, "0")}-${String(r.day).padStart(2, "0")}`;
+      if (!byDay.has(dayKey)) byDay.set(dayKey, new Map());
+      const kwMap = byDay.get(dayKey)!;
+      const prev = kwMap.get(r.keywordText);
+      if (!prev || (r.finalScore ?? 0) > (prev.finalScore ?? 0)) kwMap.set(r.keywordText, r);
+    }
+    const items: Array<(typeof rows)[number] & { rank: number }> = [];
+    for (const dayKey of [...byDay.keys()].sort().reverse()) {
+      const top10 = [...byDay.get(dayKey)!.values()]
+        .sort((a, b) => (b.finalScore ?? 0) - (a.finalScore ?? 0))
+        .slice(0, 10);
+      top10.forEach((r, i) => items.push({ ...r, rank: i + 1 }));
+    }
+    res.json({ total: items.length, items });
   }),
 );
 

@@ -361,7 +361,8 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
         },
       });
 
-      // 빅데이터 시계열 스냅샷 — 수집마다 append (덮어쓰지 않음). 년/월/일 단위 분석용.
+      // 빅데이터 시계열 스냅샷 — 각 수집의 상위 10위(엑기스)만 append. 조회 시 하루 4회를 취합해 재랭크한다.
+      if (rank <= 10)
       await prisma.keywordTrend
         .create({
           data: {
