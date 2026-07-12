@@ -18,7 +18,8 @@ export function fetchNaverHtmlViaExtension(url: string, timeoutMs = 8000): Promi
       if (!d || d.type !== "GOBLOG_NAVER_FETCH_RESULT" || d.id !== id) return;
       clearTimeout(timer);
       window.removeEventListener("message", onMsg);
-      if (d.ok && d.html) resolve(d.html as string);
+      if (d.ping) resolve(""); // 감지용 핑 응답
+      else if (d.ok && d.html) resolve(d.html as string);
       else reject(new Error(d.error || `HTTP ${d.status}`));
     };
     const timer = setTimeout(() => {
@@ -28,6 +29,16 @@ export function fetchNaverHtmlViaExtension(url: string, timeoutMs = 8000): Promi
     window.addEventListener("message", onMsg);
     window.postMessage({ type: "GOBLOG_NAVER_FETCH", id, url }, "*");
   });
+}
+
+/** 확장 다리가 실제로 응답하는지 핑으로 확인 (마커 속성보다 신뢰적) */
+export async function pingExtension(timeoutMs = 1500): Promise<boolean> {
+  try {
+    await fetchNaverHtmlViaExtension("__ping__", timeoutMs);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export interface NaverProductInfo {
@@ -76,7 +87,7 @@ export async function enrichNaverInput(
   const hasName = lines.some((l) => !/^https?:\/\//i.test(l) && l.length >= 2);
   if (!store) return { input: raw, extracted: null, reason: "no-store-url" };
   if (hasName) return { input: raw, extracted: null, reason: "has-name" };
-  if (!hasGoblogExtension()) return { input: raw, extracted: null, reason: "no-extension" };
+  if (!(await pingExtension())) return { input: raw, extracted: null, reason: "no-extension" };
   try {
     const info = parseNaverProductHtml(await fetchNaverHtmlViaExtension(store));
     if (!info.name) return { input: raw, extracted: null, reason: "blocked" };

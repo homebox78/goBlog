@@ -1,6 +1,16 @@
-// 액션 아이콘 클릭 시 사이드 패널 열기
-chrome.runtime.onInstalled.addListener(() => {
+// 액션 아이콘 클릭 시 사이드 패널 열기 + 이미 열려 있는 goBlog 탭에 다리 재주입
+// (확장을 새로고침해도 기존 탭엔 콘텐츠 스크립트가 자동 주입되지 않아 '확장 미감지'가 나던 문제)
+chrome.runtime.onInstalled.addListener(async () => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+  try {
+    const tabs = await chrome.tabs.query({ url: ["https://hom2box.com/*", "http://localhost:5173/*"] });
+    for (const tab of tabs) {
+      if (!tab.id) continue;
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content/bridge.js"] }).catch(() => {});
+    }
+  } catch (_) {
+    // 권한/쿼리 실패는 무시 — 페이지 새로고침으로도 해결됨
+  }
 });
 
 // 발행 성공 자동 감지 → 백엔드에 발행 완료 자동 기록 (사용자가 버튼 안 눌러도 됨)
