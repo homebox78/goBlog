@@ -559,3 +559,103 @@ export async function generateArticle(
 }
 
 export { kstToday };
+
+/**
+ * 기존 글을 품질 기준(85점)에 맞게 보강한다 (수동 '보정' 버튼).
+ * 본문의 삽입 블록(상품 배너·대가성 문구·이미지·해시태그)은 보존하고, 품질검사 미달 항목만 보완한다.
+ */
+export async function improveArticle(
+  articleId: number,
+): Promise<{ before: number; after: number; passed: boolean }> {
+  const article = await prisma.article.findUnique({ where: { id: articleId }, include: { keyword: true } });
+  if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
+  const topic = article.keyword?.text ?? article.title;
+
+  const faqCount = (article.contentMarkdown?.match(/^###?\s*Q[.:) ]/gm) ?? []).length;
+  const runCheck = (title: string, meta: string, excerpt: string, markdown: string) =>
+    runQualityCheck({
+      keyword: topic,
+      title,
+      metaDescription: meta,
+      excerpt,
+      contentMarkdown: markdown,
+      faqCount,
+      faqRequested: false,
+      imagePromptCount: 1,
+      claimsToVerify: [],
+    });
+
+  let title = article.title;
+  let meta = article.metaDescription ?? "";
+  let excerpt = article.excerpt ?? "";
+  let markdown = article.contentMarkdown ?? "";
+  let quality = runCheck(title, meta, excerpt, markdown);
+  const before = article.qualityScore ?? quality.score;
+
+  const system = [
+    "당신은 한국어 SEO 블로그 에디터입니다. 기존 글의 품질 부족 항목만 보강해 완성도를 85점 이상으로 올립니다.",
+    "규칙 ① 본문의 기존 HTML 블록(<a> 상품 배너, <p> 대가성 안내 문구, <figure> 이미지, 맨 끝 #해시태그 줄, 인용문)은 절대 삭제·변형하지 말고 그대로 보존한다.",
+    "규칙 ② qualityIssues의 각 항목을 해결한다 — 특히 본문 끝 #해시태그가 20개 미만이면 관련 SEO 태그를 20~30개로 늘리고, 소제목(H2)에 핵심 키워드를 자연스럽게 넣고, 키워드를 본문 전반에 고르게 분포시키며, 부족한 분량은 유용한 정보로 보강한다.",
+    "규칙 ③ 과장·보장성·광고클릭 유도 문구 금지. 사람이 쓴 자연스러운 문체·이모지를 유지한다.",
+    "출력은 JSON만: {\"title\":\"\",\"metaDescription\":\"\",\"excerpt\":\"\",\"contentMarkdown\":\"\"}",
+  ].join("\n");
+
+  for (let attempt = 0; attempt < 2 && quality.score < 85; attempt += 1) {
+    const issues = quality.items
+      .filter((item) => !item.ok)
+      .map((item) => item.label + (item.note ? ` — ${item.note}` : ""));
+    if (quality.policyRisks.length > 0) {
+      issues.push("정책 위험 문구 제거: " + quality.policyRisks.join(", "));
+    }
+    let revised: Partial<Pick<GeneratedContent, "title" | "metaDescription" | "excerpt" | "contentMarkdown">>;
+    try {
+      revised = await callClaudeJson({
+        operation: "article-improve",
+        maxTokens: 32000,
+        system,
+        user: JSON.stringify({
+          topic,
+          qualityIssues: issues,
+          previousDraft: { title, metaDescription: meta, excerpt, contentMarkdown: markdown },
+        }),
+      });
+    } catch {
+      break;
+    }
+    if (revised.contentMarkdown) {
+      title = revised.title || title;
+      meta = revised.metaDescription || meta;
+      excerpt = revised.excerpt || excerpt;
+      markdown = revised.contentMarkdown;
+      quality = runCheck(title, meta, excerpt, markdown);
+    } else {
+      break;
+    }
+  }
+
+  const contentHtml = await renderContentHtml(markdown);
+  const last = await prisma.articleVersion.findFirst({ where: { articleId }, orderBy: { version: "desc" } });
+  await prisma.article.update({
+    where: { id: articleId },
+    data: {
+      title,
+      metaDescription: meta,
+      excerpt,
+      contentMarkdown: markdown,
+      contentHtml,
+      qualityScore: quality.score,
+      qualityReport: JSON.parse(JSON.stringify(quality)),
+      versions: {
+        create: {
+          version: (last?.version ?? 0) + 1,
+          title,
+          contentMarkdown: markdown,
+          contentHtml,
+          changeNote: `품질 보정 (${before}→${quality.score}점)`,
+        },
+      },
+    },
+  });
+
+  return { before, after: quality.score, passed: quality.score >= 85 };
+}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, Save, Send, Upload, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, Save, Send, Sparkles, Upload, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +87,17 @@ export default function ArticleDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["articles"] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "저장 실패"),
+  });
+
+  const improveMutation = useMutation({
+    mutationFn: () => api.post<{ before: number; after: number; passed: boolean }>(`/api/articles/${id}/improve`),
+    onSuccess: (r) => {
+      if (r.passed) toast.success(`품질 보정 완료: ${r.before} → ${r.after}점 (85점 통과!)`);
+      else toast(`품질 보정: ${r.before} → ${r.after}점 (아직 85점 미만, 다시 시도 가능)`);
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "보정 실패"),
   });
 
   const restoreMutation = useMutation({
@@ -220,6 +231,21 @@ export default function ArticleDetailPage() {
                 : "85점 미만 — 자동발행 차단"}
             </p>
           </div>
+          {article.qualityScore !== null && article.qualityScore < 85 && (
+            <Button
+              variant="outline"
+              onClick={() => improveMutation.mutate()}
+              disabled={improveMutation.isPending}
+              title="품질 검사 미달 항목을 보강해 85점 이상으로 올립니다"
+            >
+              {improveMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              보정
+            </Button>
+          )}
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
             {saveMutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />

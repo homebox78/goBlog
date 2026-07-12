@@ -99,6 +99,15 @@ articlesRouter.post(
   }),
 );
 
+/** 품질 보정 — 85점 미만 글의 미달 항목을 Claude로 보강 (Claude 호출, 수십 초) */
+articlesRouter.post(
+  "/:id/improve",
+  asyncHandler(async (req, res) => {
+    const { improveArticle } = await import("./generator.js");
+    res.json(await improveArticle(Number(req.params.id)));
+  }),
+);
+
 /** 사용자 이미지 직접 업로드 (Gemini로 못 만드는 사진용) — base64 dataUrl */
 articlesRouter.post(
   "/:id/images/upload",
