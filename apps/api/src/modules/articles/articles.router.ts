@@ -114,6 +114,42 @@ articlesRouter.post(
   }),
 );
 
+/**
+ * 이 글과 매칭되는 누적 대량매칭 상품 — 우측 '상품 배너 삽입'에 추천으로 띄운다.
+ * 클릭하면 파트너스 링크 발급 페이지가 새창으로 열리고, 발급한 링크를 붙여넣으면 된다.
+ */
+articlesRouter.get(
+  "/:id/matched-hits",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const article = await prisma.article.findUnique({
+      where: { id },
+      select: { title: true, keyword: { select: { text: true } } },
+    });
+    if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
+    const keywordText = article.keyword?.text ?? "";
+
+    // ① 같은 키워드에 매칭된 상품 (정확 일치) ② 키워드/제목과 토큰이 겹치는 상품 (보조)
+    const { overlapScore } = await import("../products/product-match.js");
+    const recent = await prisma.bulkMatchHit.findMany({
+      orderBy: { id: "desc" },
+      take: 1000,
+      select: { id: true, source: true, name: true, keyword: true, score: true },
+    });
+    const exact = recent.filter((h) => keywordText && h.keyword === keywordText);
+    const exactIds = new Set(exact.map((h) => h.id));
+    const fuzzy = keywordText
+      ? recent
+          .filter((h) => !exactIds.has(h.id))
+          .map((h) => ({ ...h, matchScore: overlapScore({ name: h.name }, keywordText) }))
+          .filter((h) => h.matchScore >= 1)
+          .sort((a, b) => b.matchScore - a.matchScore)
+      : [];
+    const hits = [...exact, ...fuzzy].slice(0, 10);
+    res.json({ keyword: keywordText, hits });
+  }),
+);
+
 /** 붙여넣은 상품 링크/배너 HTML → 스타일 배너 HTML 생성 (프론트가 커서 위치에 삽입) */
 articlesRouter.post(
   "/:id/banner",

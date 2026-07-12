@@ -166,6 +166,17 @@ export default function ArticleDetailPage() {
   });
 
   const [bannerInput, setBannerInput] = useState("");
+
+  // 이 글과 매칭되는 누적 대량매칭 상품 (배너 삽입 추천)
+  const matchedHitsQuery = useQuery({
+    queryKey: ["article-matched-hits", id],
+    queryFn: () =>
+      api.get<{ keyword: string; hits: Array<{ id: number; source: string; name: string; keyword: string }> }>(
+        `/api/articles/${id}/matched-hits`,
+      ),
+  });
+  const matchedHits = matchedHitsQuery.data?.hits ?? [];
+
   const bannerMutation = useMutation({
     mutationFn: () =>
       api.post<{ banner: string; disclosure: string }>(`/api/articles/${id}/banner`, { input: bannerInput }),
@@ -759,6 +770,43 @@ export default function ArticleDetailPage() {
               <CardTitle className="text-sm">상품 배너 삽입</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              {matchedHits.length > 0 && (
+                <div className="space-y-1 rounded-md border border-emerald-200 bg-emerald-50/50 p-2 dark:border-emerald-900 dark:bg-emerald-950/30">
+                  <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                    ✨ 이 글과 매칭된 상품 — 클릭하면 파트너스 링크 발급 새창이 열립니다
+                  </p>
+                  <ul className="space-y-0.5">
+                    {matchedHits.map((h) => (
+                      <li key={h.id}>
+                        <a
+                          href={
+                            h.source === "COUPANG"
+                              ? `https://partners.coupang.com/#affiliate/ws/link/0/${encodeURIComponent(h.name)}`
+                              : "https://brandconnect.naver.com/"
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 rounded px-1 py-0.5 text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900"
+                          title="새창에서 제휴 링크를 발급한 뒤 아래에 붙여넣으세요"
+                        >
+                          <span
+                            className="shrink-0 rounded px-1 text-[10px] font-bold"
+                            style={{
+                              background: h.source === "COUPANG" ? "#fdeaea" : "#e9f9ef",
+                              color: h.source === "COUPANG" ? "#c41f22" : "#03a44e",
+                            }}
+                          >
+                            {h.source === "COUPANG" ? "쿠팡" : "네이버"}
+                          </span>
+                          <span className="min-w-0 truncate text-blue-600 underline decoration-dotted underline-offset-2">
+                            {h.name}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 쿠팡/네이버 상품 링크나 [이미지+텍스트] HTML을 붙여넣고, 본문에서 넣을 위치를 클릭한 뒤 삽입하세요. 여러 번 삽입할 수 있습니다.
               </p>
