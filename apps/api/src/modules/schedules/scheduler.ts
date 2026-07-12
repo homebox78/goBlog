@@ -3,7 +3,7 @@ import { prisma } from "../../common/prisma.js";
 import { runDailyDiscovery, kstToday } from "../keywords/engine.js";
 import { generateArticle, type ProductInput } from "../articles/generator.js";
 import { searchCoupangProducts } from "../products/coupang.js";
-import { overlapScore } from "../products/product-match.js";
+import { overlapScore, isNonCommercialKeyword } from "../products/product-match.js";
 
 let keywordJob: Cron | null = null;
 
@@ -36,6 +36,9 @@ function toProductInput(p: {
  * 둘 다 없으면 null → 광고 없는 정보성 글로 폴백(도배·정책 위험 방지).
  */
 async function findProductForKeyword(keywordId: number, text: string): Promise<ProductInput | null> {
+  // 사건·사고·재난·뉴스·금융 등엔 광고를 붙이지 않는다 (부적절·정책 위험).
+  if (isNonCommercialKeyword(text)) return null;
+
   // ① 등록 상품: 명시 매칭 우선 → 없으면 활성 상품 중 토큰 겹침 최고
   const explicit = await prisma.product.findFirst({
     where: { status: "ACTIVE", matchedKeywordId: keywordId },

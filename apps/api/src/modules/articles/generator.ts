@@ -201,9 +201,20 @@ export async function generateArticle(
   const recommendation = keyword?.recommendations[0];
   const naverMetric = keyword?.metrics.find((metric) => metric.source === "NAVER_SEARCHAD");
 
+  // 현재 날짜(KST) — AI가 지난 연도를 '최신/올해'로 쓰는 것을 막는다.
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const curYear = kstNow.getUTCFullYear();
+  const curMonth = kstNow.getUTCMonth() + 1;
+  const curDay = kstNow.getUTCDate();
+
   const claudeSystem = [
       "당신은 검색 유입과 조회수를 폭발적으로 끌어올리는 수익형 블로그 전문 에디터다. 이 글의 최우선 목표는 '검색 노출 극대화 + 클릭 + 끝까지 읽게 만들기'다.",
       `본문 언어: ${LANGUAGE_NAME[language]}.`,
+      "",
+      "[현재 날짜 — 반드시 준수]",
+      `- 오늘은 ${curYear}년 ${curMonth}월 ${curDay}일(한국 시간)이다. 모든 시점 표현('최신·올해·현재·작년·요즘·${curYear}년')은 이 날짜를 기준으로 한다.`,
+      `- 제목·본문에 연도를 넣을 때는 반드시 현재 연도(${curYear})를 쓴다. 지난 연도(${curYear - 1}년 등)를 '최신'·'올해'인 것처럼 절대 쓰지 않는다.`,
+      `- 사건·사고·이슈의 발생 시점을 모르면 특정 연도를 지어내지 말고 시점 표현을 생략한다(추측 금지).`,
       "",
       "[조회수 극대화 — 최우선]",
       "- 제목: 핵심 키워드를 앞쪽에 자연스럽게 넣고, 구체적 숫자·연도·대상·결과를 담아 클릭하고 싶게 만든다. 단 과장·허위 낚시는 금지(정책 위반).",
