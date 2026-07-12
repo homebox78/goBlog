@@ -9,7 +9,6 @@ import {
   LogOut,
   Loader2,
   ShoppingBag,
-  Users,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -24,7 +23,6 @@ const NAV_ITEMS = [
   { to: "/keywords", label: "키워드", icon: Lightbulb },
   { to: "/products", label: "상품 홍보", icon: ShoppingBag },
   { to: "/articles", label: "글 관리", icon: FileText },
-  { to: "/characters", label: "캐릭터", icon: Users },
   { to: "/schedule", label: "스케줄", icon: CalendarClock },
   { to: "/settings", label: "설정", icon: Settings },
 ];
