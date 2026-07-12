@@ -88,7 +88,7 @@ const bulkMatchSchema = z.object({
 productsRouter.post(
   "/bulk-match",
   asyncHandler(async (req, res) => {
-    const { text } = parseBody(bulkMatchSchema, req.body);
+    const { text, source } = parseBody(bulkMatchSchema, req.body);
     const keywords = await matchableKeywords();
     const lines = [
       ...new Set(
@@ -102,10 +102,108 @@ productsRouter.post(
     const matched: Array<{ name: string; keyword: string; score: number }> = [];
     for (const name of lines) {
       const m = bestKeywordForProduct({ name }, keywords);
-      if (m) matched.push({ name, keyword: m.keyword.text, score: m.score });
+      if (m) matched.push({ name, keyword: m.keyword.text.slice(0, 191), score: m.score });
     }
     matched.sort((a, b) => b.score - a.score);
-    res.json({ scanned: lines.length, matchedCount: matched.length, matched });
+
+    // DB에 누적 저장(중복은 무시) — 새로고침·기기 바뀌어도 히스토리 유지
+    let added = 0;
+    if (matched.length) {
+      const result = await prisma.bulkMatchHit.createMany({
+        data: matched.map((m) => ({ source, name: m.name.slice(0, 191), keyword: m.keyword, score: m.score })),
+        skipDuplicates: true,
+      });
+      added = result.count;
+    }
+    res.json({ scanned: lines.length, matchedCount: matched.length, added, matched });
+  }),
+);
+
+const bulkImportSchema = z.object({
+  source: z.enum(["COUPANG", "BRANDCONNECT"]),
+  items: z
+    .array(z.object({ name: z.string().min(1), keyword: z.string().min(1), score: z.number().int().nonnegative().default(0) }))
+    .max(2000),
+});
+
+/** 기존 로컬(브라우저) 히스토리를 DB로 이관 — 일회성 마이그레이션용(중복 무시). */
+productsRouter.post(
+  "/bulk-match/import",
+  asyncHandler(async (req, res) => {
+    const { source, items } = parseBody(bulkImportSchema, req.body);
+    if (!items.length) return res.json({ added: 0 });
+    const { count } = await prisma.bulkMatchHit.createMany({
+      data: items.map((it) => ({
+        source,
+        name: it.name.slice(0, 191),
+        keyword: it.keyword.slice(0, 191),
+        score: it.score,
+      })),
+      skipDuplicates: true,
+    });
+    res.json({ added: count });
+  }),
+);
+
+/**
+ * 대량 매칭 히스토리 — 무한스크롤(오프셋 페이지네이션) + 정렬.
+ * ?source=&offset=&take=&sort=latest|score|keyword
+ *   latest  = 최신순(등록 역순)
+ *   score   = 매칭순(매칭 점수 높은 순)
+ *   keyword = 추천순(매칭된 키워드의 트렌드 finalScore 높은 순 — 상위 키워드에 걸린 상품 먼저)
+ */
+productsRouter.get(
+  "/bulk-match/history",
+  asyncHandler(async (req, res) => {
+    const source = String(req.query.source ?? "");
+    if (source !== "COUPANG" && source !== "BRANDCONNECT") throw new HttpError(400, "source가 올바르지 않습니다.");
+    const take = Math.min(100, Math.max(1, Number(req.query.take) || 30));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const sort = String(req.query.sort ?? "latest");
+
+    const all = await prisma.bulkMatchHit.findMany({
+      where: { source },
+      orderBy: { id: "desc" },
+      take: 3000,
+      select: { id: true, name: true, keyword: true, score: true },
+    });
+    const total = all.length;
+
+    if (sort === "score") {
+      all.sort((a, b) => b.score - a.score || b.id - a.id);
+    } else if (sort === "keyword") {
+      // 키워드 텍스트 → 트렌드 finalScore(최댓값) 맵. 상위 키워드에 매칭된 상품을 먼저 보여준다.
+      const trends = await prisma.keywordTrend.findMany({
+        orderBy: { collectedAt: "desc" },
+        take: 4000,
+        select: { keywordText: true, finalScore: true },
+      });
+      const rankMap = new Map<string, number>();
+      for (const t of trends) {
+        const cur = rankMap.get(t.keywordText) ?? -1;
+        if ((t.finalScore ?? 0) > cur) rankMap.set(t.keywordText, t.finalScore ?? 0);
+      }
+      all.sort(
+        (a, b) =>
+          (rankMap.get(b.keyword) ?? -1) - (rankMap.get(a.keyword) ?? -1) || b.score - a.score || b.id - a.id,
+      );
+    }
+    // latest는 이미 id desc
+
+    const items = all.slice(offset, offset + take);
+    const nextOffset = offset + take < total ? offset + take : null;
+    res.json({ items, total, nextOffset });
+  }),
+);
+
+/** 대량 매칭 히스토리 비우기 */
+productsRouter.delete(
+  "/bulk-match/history",
+  asyncHandler(async (req, res) => {
+    const source = String(req.query.source ?? "");
+    if (source !== "COUPANG" && source !== "BRANDCONNECT") throw new HttpError(400, "source가 올바르지 않습니다.");
+    const { count } = await prisma.bulkMatchHit.deleteMany({ where: { source } });
+    res.json({ ok: true, deleted: count });
   }),
 );
 

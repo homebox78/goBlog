@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Link2, Loader2, PenLine, Sparkles, Save, Trash2, Tag, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
@@ -115,46 +115,106 @@ export default function ProductsPage() {
   );
 }
 
-interface BulkMatch {
+interface BulkHit {
+  id: number;
   name: string;
   keyword: string;
   score: number;
 }
+interface BulkHistoryPage {
+  items: BulkHit[];
+  total: number;
+  nextOffset: number | null;
+}
 interface BulkResult {
   scanned: number;
   matchedCount: number;
-  matched: BulkMatch[];
+  added: number;
+  matched: Array<{ name: string; keyword: string; score: number }>;
 }
+
+type BulkSort = "keyword" | "score" | "latest";
+const SORT_LABELS: Record<BulkSort, string> = {
+  keyword: "추천순",
+  score: "매칭순",
+  latest: "최신순",
+};
 
 function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
   const textKey = `goblog:bulkmatch:${source}:text`;
-  const historyKey = `goblog:bulkmatch:${source}:history`;
+  const queryClient = useQueryClient();
   const [text, setText] = useState(() => localStorage.getItem(textKey) ?? "");
-  // 누적 히스토리 — 실행할 때마다 새 매칭을 여기 합쳐 계속 쌓는다(이름 기준 중복 제거).
-  const [history, setHistory] = useState<BulkMatch[]>(() => {
-    try {
-      const saved = localStorage.getItem(historyKey);
-      return saved ? (JSON.parse(saved) as BulkMatch[]) : [];
-    } catch {
-      return [];
-    }
-  });
   const [lastRun, setLastRun] = useState<{ scanned: number; added: number } | null>(null);
+  const [sort, setSort] = useState<BulkSort>("keyword");
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // 기존 브라우저(localStorage) 히스토리를 DB로 1회 이관 후 삭제
+  useEffect(() => {
+    const oldKey = `goblog:bulkmatch:${source}:history`;
+    const raw = localStorage.getItem(oldKey);
+    if (!raw) return;
+    try {
+      const items = JSON.parse(raw) as Array<{ name: string; keyword: string; score?: number }>;
+      if (Array.isArray(items) && items.length) {
+        api
+          .post("/api/products/bulk-match/import", {
+            source,
+            items: items.map((m) => ({ name: m.name, keyword: m.keyword, score: m.score ?? 0 })),
+          })
+          .then(() => queryClient.invalidateQueries({ queryKey: ["bulk-history", source] }))
+          .finally(() => localStorage.removeItem(oldKey));
+      } else {
+        localStorage.removeItem(oldKey);
+      }
+    } catch {
+      localStorage.removeItem(oldKey);
+    }
+  }, [source, queryClient]);
+
+  // DB에 누적 저장된 매칭 히스토리 — 오프셋 기반 무한스크롤 + 정렬
+  const history = useInfiniteQuery({
+    queryKey: ["bulk-history", source, sort],
+    queryFn: ({ pageParam }) =>
+      api.get<BulkHistoryPage>(
+        `/api/products/bulk-match/history?source=${source}&sort=${sort}&take=30&offset=${pageParam}`,
+      ),
+    initialPageParam: 0 as number,
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
+  });
+
+  const hits = history.data?.pages.flatMap((page) => page.items) ?? [];
+  const total = history.data?.pages[0]?.total ?? 0;
+
   const matchMutation = useMutation({
     mutationFn: () => api.post<BulkResult>("/api/products/bulk-match", { source, text }),
     onSuccess: (data) => {
-      setHistory((prev) => {
-        const seen = new Set(prev.map((m) => m.name));
-        const fresh = data.matched.filter((m) => !seen.has(m.name));
-        const merged = [...fresh, ...prev]; // 새 매칭을 위로
-        localStorage.setItem(historyKey, JSON.stringify(merged));
-        setLastRun({ scanned: data.scanned, added: fresh.length });
-        return merged;
-      });
+      setLastRun({ scanned: data.scanned, added: data.added });
       localStorage.setItem(textKey, text);
+      queryClient.invalidateQueries({ queryKey: ["bulk-history", source] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "매칭 실패"),
   });
+
+  const clearMutation = useMutation({
+    mutationFn: () => api.delete(`/api/products/bulk-match/history?source=${source}`),
+    onSuccess: () => {
+      setLastRun(null);
+      queryClient.invalidateQueries({ queryKey: ["bulk-history", source] });
+    },
+  });
+
+  // 스크롤 하단 감지 → 다음 페이지 로드 (무한스크롤)
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && history.hasNextPage && !history.isFetchingNextPage) {
+        history.fetchNextPage();
+      }
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [history.hasNextPage, history.isFetchingNextPage, hits.length]);
 
   return (
     <Card className="mt-4">
@@ -163,7 +223,7 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
           <h3 className="text-sm font-semibold">상품 목록 대량 매칭</h3>
           <p className="text-xs text-muted-foreground">
             {source === "COUPANG" ? "쿠팡 파트너스" : "네이버 브랜드커넥트"}에서 상품 목록을 통째로 복사해 붙여넣으면, 오늘의 키워드와
-            매칭되는 상품만 골라줍니다. 매칭된 상품만 제휴 링크를 가져와 위에서 등록하세요.
+            매칭되는 상품만 골라줍니다. 매칭 결과는 DB에 누적 저장돼 새로고침·기기가 바뀌어도 유지됩니다.
           </p>
         </div>
         <Textarea
@@ -184,37 +244,55 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
           {matchMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
           매칭되는 상품 찾기
         </Button>
-        {(history.length > 0 || lastRun) && (
+        {(total > 0 || lastRun) && (
           <div className="rounded-md border p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                누적 <b className="text-emerald-600">{history.length}개</b> 매칭
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-xs text-muted-foreground">
+                누적 <b className="text-emerald-600">{total}개</b> 매칭
                 {lastRun && (
                   <span className="ml-1">
                     (이번 {lastRun.scanned}줄 중 신규 {lastRun.added}개 추가)
                   </span>
                 )}
               </p>
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => {
-                  setHistory([]);
-                  setLastRun(null);
-                  localStorage.removeItem(historyKey);
-                }}
-              >
-                히스토리 비우기
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="flex overflow-hidden rounded-md border text-xs">
+                  {(Object.keys(SORT_LABELS) as BulkSort[]).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSort(key)}
+                      className={
+                        "px-2 py-1 transition-colors " +
+                        (sort === key
+                          ? "bg-emerald-600 font-medium text-white"
+                          : "text-muted-foreground hover:bg-muted")
+                      }
+                    >
+                      {SORT_LABELS[key]}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  disabled={clearMutation.isPending || total === 0}
+                  onClick={() => {
+                    if (confirm(`${source} 대량매칭 히스토리 ${total}개를 모두 비울까요?`)) clearMutation.mutate();
+                  }}
+                >
+                  비우기
+                </button>
+              </div>
             </div>
-            {history.length === 0 ? (
+            {total === 0 ? (
               <p className="text-xs text-muted-foreground">
                 매칭되는 상품이 없습니다. 오늘의 키워드와 겹치는 상품이 없을 수 있어요.
               </p>
             ) : (
               <ul className="max-h-72 space-y-1.5 overflow-y-auto text-sm">
-                {history.map((m, index) => (
-                  <li key={index} className="flex items-center justify-between gap-2">
+                {hits.map((m) => (
+                  <li key={m.id} className="flex items-center justify-between gap-2">
                     {source === "COUPANG" ? (
                       <a
                         href={`https://partners.coupang.com/#affiliate/ws/link/0/${encodeURIComponent(m.name)}`}
@@ -233,6 +311,13 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
                     </span>
                   </li>
                 ))}
+                {/* 무한스크롤 센티넬 */}
+                <div ref={sentinelRef} className="h-4" />
+                {history.isFetchingNextPage && (
+                  <li className="flex justify-center py-1 text-xs text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                  </li>
+                )}
               </ul>
             )}
           </div>

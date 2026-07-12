@@ -178,6 +178,20 @@ model Product {
   @@map("products")
 }
 
+/** 대량 매칭 히스토리 — 붙여넣은 상품 목록에서 키워드와 매칭된 상품을 누적 저장(무한스크롤·중복제거). */
+model BulkMatchHit {
+  id          Int      @id @default(autoincrement())
+  source      String // COUPANG | BRANDCONNECT
+  name        String   @db.VarChar(191) // 유니크 인덱스 대상이라 길이 제한 (bulk-match는 120자 이하만 수집)
+  keyword     String   @db.VarChar(191)
+  score       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([source, name], name: "source_name")
+  @@index([source, createdAt])
+  @@map("bulk_match_hits")
+}
+
 model KeywordMetric {
   id                 Int      @id @default(autoincrement())
   keywordId          Int
