@@ -319,6 +319,7 @@ async function applyToForm() {
         title,
         html,
         tags: currentArticle.tags || [],
+        category: currentArticle.category || "",
       });
       if (!res?.ok) throw new Error(res?.error || "자동 입력 실패");
       showNotes([

@@ -156,7 +156,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: message.tabId },
         world: "MAIN", // 페이지 컨텍스트 — window.tinymce 접근 가능
-        func: (title, html, tags) => {
+        func: (title, html, tags, category) => {
           const done = [];
           const nativeSet = (input, value) => {
             const proto = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -198,9 +198,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             nativeSet(tagInput, "");
             done.push(`태그 ${Math.min(tags.length, 10)}개`);
           }
+          // ④ 카테고리 — 드롭다운 열고 글 카테고리명과 일치하는 옵션 클릭 (TinyMCE 메뉴)
+          if (category) {
+            const norm = (s) => (s || "").replace(/\s+/g, "").replace(/[·ㆍ・]/g, "·").trim();
+            const want = norm(category);
+            const catBtn = document.querySelector("#category-btn");
+            if (catBtn) catBtn.click(); // 목록 렌더/핸들러 활성화
+            const options = document.querySelectorAll('#category-list [role="option"]');
+            let picked = null;
+            for (const opt of options) {
+              const label = norm(opt.getAttribute("aria-label") || opt.textContent);
+              if (label === want || (want && label.includes(want))) {
+                picked = opt;
+                break;
+              }
+            }
+            if (picked) {
+              for (const type of ["mousedown", "mouseup", "click"]) {
+                picked.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+              }
+              done.push(`카테고리(${category})`);
+            } else if (catBtn) {
+              catBtn.click(); // 못 찾으면 열었던 드롭다운 닫기
+            }
+          }
           return done;
         },
-        args: [message.title, message.html, message.tags ?? []],
+        args: [message.title, message.html, message.tags ?? [], message.category ?? ""],
       });
       const done = result?.result ?? [];
       if (done.length === 0) {
