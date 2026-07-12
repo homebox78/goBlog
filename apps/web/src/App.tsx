@@ -4,7 +4,6 @@ import LoginPage from "@/pages/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/pages/DashboardPage";
 import KeywordsPage from "@/pages/KeywordsPage";
-import KeywordTrendsPage from "@/pages/KeywordTrendsPage";
 import ProductsPage from "@/pages/ProductsPage";
 import CharactersPage from "@/pages/CharactersPage";
 import ArticlesPage from "@/pages/ArticlesPage";
@@ -20,7 +19,8 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/keywords" element={<KeywordsPage />} />
-          <Route path="/trends" element={<KeywordTrendsPage />} />
+          {/* 트렌드는 키워드 페이지의 탭으로 통합 — 기존 링크 호환용 리다이렉트 */}
+          <Route path="/trends" element={<Navigate to="/keywords?tab=trends" replace />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/articles" element={<ArticlesPage />} />
           <Route path="/articles/:id" element={<ArticleDetailPage />} />

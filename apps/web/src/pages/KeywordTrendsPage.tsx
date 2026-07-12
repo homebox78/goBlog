@@ -63,7 +63,8 @@ function ScoreCell({ value, strong }: { value: number | null; strong?: boolean }
   return <span className={`font-mono text-sm ${color} ${strong ? "font-bold" : ""}`}>{value}</span>;
 }
 
-export default function KeywordTrendsPage() {
+/** 키워드 시계열 트렌드 뷰 — 키워드 페이지의 '트렌드' 탭에서 렌더된다. */
+export default function TrendsView() {
   const [year, setYear] = useState(String(CURRENT_YEAR));
   const [month, setMonth] = useState("all");
   const [keyword, setKeyword] = useState("");
@@ -99,12 +100,9 @@ export default function KeywordTrendsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">키워드 트렌드</h1>
-        <p className="text-sm text-muted-foreground">
-          매 수집마다 쌓인 키워드 시계열입니다. 년·월로 조회해 어느 시기에 어떤 키워드가 떴는지 분석하세요.
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        매 수집마다 쌓인 키워드 시계열입니다. 년·월로 조회해 어느 시기에 어떤 키워드가 떴는지 분석하세요.
+      </p>
 
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 pt-6">

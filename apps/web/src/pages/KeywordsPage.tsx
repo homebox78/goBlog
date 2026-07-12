@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Bookmark, Loader2, PenLine, RefreshCw, Trash2 } from "lucide-react";
+import TrendsView from "./KeywordTrendsPage";
 import { GenerateDialog } from "@/components/articles/GenerateDialog";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -74,6 +76,37 @@ function ScoreCell({ value, strong }: { value: number | null; strong?: boolean }
   return <span className={`font-mono text-sm ${color} ${strong ? "font-bold" : ""}`}>{value}</span>;
 }
 
+/** 순위 변동(전일 대비 ▲▼·NEW)과 연속 등장일 — 시계열 트렌드를 오늘 표에서 바로 보여준다 */
+function TrendBadge({
+  info,
+  rank,
+}: {
+  info?: { prevRank: number | null; daysSeen: number; seenBefore: boolean };
+  rank: number;
+}) {
+  if (!info) return <span className="text-xs text-muted-foreground">—</span>;
+  let move: ReactNode = null;
+  if (info.prevRank != null) {
+    const d = info.prevRank - rank;
+    move =
+      d > 0 ? (
+        <span className="font-bold text-emerald-600">▲{d}</span>
+      ) : d < 0 ? (
+        <span className="font-bold text-rose-500">▼{-d}</span>
+      ) : (
+        <span className="text-muted-foreground">–</span>
+      );
+  } else if (!info.seenBefore) {
+    move = <span className="rounded bg-rose-100 px-1 py-0.5 text-[10px] font-bold text-rose-600 dark:bg-rose-950 dark:text-rose-300">NEW</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs">
+      {move}
+      {info.daysSeen >= 2 && <span className="text-[10px] text-muted-foreground">{info.daysSeen}일째</span>}
+    </span>
+  );
+}
+
 /** 키워드 문구·유형·검색의도로 어울리는 글 유형을 추천한다 */
 function suggestArticleType(item: KeywordItem): string {
   const keyword = item.keyword;
@@ -97,9 +130,13 @@ function suggestArticleType(item: KeywordItem): string {
   }
 }
 
+type KeywordView = "today" | "saved" | "trends";
+
 export default function KeywordsPage() {
   const queryClient = useQueryClient();
-  const [view, setView] = useState<"today" | "saved">("today");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = (searchParams.get("tab") as KeywordView) || "today";
+  const setView = (v: KeywordView) => setSearchParams(v === "today" ? {} : { tab: v });
   const [generateTarget, setGenerateTarget] = useState<{
     id: number;
     keyword: string;
@@ -107,12 +144,39 @@ export default function KeywordsPage() {
   } | null>(null);
 
   const query = useQuery({
+    enabled: view !== "trends",
     queryKey: ["keywords", view],
     queryFn: () =>
       view === "today"
         ? api.get<TodayResponse>("/api/keywords/today")
         : api.get<TodayResponse>("/api/keywords/saved").then((r) => ({ ...r, date: "", running: false })),
   });
+
+  // 이번 달 트렌드 스냅샷 → 오늘 표에 순위 변동(▲▼/NEW)·연속 등장을 표시 (직관성)
+  const now = new Date();
+  const trendsMini = useQuery({
+    enabled: view === "today",
+    queryKey: ["keyword-trends-mini", now.getFullYear(), now.getMonth() + 1],
+    queryFn: () =>
+      api.get<{ items: Array<{ keywordText: string; date: string; rank: number | null }> }>(
+        `/api/keywords/trends?year=${now.getFullYear()}&month=${now.getMonth() + 1}`,
+      ),
+  });
+  const trendInfo = useMemo(() => {
+    const items = trendsMini.data?.items ?? [];
+    const days = [...new Set(items.map((i) => i.date))].sort().reverse(); // 최신일 먼저
+    const todayKey = days[0];
+    const prevKey = days[1];
+    const map = new Map<string, { prevRank: number | null; daysSeen: number; seenBefore: boolean }>();
+    for (const it of items) {
+      const cur = map.get(it.keywordText) ?? { prevRank: null, daysSeen: 0, seenBefore: false };
+      cur.daysSeen += 1;
+      if (it.date === prevKey) cur.prevRank = it.rank;
+      if (it.date !== todayKey) cur.seenBefore = true;
+      map.set(it.keywordText, cur);
+    }
+    return map;
+  }, [trendsMini.data]);
 
   const discoverMutation = useMutation({
     mutationFn: () =>
@@ -165,28 +229,39 @@ export default function KeywordsPage() {
             >
               저장된 키워드
             </Button>
+            <Button
+              variant={view === "trends" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("trends")}
+            >
+              📈 트렌드 (시계열)
+            </Button>
           </div>
         </div>
-        <Button
-          onClick={() => discoverMutation.mutate()}
-          disabled={discoverMutation.isPending || query.data?.running}
-        >
-          {discoverMutation.isPending || query.data?.running ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="size-4" />
-          )}
-          지금 수집
-        </Button>
+        {view !== "trends" && (
+          <Button
+            onClick={() => discoverMutation.mutate()}
+            disabled={discoverMutation.isPending || query.data?.running}
+          >
+            {discoverMutation.isPending || query.data?.running ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            지금 수집
+          </Button>
+        )}
       </div>
 
-      {discoverMutation.isPending && (
+      {view === "trends" && <TrendsView />}
+
+      {view !== "trends" && discoverMutation.isPending && (
         <p className="text-sm text-muted-foreground">
           이슈 수집 → AI 키워드 발굴 → 검색량 조회 중입니다. 1~2분 정도 걸립니다.
         </p>
       )}
 
-      {query.isPending ? (
+      {view === "trends" ? null : query.isPending ? (
         <Skeleton className="h-96" />
       ) : query.isError ? (
         <p className="text-sm text-destructive">키워드를 불러오지 못했습니다.</p>
@@ -204,6 +279,7 @@ export default function KeywordsPage() {
                 <TableRow>
                   <TableHead className="w-10 text-center">#</TableHead>
                   <TableHead>키워드</TableHead>
+                  {view === "today" && <TableHead className="w-20 text-center">트렌드</TableHead>}
                   <TableHead className="text-center">유형</TableHead>
                   <TableHead className="text-right">검색량(N)</TableHead>
                   <TableHead className="text-right">경쟁문서</TableHead>
@@ -245,6 +321,11 @@ export default function KeywordsPage() {
                           </TooltipContent>
                         </Tooltip>
                       </TableCell>
+                      {view === "today" && (
+                        <TableCell className="text-center">
+                          <TrendBadge info={trendInfo.get(item.keyword)} rank={item.rank} />
+                        </TableCell>
+                      )}
                       <TableCell className="text-center">
                         {type ? <Badge className={type.className}>{type.label}</Badge> : "—"}
                       </TableCell>
