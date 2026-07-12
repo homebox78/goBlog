@@ -729,7 +729,7 @@ export async function improveArticle(
 
   const system = [
     "당신은 한국어 SEO 블로그 에디터입니다. 기존 글의 품질 부족 항목만 보강해 완성도를 85점 이상으로 올립니다.",
-    "규칙 ① 본문의 기존 HTML 블록(<a> 상품 배너, <p> 대가성 안내 문구, <figure> 이미지, 맨 끝 #해시태그 줄, 인용문)은 절대 삭제·변형하지 말고 그대로 보존한다.",
+    "규칙 ① 본문의 기존 HTML 블록(<a> 상품 배너, <p> 대가성 안내 문구, <figure> 이미지, 맨 끝 #해시태그 줄, 인용문)과 [IMAGE:n]·[PRODUCT_BANNER] 마커는 절대 삭제·변형하지 말고 그대로 보존한다.",
     "규칙 ② qualityIssues의 각 항목을 해결한다 — 특히 본문 끝 #해시태그가 20개 미만이면 관련 SEO 태그를 20~30개로 늘리고, 소제목(H2)에 핵심 키워드를 자연스럽게 넣고, 키워드를 본문 전반에 고르게 분포시키며, 부족한 분량은 유용한 정보로 보강한다.",
     "규칙 ③ 과장·보장성·광고클릭 유도 문구 금지. 사람이 쓴 자연스러운 문체·이모지를 유지한다.",
     `규칙 ④ 오늘은 ${curYear}년 ${curMonth}월 ${curDay}일이다. 제목·본문의 연도·시점 표현이 현재와 안 맞으면(예: 지난 연도를 '최신'·'올해'로 표기) 반드시 현재 연도(${curYear}) 기준으로 바로잡는다. 시점을 모르면 연도를 지어내지 말고 표현을 뺀다.`,
@@ -794,4 +794,27 @@ export async function improveArticle(
   });
 
   return { before, after: quality.score, passed: quality.score >= 85 };
+}
+
+/**
+ * 생성 후 마무리 파이프라인 (원스톱 자동화) — ① 85점 미만이면 자동 보정 1회 ② 이미지 3장 자동 생성.
+ * 스케줄러(자동 글)는 await, 수동 생성 라우트는 응답 후 백그라운드로 호출한다.
+ * 실패해도 글은 남으므로 예외는 로그만 남기고 삼킨다.
+ */
+export async function finishArticlePipeline(articleId: number, qualityScore: number): Promise<void> {
+  if (qualityScore < 85) {
+    try {
+      const r = await improveArticle(articleId);
+      console.log(`[pipeline] 자동 보정 ${r.before}→${r.after}점 (글 ${articleId})`);
+    } catch (error) {
+      console.error(`[pipeline] 자동 보정 실패 (글 ${articleId}):`, (error as Error).message);
+    }
+  }
+  try {
+    const { generateArticleImages } = await import("../images/image-service.js");
+    const r = await generateArticleImages(articleId);
+    console.log(`[pipeline] 이미지 자동 생성 ${r.generated}장${r.failed ? ` (실패 ${r.failed})` : ""} (글 ${articleId})`);
+  } catch (error) {
+    console.error(`[pipeline] 이미지 자동 생성 실패 (글 ${articleId}):`, (error as Error).message);
+  }
 }

@@ -10,6 +10,12 @@ interface DashboardData {
   db: boolean;
   keywordsToday: number;
   articleCount: number;
+  todo?: {
+    review: number;
+    noImage: number;
+    lowQuality: number;
+    notPublished: number;
+  };
   publishStats: Record<string, number>;
   recentArticles: Array<{
     id: number;
@@ -92,6 +98,20 @@ export default function DashboardPage() {
             <code className="font-mono"> pnpm db:push</code>로 스키마를 반영해주세요.
           </span>
         </div>
+      )}
+
+      {data.todo && (
+        <Card className="border-primary/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">📋 오늘 할 일</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <TodoCard label="검토 대기" value={data.todo.review} to="/articles?filter=review" hint="내용 확인 후 발행" />
+            <TodoCard label="이미지 없는 글" value={data.todo.noImage} to="/articles?filter=noimage" hint="이미지 생성 필요" />
+            <TodoCard label="85점 미만" value={data.todo.lowQuality} to="/articles?filter=lowq" hint="보정 필요" />
+            <TodoCard label="미발행 글" value={data.todo.notPublished} to="/articles?filter=unpublished" hint="발행 대기 중" />
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -199,6 +219,22 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function TodoCard({ label, value, to, hint }: { label: string; value: number; to: string; hint: string }) {
+  const done = value === 0;
+  return (
+    <Link
+      to={to}
+      className={`rounded-lg border p-3 transition-colors hover:bg-accent ${done ? "opacity-50" : "border-primary/50"}`}
+    >
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`mt-0.5 text-2xl font-bold ${done ? "" : "text-primary"}`}>
+        {done ? "✓" : value}
+      </p>
+      <p className="text-[11px] text-muted-foreground">{done ? "완료" : hint}</p>
+    </Link>
   );
 }
 

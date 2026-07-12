@@ -165,7 +165,7 @@ productsRouter.get(
       where: { source },
       orderBy: { id: "desc" },
       take: 3000,
-      select: { id: true, name: true, keyword: true, score: true },
+      select: { id: true, name: true, keyword: true, score: true, usedAt: true, articleId: true },
     });
     const total = all.length;
 

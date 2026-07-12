@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Trash2 } from "lucide-react";
+import { ImagePlus, Loader2, Trash2, Wand2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,9 +37,38 @@ interface ArticleListItem {
   qualityScore: number | null;
   adSource: string | null;
   adProduct: string | null;
+  extensionDoneAt: string | null;
   createdAt: string;
   keyword: { id: number; text: string } | null;
   thumbnailUrl: string | null;
+  pendingImages: number;
+}
+
+type ListFilter = "all" | "review" | "noimage" | "lowq" | "unpublished" | "ad";
+const FILTERS: Array<{ key: ListFilter; label: string }> = [
+  { key: "all", label: "전체" },
+  { key: "review", label: "검토 대기" },
+  { key: "noimage", label: "이미지 없음" },
+  { key: "lowq", label: "85점 미만" },
+  { key: "unpublished", label: "미발행" },
+  { key: "ad", label: "광고 있음" },
+];
+
+function matchFilter(article: ArticleListItem, filter: ListFilter): boolean {
+  switch (filter) {
+    case "review":
+      return article.status === "REVIEW";
+    case "noimage":
+      return article.pendingImages > 0;
+    case "lowq":
+      return article.qualityScore !== null && article.qualityScore < 85 && article.status !== "PUBLISHED";
+    case "unpublished":
+      return article.status !== "PUBLISHED" && !article.extensionDoneAt;
+    case "ad":
+      return !!article.adProduct;
+    default:
+      return true;
+  }
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
@@ -52,6 +82,11 @@ const STATUS_BADGE: Record<string, { label: string; variant: "default" | "second
 
 export default function ArticlesPage() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filter = (searchParams.get("filter") as ListFilter) || "all";
+  // 행별 진행 중 작업 (이미지 생성/보정은 수십 초 걸림)
+  const [busy, setBusy] = useState<Record<number, "images" | "improve">>({});
+
   const query = useQuery({
     queryKey: ["articles"],
     queryFn: () => api.get<{ articles: ArticleListItem[] }>("/api/articles"),
@@ -66,6 +101,30 @@ export default function ArticlesPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "삭제 실패"),
   });
 
+  const runRowAction = async (id: number, kind: "images" | "improve") => {
+    setBusy((prev) => ({ ...prev, [id]: kind }));
+    try {
+      if (kind === "images") {
+        const r = await api.post<{ generated: number; failed: number }>(`/api/articles/${id}/images`, {});
+        toast.success(`이미지 ${r.generated}장 생성${r.failed ? ` (실패 ${r.failed})` : ""}`);
+      } else {
+        const r = await api.post<{ before: number; after: number }>(`/api/articles/${id}/improve`, {});
+        toast.success(`보정 완료: ${r.before} → ${r.after}점`);
+      }
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "실행 실패");
+    } finally {
+      setBusy((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+  };
+
+  const filtered = (query.data?.articles ?? []).filter((a) => matchFilter(a, filter));
+
   return (
     <div className="space-y-6">
       <div>
@@ -75,14 +134,33 @@ export default function ArticlesPage() {
         </p>
       </div>
 
+      <div className="flex flex-wrap gap-1.5">
+        {FILTERS.map(({ key, label }) => {
+          const count = key === "all" ? undefined : (query.data?.articles ?? []).filter((a) => matchFilter(a, key)).length;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSearchParams(key === "all" ? {} : { filter: key })}
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                filter === key ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {label}
+              {count !== undefined && count > 0 && <span className="ml-1 font-semibold">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
       {query.isPending ? (
         <Skeleton className="h-72" />
       ) : query.isError ? (
         <p className="text-sm text-destructive">글 목록을 불러오지 못했습니다.</p>
-      ) : query.data.articles.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            아직 생성된 글이 없습니다.
+            {filter === "all" ? "아직 생성된 글이 없습니다." : "조건에 맞는 글이 없습니다. ✓ 다 처리됐어요!"}
           </CardContent>
         </Card>
       ) : (
@@ -103,11 +181,12 @@ export default function ArticlesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {query.data.articles.map((article) => {
+                {filtered.map((article) => {
                   const status = STATUS_BADGE[article.status] ?? {
                     label: article.status,
                     variant: "secondary" as const,
                   };
+                  const rowBusy = busy[article.id];
                   return (
                     <TableRow key={article.id}>
                       <TableCell>
@@ -170,6 +249,37 @@ export default function ArticlesPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-0.5">
+                          {article.pendingImages > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={`이미지 ${article.pendingImages}장 생성`}
+                              disabled={!!rowBusy}
+                              onClick={() => runRowAction(article.id, "images")}
+                            >
+                              {rowBusy === "images" ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <ImagePlus className="size-4 text-blue-600" />
+                              )}
+                            </Button>
+                          )}
+                          {article.qualityScore !== null && article.qualityScore < 85 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={`품질 보정 (현재 ${article.qualityScore}점)`}
+                              disabled={!!rowBusy}
+                              onClick={() => runRowAction(article.id, "improve")}
+                            >
+                              {rowBusy === "improve" ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <Wand2 className="size-4 text-amber-600" />
+                              )}
+                            </Button>
+                          )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" aria-label="글 삭제">
@@ -198,6 +308,7 @@ export default function ArticlesPage() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -28,15 +28,13 @@ articlesRouter.get(
         adSource: true,
         adProduct: true,
         contentMarkdown: true,
+        extensionDoneAt: true,
         createdAt: true,
         updatedAt: true,
         keyword: { select: { id: true, text: true } },
-        // 대표 썸네일 = 첫 번째 이미지 (position 순, kind 무관)
         media: {
-          where: { webpUrl: { not: null } },
           orderBy: { position: "asc" },
-          select: { webpUrl: true },
-          take: 1,
+          select: { webpUrl: true, prompt: true },
         },
       },
     });
@@ -51,7 +49,9 @@ articlesRouter.get(
           ...rest,
           adSource: adSource ?? (hasBanner ? (/coupang/i.test(md) ? "COUPANG" : "BRANDCONNECT") : null),
           adProduct: adProduct ?? (hasBanner ? bannerAlt ?? "삽입 배너" : null),
-          thumbnailUrl: media[0]?.webpUrl ?? null,
+          // 대표 썸네일 = 첫 번째 생성된 이미지, 미생성 이미지 수(원스톱 액션 버튼용)
+          thumbnailUrl: media.find((m) => m.webpUrl)?.webpUrl ?? null,
+          pendingImages: media.filter((m) => m.prompt && !m.webpUrl).length,
         };
       }),
     });
@@ -99,6 +99,9 @@ articlesRouter.post(
       : undefined;
     const result = await generateArticle({ ...options, product });
     res.json(result);
+    // 원스톱: 응답 후 백그라운드로 85점 미만 자동 보정 + 이미지 3장 자동 생성
+    const { finishArticlePipeline } = await import("./generator.js");
+    void finishArticlePipeline(result.articleId, result.qualityScore);
   }),
 );
 

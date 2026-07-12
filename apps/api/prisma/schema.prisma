@@ -185,10 +185,13 @@ model BulkMatchHit {
   name        String   @db.VarChar(191) // 유니크 인덱스 대상이라 길이 제한 (bulk-match는 120자 이하만 수집)
   keyword     String   @db.VarChar(191)
   score       Int      @default(0)
+  usedAt      DateTime? // 스케줄러가 이 매칭으로 글을 자동 생성한 시각 (소진 처리)
+  articleId   Int? // 생성된 글 ID (히스토리에서 바로가기)
   createdAt   DateTime @default(now())
 
   @@unique([source, name], name: "source_name")
   @@index([source, createdAt])
+  @@index([usedAt])
   @@map("bulk_match_hits")
 }
 

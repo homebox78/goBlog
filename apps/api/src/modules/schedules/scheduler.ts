@@ -1,7 +1,7 @@
 import { Cron } from "croner";
 import { prisma } from "../../common/prisma.js";
 import { runDailyDiscovery, kstToday } from "../keywords/engine.js";
-import { generateArticle, type ProductInput } from "../articles/generator.js";
+import { finishArticlePipeline, generateArticle, type ProductInput } from "../articles/generator.js";
 import { searchCoupangProducts } from "../products/coupang.js";
 import { overlapScore, isNonCommercialKeyword } from "../products/product-match.js";
 
@@ -122,16 +122,73 @@ async function autoGenerateTopArticles(count: number): Promise<number> {
     try {
       // 제휴 수익화: 키워드에 어울리는 상품(등록 상품 우선)을 붙이면 배너·딥링크·대가성 문구가 자동 삽입된다.
       const product = await findProductForKeyword(rec.keywordId, rec.keyword.text);
-      await generateArticle({
+      const result = await generateArticle({
         keywordId: rec.keywordId,
         articleType: suggestArticleType(rec.keyword.text, rec.keyword.sourceType, rec.keyword.searchIntent),
         language: "ko",
         schemaTypes: ["BlogPosting", "FAQPage"],
         product: product ?? undefined,
       });
+      // 원스톱: 85점 미만 자동 보정 + 이미지 3장 자동 생성 → 검토만 하면 되는 완성 글
+      await finishArticlePipeline(result.articleId, result.qualityScore);
       made += 1;
     } catch (error) {
       console.error(`[scheduler] 자동 글 생성 실패 (${rec.keyword.text}):`, (error as Error).message);
+    }
+  }
+  return made;
+}
+
+/**
+ * 누적 대량매칭(BulkMatchHit)에서 미사용 매칭을 골라 자동으로 글을 생성한다.
+ * 사용자는 '매칭되는 상품 찾기'로 쌓아두기만 하면 되고, 스케줄러가 알아서 글을 만든다.
+ *  - 매칭 점수 높은 순, 키워드당 1건 (중복 글 방지)
+ *  - 같은 키워드로 글이 이미 있으면 소진 처리만
+ *  - 등록 상품(트래킹 링크 보유)이 있으면 배너까지, 없으면 정보성 글(배너는 나중에 삽입)
+ */
+async function autoGenerateFromBulkMatches(count: number): Promise<number> {
+  const hits = await prisma.bulkMatchHit.findMany({
+    where: { usedAt: null },
+    orderBy: { score: "desc" },
+    take: 50,
+  });
+  let made = 0;
+  const usedKeywords = new Set<string>();
+  for (const hit of hits) {
+    if (made >= count) break;
+    if (usedKeywords.has(hit.keyword)) continue;
+    const keyword = await prisma.keyword.findFirst({ where: { text: hit.keyword } });
+    if (!keyword) continue;
+
+    // 같은 키워드로 이미 글이 있으면 이 매칭은 소진 처리 (중복 글 방지)
+    const existing = await prisma.article.findFirst({ where: { keywordId: keyword.id }, select: { id: true } });
+    if (existing) {
+      await prisma.bulkMatchHit
+        .update({ where: { id: hit.id }, data: { usedAt: new Date(), articleId: existing.id } })
+        .catch(() => undefined);
+      usedKeywords.add(hit.keyword);
+      continue;
+    }
+
+    try {
+      const product = await findProductForKeyword(keyword.id, keyword.text);
+      const result = await generateArticle({
+        keywordId: keyword.id,
+        articleType: suggestArticleType(keyword.text, keyword.sourceType, keyword.searchIntent),
+        language: "ko",
+        schemaTypes: ["BlogPosting", "FAQPage"],
+        product: product ?? undefined,
+      });
+      await finishArticlePipeline(result.articleId, result.qualityScore);
+      await prisma.bulkMatchHit
+        .update({ where: { id: hit.id }, data: { usedAt: new Date(), articleId: result.articleId } })
+        .catch(() => undefined);
+      usedKeywords.add(hit.keyword);
+      made += 1;
+      console.log(`[scheduler] 매칭 기반 자동 글: "${hit.keyword}" (상품: ${hit.name.slice(0, 30)})`);
+    } catch (error) {
+      // 82점 이하 폐기 등 — 소진 처리하지 않고 다음 회차에 재시도
+      console.error(`[scheduler] 매칭 기반 글 생성 실패 (${hit.keyword}):`, (error as Error).message);
     }
   }
   return made;
@@ -154,6 +211,8 @@ export async function scheduleFromSettings(): Promise<void> {
           console.log(`[scheduler] 키워드 수집: 추천 ${result.recommendedCount}개`);
           const made = await autoGenerateTopArticles(2);
           console.log(`[scheduler] 자동 글 ${made}건 생성 (검토 대기)`);
+          const promoMade = await autoGenerateFromBulkMatches(2);
+          console.log(`[scheduler] 매칭 기반 자동 글 ${promoMade}건 생성`);
         } catch (error) {
           console.error("[scheduler] 정기 작업 실패:", (error as Error).message);
         }
@@ -169,5 +228,6 @@ export async function scheduleFromSettings(): Promise<void> {
 export async function runCollectionNow(): Promise<{ recommendedCount: number; articlesMade: number }> {
   const result = await runDailyDiscovery("manual");
   const made = await autoGenerateTopArticles(2);
-  return { recommendedCount: result.recommendedCount, articlesMade: made };
+  const promoMade = await autoGenerateFromBulkMatches(2);
+  return { recommendedCount: result.recommendedCount, articlesMade: made + promoMade };
 }

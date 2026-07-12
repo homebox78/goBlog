@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Link2, Loader2, PenLine, Sparkles, Save, Trash2, Tag, ExternalLink } from "lucide-react";
@@ -120,6 +121,8 @@ interface BulkHit {
   name: string;
   keyword: string;
   score: number;
+  usedAt: string | null;
+  articleId: number | null;
 }
 interface BulkHistoryPage {
   items: BulkHit[];
@@ -144,7 +147,7 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
   const queryClient = useQueryClient();
   // 입력창은 저장하지 않는다 — 새로고침하면 비워지고, 매칭된 결과만 DB에 기록된다.
   const [text, setText] = useState("");
-  const [lastRun, setLastRun] = useState<{ scanned: number; added: number } | null>(null);
+  const [lastRun, setLastRun] = useState<{ scanned: number; matched: number; added: number } | null>(null);
   const [sort, setSort] = useState<BulkSort>("keyword");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -188,9 +191,14 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
   const matchMutation = useMutation({
     mutationFn: () => api.post<BulkResult>("/api/products/bulk-match", { source, text }),
     onSuccess: (data) => {
-      setLastRun({ scanned: data.scanned, added: data.added });
+      setLastRun({ scanned: data.scanned, matched: data.matchedCount, added: data.added });
       setText(""); // 입력 내용은 비운다 (매칭 결과만 남긴다)
       queryClient.invalidateQueries({ queryKey: ["bulk-history", source] });
+      if (data.matchedCount > 0 && data.added === 0) {
+        toast.info(`매칭 ${data.matchedCount}개 모두 이미 히스토리에 있습니다 (신규 없음).`);
+      } else if (data.matchedCount === 0) {
+        toast.info("이 목록과 겹치는 키워드가 풀에 없습니다. 키워드 수집 후 다시 시도하세요.");
+      }
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "매칭 실패"),
   });
@@ -248,7 +256,7 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
                 누적 <b className="text-emerald-600">{total}개</b> 매칭
                 {lastRun && (
                   <span className="ml-1">
-                    (이번 {lastRun.scanned}줄 중 신규 {lastRun.added}개 추가)
+                    (이번 {lastRun.scanned}줄 중 매칭 {lastRun.matched}개, 신규 {lastRun.added}개)
                   </span>
                 )}
               </p>
@@ -303,8 +311,39 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
                     ) : (
                       <span className="min-w-0 flex-1 truncate font-medium">{m.name}</span>
                     )}
-                    <span className="inline-flex shrink-0 items-center gap-1 text-xs text-emerald-600">
-                      <Tag className="size-3" /> {m.keyword}
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      {m.articleId ? (
+                        <RouterLink
+                          to={`/articles/${m.articleId}`}
+                          className="rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300"
+                          title="이 매칭으로 자동 생성된 글 보기"
+                        >
+                          📝 글 생성됨
+                        </RouterLink>
+                      ) : (
+                        <button
+                          type="button"
+                          className="rounded border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted"
+                          title="파트너스 링크 발급 페이지를 열고 등록칸으로 이동합니다"
+                          onClick={() => {
+                            window.open(
+                              source === "COUPANG"
+                                ? `https://partners.coupang.com/#affiliate/ws/link/0/${encodeURIComponent(m.name)}`
+                                : "https://brandconnect.naver.com/",
+                              "_blank",
+                            );
+                            const ta = document.getElementById(`analyzer-${source}`);
+                            ta?.scrollIntoView({ behavior: "smooth", block: "center" });
+                            (ta as HTMLTextAreaElement | null)?.focus();
+                            toast.info("파트너스에서 [이미지+텍스트] HTML(또는 링크)을 복사해 등록칸에 붙여넣으세요.");
+                          }}
+                        >
+                          등록
+                        </button>
+                      )}
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
+                        <Tag className="size-3" /> {m.keyword}
+                      </span>
                     </span>
                   </li>
                 ))}
@@ -524,6 +563,7 @@ function UrlAnalyzer({
 
         <div className="space-y-2">
           <Textarea
+            id={`analyzer-${source}`}
             rows={3}
             className="font-mono text-xs"
             placeholder={placeholder}

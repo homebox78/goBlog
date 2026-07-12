@@ -29,6 +29,10 @@ async function init() {
   $("#saveSetup").addEventListener("click", saveSetup);
   $("#openSetup").addEventListener("click", () => $("#setup").classList.toggle("hidden"));
   $("#refresh").addEventListener("click", loadArticles);
+  // 네이버 글쓰기 원스톱 — GoBlogWrite는 로그인된 내 블로그의 글쓰기 화면으로 리다이렉트된다
+  $("#openNaverWrite").addEventListener("click", () => {
+    chrome.tabs.create({ url: "https://blog.naver.com/GoBlogWrite.naver" });
+  });
   $("#applyBtn").addEventListener("click", applyToForm);
   $("#copyBtn").addEventListener("click", copyBody);
   $("#doneBtn").addEventListener("click", markPublished);
