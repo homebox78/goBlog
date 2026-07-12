@@ -115,29 +115,42 @@ export default function ProductsPage() {
   );
 }
 
+interface BulkMatch {
+  name: string;
+  keyword: string;
+  score: number;
+}
 interface BulkResult {
   scanned: number;
   matchedCount: number;
-  matched: Array<{ name: string; keyword: string; score: number }>;
+  matched: BulkMatch[];
 }
 
 function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
   const textKey = `goblog:bulkmatch:${source}:text`;
-  const resultKey = `goblog:bulkmatch:${source}:result`;
+  const historyKey = `goblog:bulkmatch:${source}:history`;
   const [text, setText] = useState(() => localStorage.getItem(textKey) ?? "");
-  const [result, setResult] = useState<BulkResult | null>(() => {
+  // 누적 히스토리 — 실행할 때마다 새 매칭을 여기 합쳐 계속 쌓는다(이름 기준 중복 제거).
+  const [history, setHistory] = useState<BulkMatch[]>(() => {
     try {
-      const saved = localStorage.getItem(resultKey);
-      return saved ? (JSON.parse(saved) as BulkResult) : null;
+      const saved = localStorage.getItem(historyKey);
+      return saved ? (JSON.parse(saved) as BulkMatch[]) : [];
     } catch {
-      return null;
+      return [];
     }
   });
+  const [lastRun, setLastRun] = useState<{ scanned: number; added: number } | null>(null);
   const matchMutation = useMutation({
     mutationFn: () => api.post<BulkResult>("/api/products/bulk-match", { source, text }),
     onSuccess: (data) => {
-      setResult(data);
-      localStorage.setItem(resultKey, JSON.stringify(data));
+      setHistory((prev) => {
+        const seen = new Set(prev.map((m) => m.name));
+        const fresh = data.matched.filter((m) => !seen.has(m.name));
+        const merged = [...fresh, ...prev]; // 새 매칭을 위로
+        localStorage.setItem(historyKey, JSON.stringify(merged));
+        setLastRun({ scanned: data.scanned, added: fresh.length });
+        return merged;
+      });
       localStorage.setItem(textKey, text);
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "매칭 실패"),
@@ -171,31 +184,36 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
           {matchMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
           매칭되는 상품 찾기
         </Button>
-        {result && (
+        {(history.length > 0 || lastRun) && (
           <div className="rounded-md border p-3">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                {result.scanned}개 줄 중 <b className="text-emerald-600">{result.matchedCount}개</b> 매칭
-                <span className="ml-1">(새로고침해도 유지)</span>
+                누적 <b className="text-emerald-600">{history.length}개</b> 매칭
+                {lastRun && (
+                  <span className="ml-1">
+                    (이번 {lastRun.scanned}줄 중 신규 {lastRun.added}개 추가)
+                  </span>
+                )}
               </p>
               <button
                 type="button"
                 className="text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => {
-                  setResult(null);
-                  localStorage.removeItem(resultKey);
+                  setHistory([]);
+                  setLastRun(null);
+                  localStorage.removeItem(historyKey);
                 }}
               >
-                지우기
+                히스토리 비우기
               </button>
             </div>
-            {result.matched.length === 0 ? (
+            {history.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 매칭되는 상품이 없습니다. 오늘의 키워드와 겹치는 상품이 없을 수 있어요.
               </p>
             ) : (
               <ul className="max-h-72 space-y-1.5 overflow-y-auto text-sm">
-                {result.matched.map((m, index) => (
+                {history.map((m, index) => (
                   <li key={index} className="flex items-center justify-between gap-2">
                     <span className="min-w-0 flex-1 truncate font-medium">{m.name}</span>
                     <span className="inline-flex shrink-0 items-center gap-1 text-xs text-emerald-600">

@@ -33,7 +33,13 @@ function tokenize(text: string | null | undefined): string[] {
     .toLowerCase()
     .replace(/[^\w가-힣\s]/g, " ")
     .split(/\s+/)
-    .filter((token) => token.length >= 2 && !STOPWORDS.has(token));
+    .filter(
+      (token) =>
+        token.length >= 2 &&
+        !STOPWORDS.has(token) &&
+        // 숫자로 시작하는 토큰은 가격·수량·용량 노이즈(100,000원·30정·65g·24개·1000만원대) → 매칭 근거 제외
+        !/^\d/.test(token),
+    );
 }
 
 /**
