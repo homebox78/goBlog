@@ -576,8 +576,16 @@ export { kstToday };
  * 사용자가 글 상세에서 원하는 위치에 직접 삽입할 때 사용. 쿠팡은 딥링크·이미지 재호스팅 적용.
  */
 export async function buildManualBanner(input: string): Promise<{ banner: string }> {
+  const trimmed = input.trim();
+  // 이미 배너 HTML(<a>…<img>…</a>)을 붙여넣었으면 그 형태를 그대로 삽입한다 (사용자 배너 유지).
+  // 쿠팡 제휴 배너는 이미 트래킹 링크·전용 배너 이미지라 재생성하지 않는다.
+  if (/<a\s/i.test(trimmed) && /<img\s/i.test(trimmed)) {
+    return { banner: `<p style="text-align:center;margin:20px 0;">${trimmed}</p>` };
+  }
+
+  // 링크 URL만 붙여넣은 경우엔 카드형 배너를 생성한다.
   const { analyzeProductInput } = await import("../products/analyze.js");
-  const product = await analyzeProductInput(input);
+  const product = await analyzeProductInput(trimmed);
   let linkUrl = product.productUrl;
   if (product.source === "COUPANG" && /coupang\.com/i.test(linkUrl)) {
     try {
