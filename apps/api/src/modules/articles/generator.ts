@@ -251,6 +251,7 @@ export async function generateArticle(
       "[신뢰·정책 — 애드센스/검색 정책 준수]",
       "- 첫 문단에서 검색자의 핵심 질문에 바로 답한다.",
       "- H2(##)·H3(###) 구조를 지킨다.",
+      "- 이미지는 정확히 3장. 본문 흐름에 맞는 3곳에 [IMAGE:1] [IMAGE:2] [IMAGE:3] 마커를 넣고, imagePrompts도 position 1·2·3으로 정확히 3개만 만든다. 첫 번째 이미지가 대표(썸네일)가 된다.",
       "- 확인할 수 없는 통계·가격·법률·의료·금융 정보는 단정하지 않고 claimsToVerify에 표시한다. 공식 확인이 필요한 부분은 본문에서 '최신 기준은 공식 사이트에서 확인' 식으로 안내한다.",
       "- 존재하지 않는 URL·출처·개인 경험담·허위 후기·가상의 전문가 인용을 만들지 않는다.",
       "- 존재하지 않는 혜택·신청 기능·다운로드를 있는 것처럼 쓰지 않는다.",
@@ -315,11 +316,10 @@ export async function generateArticle(
           : null,
         imagePrompts: [
           {
-            role: "FEATURED|CONTENT",
-            prompt: "이미지 생성 프롬프트 (영어). 밝고 긍정적인 분위기, 등장인물은 한국인만(외국인 금지). 이미지 속 글자 없이. 사람이 등장하는 장면이면 아래 characters에 등장 인물을 지정",
+            prompt: "이미지 생성 프롬프트 (영어). 밝고 긍정적인 분위기, 등장인물은 한국인만(외국인 금지). 이미지 속 글자·로고·브랜드 없이. 특정 제품 클로즈업 대신 장면/분위기. 사람이 등장하는 장면이면 아래 characters에 등장 인물을 지정",
             altText: "한국어 대체 텍스트",
             caption: "캡션",
-            position: "본문 [IMAGE:n]의 n (대표는 0)",
+            position: "본문 [IMAGE:n]의 n (정확히 1, 2, 3 세 장)",
             characters: "등장 인물 키 배열 (사람 없으면 빈 배열). 가능한 값: girl(여자아이), boy(남자아이), man_20s(20대남), woman_20s(20대여), man_middle(중년남), woman_middle(중년여)",
           },
         ],
@@ -459,6 +459,11 @@ export async function generateArticle(
     claimsToVerify: claims,
   });
 
+  // 품질 82점 이하는 폐기 (저장하지 않음)
+  if (quality.score <= 82) {
+    throw new HttpError(422, `품질 ${quality.score}점(82점 이하)으로 폐기되었습니다. 다시 생성하거나 키워드를 바꿔주세요.`);
+  }
+
   const contentHtml = await renderContentHtml(contentMarkdown);
 
   const article = await prisma.article.create({
@@ -487,24 +492,19 @@ export async function generateArticle(
           changeNote: "최초 생성",
         },
       },
+      // 이미지는 정확히 3장, 모두 본문(CONTENT)에 삽입. 첫 번째(position 1)가 대표(썸네일)로 쓰인다.
       media: {
-        create: imagePrompts.slice(0, 5).map((prompt, index) => {
-          // Claude가 position을 문자열로 줄 수 있다 — Int로 강제
-          const position = Number(prompt.position);
+        create: imagePrompts.slice(0, 3).map((prompt, index) => {
           const characters = (prompt.characters ?? [])
             .filter((key) => VALID_CHARACTER_KEYS.includes(key))
             .join(",");
-          const isFeatured = prompt.role === "FEATURED";
-          // 상품 홍보 글의 대표 이미지는 실제 상품 사진을 사용한다 (Gemini가 브랜드 상표를 못 그려 엉뚱한 제품이 나오는 문제 방지)
-          const useProductImage = isFeatured && bannerImageUrl;
           return {
-            kind: isFeatured ? "FEATURED" : "CONTENT",
+            kind: "CONTENT",
             prompt: prompt.prompt,
             altText: prompt.altText || null,
             caption: prompt.caption || null,
-            position: Number.isInteger(position) ? position : index,
+            position: index + 1,
             characterKeys: characters || null,
-            ...(useProductImage ? { webpUrl: bannerImageUrl, originalUrl: bannerImageUrl } : {}),
           };
         }),
       },

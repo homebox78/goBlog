@@ -497,7 +497,7 @@ export default function ArticleDetailPage() {
                 <div key={asset.id} className="rounded-md border p-2 text-xs">
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">
-                      {asset.kind === "FEATURED" ? "대표" : `본문 ${asset.position ?? ""}`}
+                      {asset.position === 1 ? "대표·본문1" : `본문 ${asset.position ?? ""}`}
                     </Badge>
                     {asset.webpUrl && <Badge className="text-[10px]">생성됨</Badge>}
                     <Button

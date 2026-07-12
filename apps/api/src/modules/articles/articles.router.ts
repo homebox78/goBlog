@@ -27,11 +27,14 @@ articlesRouter.get(
         qualityScore: true,
         adSource: true,
         adProduct: true,
+        contentMarkdown: true,
         createdAt: true,
         updatedAt: true,
         keyword: { select: { id: true, text: true } },
+        // 대표 썸네일 = 첫 번째 이미지 (position 순, kind 무관)
         media: {
-          where: { kind: "FEATURED", webpUrl: { not: null } },
+          where: { webpUrl: { not: null } },
+          orderBy: { position: "asc" },
           select: { webpUrl: true },
           take: 1,
         },
@@ -39,8 +42,17 @@ articlesRouter.get(
     });
     res.json({
       articles: articles.map((article) => {
-        const { media, ...rest } = article;
-        return { ...rest, thumbnailUrl: media[0]?.webpUrl ?? null };
+        const { media, contentMarkdown, adSource, adProduct, ...rest } = article;
+        // 광고 감지: adProduct(자동 매칭) 없어도 본문에 수동 삽입 배너가 있으면 광고로 표시
+        const md = contentMarkdown ?? "";
+        const hasBanner = /link\.coupang|coupangcdn|smartstore|brandconnect|naver\.me|쿠팡에서 최저가|쇼핑하기|활동의 일환/.test(md);
+        const bannerAlt = md.match(/<img[^>]+alt=["']([^"']+)["']/i)?.[1];
+        return {
+          ...rest,
+          adSource: adSource ?? (hasBanner ? (/coupang/i.test(md) ? "COUPANG" : "BRANDCONNECT") : null),
+          adProduct: adProduct ?? (hasBanner ? bannerAlt ?? "삽입 배너" : null),
+          thumbnailUrl: media[0]?.webpUrl ?? null,
+        };
       }),
     });
   }),

@@ -115,17 +115,33 @@ export default function ProductsPage() {
   );
 }
 
+interface BulkResult {
+  scanned: number;
+  matchedCount: number;
+  matched: Array<{ name: string; keyword: string; score: number }>;
+}
+
 function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
-  const [text, setText] = useState("");
+  const textKey = `goblog:bulkmatch:${source}:text`;
+  const resultKey = `goblog:bulkmatch:${source}:result`;
+  const [text, setText] = useState(() => localStorage.getItem(textKey) ?? "");
+  const [result, setResult] = useState<BulkResult | null>(() => {
+    try {
+      const saved = localStorage.getItem(resultKey);
+      return saved ? (JSON.parse(saved) as BulkResult) : null;
+    } catch {
+      return null;
+    }
+  });
   const matchMutation = useMutation({
-    mutationFn: () =>
-      api.post<{ scanned: number; matchedCount: number; matched: Array<{ name: string; keyword: string; score: number }> }>(
-        "/api/products/bulk-match",
-        { source, text },
-      ),
+    mutationFn: () => api.post<BulkResult>("/api/products/bulk-match", { source, text }),
+    onSuccess: (data) => {
+      setResult(data);
+      localStorage.setItem(resultKey, JSON.stringify(data));
+      localStorage.setItem(textKey, text);
+    },
     onError: (error) => toast.error(error instanceof Error ? error.message : "매칭 실패"),
   });
-  const result = matchMutation.data;
 
   return (
     <Card className="mt-4">
@@ -142,7 +158,10 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
           className="font-mono text-xs"
           placeholder={"상품명을 줄바꿈으로 붙여넣으세요 (가격·평점 등이 섞여 있어도 매칭 안 되는 줄은 자동 무시)\n예)\n삼성 갤럭시워치7 프로 44mm\n무선 청소기 차이슨 ...\n..."}
           value={text}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            setText(event.target.value);
+            localStorage.setItem(textKey, event.target.value);
+          }}
         />
         <Button
           className="w-full"
@@ -154,9 +173,22 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
         </Button>
         {result && (
           <div className="rounded-md border p-3">
-            <p className="mb-2 text-xs text-muted-foreground">
-              {result.scanned}개 줄 중 <b className="text-emerald-600">{result.matchedCount}개</b> 매칭
-            </p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {result.scanned}개 줄 중 <b className="text-emerald-600">{result.matchedCount}개</b> 매칭
+                <span className="ml-1">(새로고침해도 유지)</span>
+              </p>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setResult(null);
+                  localStorage.removeItem(resultKey);
+                }}
+              >
+                지우기
+              </button>
+            </div>
             {result.matched.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 매칭되는 상품이 없습니다. 오늘의 키워드와 겹치는 상품이 없을 수 있어요.
