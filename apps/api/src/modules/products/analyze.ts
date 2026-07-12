@@ -58,11 +58,11 @@ function extractPrice(html: string): number | null {
 async function naverShopLookup(
   name: string,
 ): Promise<{ imageUrl: string | null; price: number | null; title: string | null } | null> {
-  const values = await getSettingValues(["naver.datalabClientId", "naver.datalabClientSecret"]);
-  const clientId = values["naver.datalabClientId"];
-  const clientSecret = values["naver.datalabClientSecret"];
-  if (!clientId || !clientSecret) return null;
   try {
+    const values = await getSettingValues(["naver.datalabClientId", "naver.datalabClientSecret"]);
+    const clientId = values["naver.datalabClientId"];
+    const clientSecret = values["naver.datalabClientSecret"];
+    if (!clientId || !clientSecret) return null;
     const res = await fetch(
       `https://openapi.naver.com/v1/search/shop.json?query=${encodeURIComponent(name)}&display=5`,
       { headers: { "X-Naver-Client-Id": clientId, "X-Naver-Client-Secret": clientSecret } },
