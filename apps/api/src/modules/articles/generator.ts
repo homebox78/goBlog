@@ -146,7 +146,7 @@ async function rehostProductImage(url: string, key: string): Promise<string | nu
  * 본문에 삽입할 상품 배너 HTML — [이미지][정보+CTA] 카드형.
  * Blogger 등은 <a> 안의 block 요소(div)를 제거하므로, div 컨테이너 + CTA만 링크로 구성한다.
  */
-function buildProductBanner(product: ProductInput, linkUrl: string, imageUrl: string | null): string {
+export function buildProductBanner(product: ProductInput, linkUrl: string, imageUrl: string | null): string {
   const isCoupang = product.source === "COUPANG";
   const accent = isCoupang ? "#e52528" : "#03c75a"; // 쿠팡 레드 / 네이버 그린
   const accentDark = isCoupang ? "#c41f22" : "#02b350";

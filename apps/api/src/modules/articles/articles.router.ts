@@ -262,6 +262,74 @@ articlesRouter.post(
 );
 
 /**
+ * 배너 백필 — 옛 flex 배너(네이버 SmartEditor에서 깨짐)를 새 블록 배너로 일괄 교체한다.
+ * 옛 배너 <a style="...display:flex...">에서 링크·이미지·상품명·가격·소스를 추출해 재생성.
+ */
+articlesRouter.post(
+  "/backfill-banners",
+  asyncHandler(async (_req, res) => {
+    const { buildProductBanner } = await import("./generator.js");
+    const articles = await prisma.article.findMany({
+      select: { id: true, title: true, contentMarkdown: true },
+      take: 500,
+    });
+    const unescape = (s: string) =>
+      s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+    // 옛 flex 배너 <a ...display:flex...>…</a> (중첩 </a> 없음 → 비탐욕)
+    const bannerRe = /<a\b[^>]*style="[^"]*display:flex[^"]*"[^>]*>[\s\S]*?<\/a>/g;
+    const fixed: Array<{ id: number; title: string; count: number }> = [];
+
+    for (const a of articles) {
+      const md = a.contentMarkdown ?? "";
+      const matches = md.match(bannerRe);
+      if (!matches || matches.length === 0) continue;
+      let next = md;
+      let count = 0;
+      for (const block of matches) {
+        const href = block.match(/<a[^>]+href="([^"]+)"/i)?.[1];
+        if (!href) continue;
+        const imageUrl = block.match(/<img[^>]+src="([^"]+)"/i)?.[1] ?? null;
+        const nameRaw = block.match(/<img[^>]+alt="([^"]*)"/i)?.[1] ?? "";
+        const name = unescape(nameRaw).trim() || "추천 상품";
+        const priceStr = block.match(/([\d,]{2,})\s*원/)?.[1];
+        const price = priceStr ? Number(priceStr.replace(/[^\d]/g, "")) : undefined;
+        const isRocket = /로켓/.test(block);
+        const source: "COUPANG" | "BRANDCONNECT" =
+          /#e52528|coupang|쿠팡/i.test(block) ? "COUPANG" : "BRANDCONNECT";
+        const rebuilt = buildProductBanner(
+          { source, name, price, imageUrl: imageUrl ?? undefined, productUrl: href, isRocket },
+          href,
+          imageUrl,
+        );
+        next = next.replace(block, rebuilt);
+        count += 1;
+      }
+      if (count === 0 || next === md) continue;
+      const contentHtml = await renderContentHtml(next);
+      const last = await prisma.articleVersion.findFirst({ where: { articleId: a.id }, orderBy: { version: "desc" } });
+      await prisma.article.update({
+        where: { id: a.id },
+        data: {
+          contentMarkdown: next,
+          contentHtml,
+          versions: {
+            create: {
+              version: (last?.version ?? 0) + 1,
+              title: a.title,
+              contentMarkdown: next,
+              contentHtml,
+              changeNote: "배너 디자인 갱신(에디터 호환)",
+            },
+          },
+        },
+      });
+      fixed.push({ id: a.id, title: a.title.slice(0, 34), count });
+    }
+    res.json({ scanned: articles.length, fixedCount: fixed.length, fixed });
+  }),
+);
+
+/**
  * 해시태그 백필 — 본문 끝 해시태그가 20개 미만인 글에 SEO 태그 25개를 생성해 붙인다.
  * (해시태그 기능 이전에 생성된 옛 글 보정용. Claude 소형 호출 1회/글)
  */
