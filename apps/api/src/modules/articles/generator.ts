@@ -222,6 +222,10 @@ export async function generateArticle(
 
   const settings = await getSettingValues(["anthropic.defaultLength"]);
   const length = options.length ?? Number(settings["anthropic.defaultLength"] ?? 2000) ?? 2000;
+
+  // 실시간 그라운딩 — 생성 시점의 최신 뉴스를 주입해 학습 데이터의 옛 사실(상장·출시·발표 등) 오류를 막는다.
+  const { fetchRecentNews } = await import("./grounding.js");
+  const recentNews = await fetchRecentNews(topic).catch(() => []);
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
   const tone = options.tone;
   const language = LANGUAGE_NAME[options.language] ? options.language : "ko";
@@ -252,6 +256,14 @@ export async function generateArticle(
       `- 오늘은 ${curYear}년 ${curMonth}월 ${curDay}일(한국 시간)이다. 모든 시점 표현('최신·올해·현재·작년·요즘·${curYear}년')은 이 날짜를 기준으로 한다.`,
       `- 제목·본문에 연도를 넣을 때는 반드시 현재 연도(${curYear})를 쓴다. 지난 연도(${curYear - 1}년 등)를 '최신'·'올해'인 것처럼 절대 쓰지 않는다.`,
       `- 사건·사고·이슈의 발생 시점을 모르면 특정 연도를 지어내지 말고 시점 표현을 생략한다(추측 금지).`,
+      "",
+      "[⚠️ 최신 사실 — 학습 데이터보다 우선. 반드시 준수]",
+      "- 아래 userPayload의 recentNews(최신 뉴스)는 '지금 시점'의 사실이다. 네 학습 데이터의 옛 정보와 충돌하면 무조건 recentNews를 따른다.",
+      "- 상장·출시·발표·인수·수치·순위처럼 시점에 민감한 사실은 recentNews에 근거해서만 단정한다. recentNews에 근거가 없으면 '아직 확정되지 않았다'는 식으로 단정하지 말고, '최신 상황은 공식 발표를 확인'처럼 열어둔다.",
+      "- 특히 '~는 아직 안 했다 / 미정 / 예정'처럼 부정·미확정으로 단정하는 것은 매우 위험하다(이미 일어난 일을 안 일어난 것처럼 쓰는 오류). recentNews에 반대 사실이 있으면 절대 그렇게 쓰지 않는다.",
+      recentNews.length === 0
+        ? "- (이번엔 최신 뉴스가 없다) 그러므로 시점 민감 사실을 새로 단정하지 말고, 변하지 않는 정보 위주로 쓰고 최신 사항은 '공식 발표·최신 뉴스 확인'으로 안내한다."
+        : "",
       "",
       "[조회수 극대화 — 최우선]",
       "- 제목: 핵심 키워드를 앞쪽에 자연스럽게 넣고, 구체적 숫자·연도·대상·결과를 담아 클릭하고 싶게 만든다. 단 과장·허위 낚시는 금지(정책 위반).",
@@ -330,6 +342,8 @@ export async function generateArticle(
     JSON.stringify({
       task: product ? "제휴 상품 홍보 글 생성" : "SEO 블로그 글 생성",
       topic,
+      // 실시간 그라운딩 — 학습 데이터보다 이 최신 뉴스를 우선해 시점 민감 사실을 판단
+      recentNews: recentNews.length > 0 ? recentNews : "최신 뉴스 없음(시점 민감 사실 단정 금지)",
       keywordContext: keyword
         ? {
             category: keyword.category,
