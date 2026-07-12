@@ -68,7 +68,11 @@ export async function publishToBlogger(article: {
     blogId = blog.id;
   }
 
-  const labels = await getArticleTags(article.id).catch(() => [] as string[]);
+  // Blogger 라벨은 개수/총길이에 민감해 많으면 'invalid argument' 400을 낸다 → 짧고 안전한 5개로 제한.
+  const rawLabels = await getArticleTags(article.id).catch(() => [] as string[]);
+  const labels = [
+    ...new Set(rawLabels.map((t) => t.replace(/[,<>]/g, "").trim()).filter((t) => t.length > 0 && t.length <= 30)),
+  ].slice(0, 5);
   const res = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/`, {
     method: "POST",
     headers,
