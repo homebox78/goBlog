@@ -47,8 +47,12 @@ articlesRouter.get(
     res.json({
       articles: articles.map((article) => {
         const { media, contentMarkdown, adSource, adProduct, publishJobs, ...rest } = article;
-        // 플랫폼별 최신 작업 (publishJobs는 id desc 정렬이라 첫 항목이 최신)
-        const latest = (platform: string) => publishJobs.find((j) => j.platform === platform);
+        // 플랫폼별 대표 작업 — 성공(SUCCEEDED)이 하나라도 있으면 그걸 우선(중복 대기작업에 가려지지 않게),
+        // 없으면 최신 작업(id desc 첫 항목).
+        const latest = (platform: string) => {
+          const forPlat = publishJobs.filter((j) => j.platform === platform);
+          return forPlat.find((j) => j.status === "SUCCEEDED") ?? forPlat[0];
+        };
         const wp = latest("WORDPRESS");
         const blog = latest("BLOGGER");
         const nv = latest("NAVER_BLOG");
