@@ -159,8 +159,15 @@ export default function ArticlesPage() {
                       <TableCell className="text-right font-mono">
                         {article.qualityScore ?? "—"}
                       </TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">
+                      <TableCell className="whitespace-nowrap text-center text-sm text-muted-foreground">
                         {new Date(article.createdAt).toLocaleDateString("ko-KR")}
+                        <span className="block text-xs">
+                          {new Date(article.createdAt).toLocaleTimeString("ko-KR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center">
                         <AlertDialog>
