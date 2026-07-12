@@ -4,6 +4,7 @@ import LoginPage from "@/pages/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/pages/DashboardPage";
 import KeywordsPage from "@/pages/KeywordsPage";
+import KeywordTrendsPage from "@/pages/KeywordTrendsPage";
 import ProductsPage from "@/pages/ProductsPage";
 import CharactersPage from "@/pages/CharactersPage";
 import ArticlesPage from "@/pages/ArticlesPage";
@@ -19,6 +20,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/keywords" element={<KeywordsPage />} />
+          <Route path="/trends" element={<KeywordTrendsPage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/articles" element={<ArticlesPage />} />
           <Route path="/articles/:id" element={<ArticleDetailPage />} />

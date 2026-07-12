@@ -10,6 +10,7 @@ import {
   Loader2,
   ShoppingBag,
   Users,
+  TrendingUp,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ interface MeResponse {
 const NAV_ITEMS = [
   { to: "/", label: "대시보드", icon: LayoutDashboard },
   { to: "/keywords", label: "오늘의 키워드", icon: Lightbulb },
+  { to: "/trends", label: "키워드 트렌드", icon: TrendingUp },
   { to: "/products", label: "상품 홍보", icon: ShoppingBag },
   { to: "/articles", label: "글 관리", icon: FileText },
   { to: "/characters", label: "캐릭터", icon: Users },
