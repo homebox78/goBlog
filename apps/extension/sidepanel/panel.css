@@ -87,6 +87,14 @@ button.link { background: none; color: #888; font-weight: 400; padding: 4px; }
   border-radius: 8px;
 }
 .item:hover { border-color: #1a1a1a; }
+/* 선택된 글 — 지속 표시 (호버와 무관) */
+.item.selected {
+  border-color: #03c75a;
+  border-width: 2px;
+  background: #f2fdf6;
+  box-shadow: 0 0 0 1px #03c75a inset;
+}
+.item.selected .item-main p { color: #027a3a; }
 .item-main { flex: 1; min-width: 0; cursor: pointer; }
 .item p { margin: 0; font-weight: 600; font-size: 12px; }
 .item small { color: #888; }

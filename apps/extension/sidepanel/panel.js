@@ -136,12 +136,19 @@ async function loadArticles() {
     for (const article of articles) {
       const row = document.createElement("div");
       row.className = "item";
+      row.dataset.articleId = article.id;
+      if (currentArticle && currentArticle.id === article.id) row.classList.add("selected");
       const main = document.createElement("div");
       main.className = "item-main";
       main.innerHTML = `<p></p><small><span class="cat"></span> ${article.qualityScore ?? "—"}점 · ${article.language} · ${article.status}</small>`;
       main.querySelector("p").textContent = article.title;
       main.querySelector(".cat").textContent = article.category ? `📁 ${article.category}` : "";
-      main.addEventListener("click", () => openArticle(article.id));
+      main.addEventListener("click", () => {
+        // 선택 표시 지속 (호버가 아니라 선택된 글에 표시)
+        document.querySelectorAll("#list .item.selected").forEach((el) => el.classList.remove("selected"));
+        row.classList.add("selected");
+        openArticle(article.id);
+      });
       const done = document.createElement("button");
       done.className = "done-mini ghost";
       done.textContent = "발행완료";
