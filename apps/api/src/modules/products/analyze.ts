@@ -116,10 +116,13 @@ export async function analyzeProductUrl(rawUrl: string): Promise<AnalyzedProduct
 
   const isCoupang = /coupang\.com/i.test(finalUrl) || /coupang\.com/i.test(rawUrl);
 
-  if (!name) {
+  // 네이버 등은 서버 요청을 에러/로그인/봇차단 페이지로 돌려준다 — 그 제목을 상품명으로 쓰면 안 된다.
+  const BLOCKED =
+    /에러\s*페이지|시스템\s*오류|일시적(인)?\s*오류|로그인(이)?\s*필요|본인\s*인증|접근(이)?\s*(제한|차단)|잘못된\s*접근|페이지를\s*찾을\s*수\s*없|not\s*found|access\s*denied|error\s*page/i;
+  if (!name || BLOCKED.test(rawTitle) || BLOCKED.test(name)) {
     throw new HttpError(
       422,
-      "상품 정보를 자동으로 읽지 못했습니다 (로그인·봇 차단 페이지일 수 있음). 상품명·가격을 직접 입력해주세요.",
+      "이 쇼핑몰(네이버 등)은 자동 분석이 막혀 있습니다. 상품명·가격·이미지·링크를 직접 입력해주세요. (링크 필드엔 방금 넣은 주소가 그대로 유지됩니다)",
     );
   }
 
