@@ -637,10 +637,24 @@ export { kstToday };
  */
 export async function buildManualBanner(input: string): Promise<{ banner: string; disclosure: string }> {
   const trimmed = input.trim();
-  // 이미 배너 HTML(<a>…<img>…</a>)을 붙여넣었으면 그 형태를 그대로 삽입한다 (사용자 배너 유지).
-  // 쿠팡 제휴 배너는 이미 트래킹 링크·전용 배너 이미지라 재생성하지 않는다.
+  // 배너 HTML(<a>…<img>…</a>)을 붙여넣으면 링크·이미지·상품명을 추출해 '내 카드 포맷'으로 변환한다.
+  // (쿠팡 기본 배너는 120px로 작고 밋밋해 클릭률이 낮다 — 트래킹 링크는 그대로 유지)
   if (/<a\s/i.test(trimmed) && /<img\s/i.test(trimmed)) {
-    const source = /coupang/i.test(trimmed) ? "COUPANG" : "BRANDCONNECT";
+    const source = /coupang/i.test(trimmed) ? ("COUPANG" as const) : ("BRANDCONNECT" as const);
+    const linkUrl = trimmed.match(/<a[^>]+href=["']([^"']+)["']/i)?.[1];
+    const imgUrl = trimmed.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ?? null;
+    const name = trimmed.match(/<img[^>]+alt=["']([^"']+)["']/i)?.[1]?.trim() || "추천 상품";
+    if (linkUrl) {
+      // 쿠팡 CDN 배너 이미지는 hotlink가 막힐 수 있어 서버에 재호스팅
+      const rehosted = imgUrl ? await rehostProductImage(imgUrl, `manual-${Date.now()}`) : null;
+      const banner = buildProductBanner(
+        { source, name, productUrl: linkUrl },
+        linkUrl,
+        rehosted ?? imgUrl,
+      );
+      return { banner, disclosure: disclosureHtml({ source }) };
+    }
+    // 링크를 못 찾으면(비정상 HTML) 원본 그대로 삽입
     return {
       banner: `<p style="text-align:center;margin:20px 0;">${trimmed}</p>`,
       disclosure: disclosureHtml({ source }),
