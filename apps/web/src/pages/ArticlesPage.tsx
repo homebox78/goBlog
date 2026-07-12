@@ -101,6 +101,24 @@ export default function ArticlesPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "삭제 실패"),
   });
 
+  // 목록에서 바로 검수 완료(승인) 토글 — REVIEW↔APPROVED. 승인 시 Blogger·워드프레스 자동발행.
+  const approveMutation = useMutation({
+    mutationFn: (a: ArticleListItem) =>
+      api.put<{ status: string; autoPublished: string[] }>(`/api/articles/${a.id}`, {
+        status: a.status === "APPROVED" ? "REVIEW" : "APPROVED",
+        changeNote: a.status === "APPROVED" ? "검수 취소" : "검수 완료",
+      }),
+    onSuccess: (r) => {
+      const names = (r.autoPublished ?? [])
+        .map((p) => (p === "BLOGGER" ? "Blogger" : p === "WORDPRESS" ? "워드프레스" : p))
+        .join(" · ");
+      if (r.status === "APPROVED") toast.success(names ? `검수 완료 → ${names} 자동 발행` : "검수 완료했습니다.");
+      else toast.success("검수 대기로 되돌렸습니다.");
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "상태 변경 실패"),
+  });
+
   const runRowAction = async (id: number, kind: "images" | "improve") => {
     setBusy((prev) => ({ ...prev, [id]: kind }));
     try {
@@ -233,7 +251,38 @@ export default function ArticlesPage() {
                       </TableCell>
                       <TableCell className="text-center text-sm">{article.language}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={status.variant}>{status.label}</Badge>
+                        {article.status === "PUBLISHED" ? (
+                          <Badge variant={status.variant}>{status.label}</Badge>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={approveMutation.isPending}
+                            onClick={() => approveMutation.mutate(article)}
+                            title={
+                              article.status === "APPROVED"
+                                ? "클릭하면 검수 대기로 되돌립니다"
+                                : "클릭하면 검수 완료(승인) — Blogger·워드프레스 자동 발행"
+                            }
+                            className="transition-transform hover:scale-105 disabled:opacity-50"
+                          >
+                            <Badge
+                              variant={article.status === "APPROVED" ? "default" : "secondary"}
+                              className={
+                                article.status === "APPROVED"
+                                  ? "cursor-pointer bg-emerald-600 hover:bg-emerald-700"
+                                  : "cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-950"
+                              }
+                            >
+                              {approveMutation.isPending && approveMutation.variables?.id === article.id ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : article.status === "APPROVED" ? (
+                                "✓ 승인됨"
+                              ) : (
+                                "검수 완료 →"
+                              )}
+                            </Badge>
+                          </button>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {article.qualityScore ?? "—"}
