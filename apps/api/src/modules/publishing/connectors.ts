@@ -102,6 +102,9 @@ export async function publishToWordpress(article: {
 
   const credentials = Buffer.from(`${values["wordpress.username"]}:${values["wordpress.appPassword"]}`).toString("base64");
 
+  // 고유주소가 '기본(Plain)'이면 /wp-json/ 예쁜 경로가 404다 → ?rest_route= 방식은 어떤 설정에서도 작동.
+  const rest = (route: string) => `${baseUrl}/?rest_route=${encodeURIComponent(route)}`;
+
   // 대표 이미지를 미디어로 업로드해 featured image로 설정 (실패해도 본문 발행은 진행)
   let featuredMediaId: number | undefined;
   const featured = await prisma.mediaAsset.findFirst({
@@ -111,7 +114,7 @@ export async function publishToWordpress(article: {
     try {
       const imgRes = await fetch(featured.webpUrl);
       const buffer = Buffer.from(await imgRes.arrayBuffer());
-      const uploadRes = await fetch(`${baseUrl}/wp-json/wp/v2/media`, {
+      const uploadRes = await fetch(rest("/wp/v2/media"), {
         method: "POST",
         headers: {
           Authorization: `Basic ${credentials}`,
@@ -127,7 +130,7 @@ export async function publishToWordpress(article: {
     }
   }
 
-  const res = await fetch(`${baseUrl}/wp-json/wp/v2/posts`, {
+  const res = await fetch(rest("/wp/v2/posts"), {
     method: "POST",
     headers: { Authorization: `Basic ${credentials}`, "Content-Type": "application/json" },
     body: JSON.stringify({

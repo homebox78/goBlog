@@ -316,7 +316,8 @@ export async function testWordpress(): Promise<TestResult> {
     `${values["wordpress.username"]}:${values["wordpress.appPassword"]}`,
   ).toString("base64");
 
-  const res = await safeFetch(`${baseUrl}/wp-json/wp/v2/users/me?context=edit`, {
+  // ?rest_route= 방식은 고유주소가 '기본(Plain)'이어도 작동한다 (/wp-json/ 예쁜 경로는 404 남)
+  const res = await safeFetch(`${baseUrl}/?rest_route=${encodeURIComponent("/wp/v2/users/me?context=edit")}`, {
     headers: { Authorization: `Basic ${credentials}` },
   });
 
