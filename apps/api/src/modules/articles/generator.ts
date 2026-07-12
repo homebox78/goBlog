@@ -424,7 +424,7 @@ export async function generateArticle(
     }
 
     // 대가성 표기 — 글 최상단 (공정위 지침: 소비자가 쉽게 인식할 수 있는 위치). 폰트 11px로 작게.
-    contentMarkdown = `<p style="font-size:11px;color:#8a8a8a;margin:0 0 16px;line-height:1.5;">${disclosureText(product)}</p>\n\n${contentMarkdown}`;
+    contentMarkdown = `<p style="font-size:12px;color:#8a8a8a;margin:0 0 16px;line-height:1.5;">${disclosureText(product)}</p>\n\n${contentMarkdown}`;
   }
 
   // 삽입된 광고(상품) 요약 — 글 목록에서 어떤 광고가 들어갔는지 표시용
@@ -570,6 +570,39 @@ export async function generateArticle(
 }
 
 export { kstToday };
+
+/**
+ * 붙여넣은 상품 링크/배너 HTML(쿠팡 [이미지+텍스트] 태그 등)로 스타일 배너 HTML을 만든다.
+ * 사용자가 글 상세에서 원하는 위치에 직접 삽입할 때 사용. 쿠팡은 딥링크·이미지 재호스팅 적용.
+ */
+export async function buildManualBanner(input: string): Promise<{ banner: string }> {
+  const { analyzeProductInput } = await import("../products/analyze.js");
+  const product = await analyzeProductInput(input);
+  let linkUrl = product.productUrl;
+  if (product.source === "COUPANG" && /coupang\.com/i.test(linkUrl)) {
+    try {
+      linkUrl = await createCoupangDeeplink(linkUrl);
+    } catch {
+      // 딥링크 실패 시 원본 링크 사용
+    }
+  }
+  const bannerImageUrl = product.imageUrl
+    ? await rehostProductImage(product.imageUrl, `manual-${Date.now()}`)
+    : null;
+  const banner = buildProductBanner(
+    {
+      source: product.source,
+      name: product.name,
+      price: product.price ?? undefined,
+      imageUrl: product.imageUrl ?? undefined,
+      productUrl: linkUrl,
+      description: product.description ?? undefined,
+    },
+    linkUrl,
+    bannerImageUrl,
+  );
+  return { banner };
+}
 
 /**
  * 기존 글을 품질 기준(85점)에 맞게 보강한다 (수동 '보정' 버튼).

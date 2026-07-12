@@ -160,6 +160,24 @@ export default function ArticleDetailPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 삭제 실패"),
   });
 
+  const [bannerInput, setBannerInput] = useState("");
+  const bannerMutation = useMutation({
+    mutationFn: () => api.post<{ banner: string }>(`/api/articles/${id}/banner`, { input: bannerInput }),
+    onSuccess: async (r) => {
+      // 본문 소스에서 커서(클릭) 위치에 배너 삽입 후 저장 (중복 삽입 가능)
+      const ta = contentRef.current;
+      const md = ta?.value ?? form.contentMarkdown;
+      const pos = ta ? ta.selectionStart : md.length;
+      const next = `${md.slice(0, pos)}\n\n${r.banner}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
+      setForm((prev) => ({ ...prev, contentMarkdown: next }));
+      await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "배너 삽입" });
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      toast.success("커서 위치에 상품 배너를 삽입했습니다.");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "배너 생성 실패"),
+  });
+
   const onPickImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = ""; // 같은 파일 재선택 허용
@@ -499,6 +517,33 @@ export default function ArticleDetailPage() {
                   )}
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">상품 배너 삽입</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                쿠팡/네이버 상품 링크나 [이미지+텍스트] HTML을 붙여넣고, 본문에서 넣을 위치를 클릭한 뒤 삽입하세요. 여러 번 삽입할 수 있습니다.
+              </p>
+              <Textarea
+                rows={4}
+                className="font-mono text-xs"
+                placeholder={'<a href="https://link.coupang.com/a/..." ...><img src="...coupangcdn..." alt="상품명" ...></a>'}
+                value={bannerInput}
+                onChange={(event) => setBannerInput(event.target.value)}
+              />
+              <Button
+                size="sm"
+                className="w-full"
+                disabled={!bannerInput.trim() || bannerMutation.isPending}
+                onClick={() => bannerMutation.mutate()}
+              >
+                {bannerMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                커서 위치에 배너 삽입
+              </Button>
             </CardContent>
           </Card>
 

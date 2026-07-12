@@ -99,6 +99,17 @@ articlesRouter.post(
   }),
 );
 
+/** 붙여넣은 상품 링크/배너 HTML → 스타일 배너 HTML 생성 (프론트가 커서 위치에 삽입) */
+articlesRouter.post(
+  "/:id/banner",
+  asyncHandler(async (req, res) => {
+    const input = req.body?.input;
+    if (!input || typeof input !== "string") throw new HttpError(400, "상품 링크나 배너 HTML을 입력해주세요.");
+    const { buildManualBanner } = await import("./generator.js");
+    res.json(await buildManualBanner(input));
+  }),
+);
+
 /** 품질 보정 — 85점 미만 글의 미달 항목을 Claude로 보강 (Claude 호출, 수십 초) */
 articlesRouter.post(
   "/:id/improve",
