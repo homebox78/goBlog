@@ -97,6 +97,21 @@ export function disclosureText(product: Pick<ProductInput, "source">): string {
   return "이 포스팅은 네이버 쇼핑 커넥트 활동의 일환으로, 판매 발생 시 수수료를 제공받습니다.";
 }
 
+/**
+ * 대가성(경제적 이해관계) 표기 박스 — 쿠팡 「경제적 이해관계 표시 가이드」/공정위 심사지침 준수.
+ *  · 위치: 게시물 최상단(소비자가 클릭 없이 바로 인식)
+ *  · 가시성: 흐린 회색·초소형 금지 → 13px, 진한 글자(#222), 본문과 구분되는 박스(배경·테두리)
+ *  · 표현: 플랫폼 지정 원문 + "광고" 명시(추천·보증의 경제적 이해관계임을 분명히)
+ */
+export function disclosureHtml(product: Pick<ProductInput, "source">): string {
+  return `<p style="font-size:13px;color:#222;background:#f5f6f8;border:1px solid #e2e5ea;border-radius:6px;padding:11px 13px;margin:0 0 18px;line-height:1.6;"><strong style="color:#c0392b;">[광고]</strong> ${disclosureText(product)}</p>`;
+}
+
+/** 본문에 이미 대가성 문구가 있는가 (중복 삽입 방지·백필 판별용) */
+export function hasDisclosure(markdown: string): boolean {
+  return /활동의 일환/.test(markdown);
+}
+
 /** 네이버·쿠팡 CDN 이미지는 blogspot 등에서 hotlink가 막히므로 서버에 재호스팅한다. */
 async function rehostProductImage(url: string, key: string): Promise<string | null> {
   try {
@@ -423,8 +438,8 @@ export async function generateArticle(
       contentMarkdown += "\n\n" + banner;
     }
 
-    // 대가성 표기 — 글 최상단 (공정위 지침: 소비자가 쉽게 인식할 수 있는 위치). 폰트 11px로 작게.
-    contentMarkdown = `<p style="font-size:12px;color:#8a8a8a;margin:0 0 16px;line-height:1.5;">${disclosureText(product)}</p>\n\n${contentMarkdown}`;
+    // 대가성(경제적 이해관계) 표기 — 글 최상단, 쿠팡 표시 가이드 준수 박스.
+    contentMarkdown = `${disclosureHtml(product)}\n\n${contentMarkdown}`;
   }
 
   // 삽입된 광고(상품) 요약 — 글 목록에서 어떤 광고가 들어갔는지 표시용
@@ -583,7 +598,7 @@ export async function buildManualBanner(input: string): Promise<{ banner: string
     const source = /coupang/i.test(trimmed) ? "COUPANG" : "BRANDCONNECT";
     return {
       banner: `<p style="text-align:center;margin:20px 0;">${trimmed}</p>`,
-      disclosure: disclosureText({ source }),
+      disclosure: disclosureHtml({ source }),
     };
   }
 
@@ -613,7 +628,7 @@ export async function buildManualBanner(input: string): Promise<{ banner: string
     linkUrl,
     bannerImageUrl,
   );
-  return { banner, disclosure: disclosureText({ source: product.source }) };
+  return { banner, disclosure: disclosureHtml({ source: product.source }) };
 }
 
 /**

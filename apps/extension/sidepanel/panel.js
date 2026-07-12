@@ -3,6 +3,7 @@ const $ = (selector) => document.querySelector(selector);
 let config = { apiBase: "", token: "" };
 let currentArticle = null;
 let currentPlatform = null;
+let currentRestricted = null; // 쇼핑 커넥트 활동 제한 채널명(있으면 발행 차단)
 
 init();
 
@@ -61,6 +62,7 @@ async function api(path) {
 async function detectPlatform() {
   const response = await chrome.runtime.sendMessage({ relay: true, payload: { type: "DETECT" } });
   currentPlatform = response?.platform ?? null;
+  currentRestricted = response?.restricted ?? null;
   const chip = $("#platform");
   if (currentPlatform === "NAVER_BLOG") {
     chip.textContent = "네이버 블로그";
@@ -71,6 +73,16 @@ async function detectPlatform() {
   } else {
     chip.textContent = "작성폼 아님";
     chip.classList.remove("on");
+  }
+  // 쇼핑 커넥트 활동 제한 채널이면 붉은 경고 + 발행 차단
+  const warn = $("#restrictedWarn");
+  if (warn) {
+    if (currentRestricted) {
+      warn.textContent = `⚠ 활동 제한 채널(${currentRestricted}) — 쇼핑 커넥트 링크 게시 금지(실적 미인정·이용 제재). 여기서는 발행하지 마세요.`;
+      warn.classList.remove("hidden");
+    } else {
+      warn.classList.add("hidden");
+    }
   }
 }
 
@@ -166,6 +178,16 @@ function buildBodyHtml() {
 async function applyToForm() {
   if (!currentArticle) return;
   await detectPlatform();
+
+  // 활동 제한 채널이면 커넥트 링크 게시 금지 → 삽입 차단
+  if (currentRestricted) {
+    showNotes([
+      `⛔ '${currentRestricted}'는 네이버 쇼핑 커넥트 활동 제한 채널입니다.`,
+      "이 채널에 커넥트 링크를 게시하면 실적이 인정되지 않고 서비스 이용 제재 대상이 됩니다.",
+      "본인 소유의 일반 블로그 등 허용 채널에서 발행해주세요.",
+    ]);
+    return;
+  }
 
   // 발행 완료를 백엔드가 자동 기록하도록, '어떤 글을 어느 플랫폼에 올리는 중'인지 저장해둔다.
   // background가 발행 성공(게시글 URL 이동)을 감지하면 이 정보로 자동 기록한다.

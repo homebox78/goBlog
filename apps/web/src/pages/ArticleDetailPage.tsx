@@ -170,9 +170,10 @@ export default function ArticleDetailPage() {
       const md = ta?.value ?? form.contentMarkdown;
       const pos = ta ? ta.selectionStart : md.length;
       let next = `${md.slice(0, pos)}\n\n${r.banner}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
-      // 대가성 안내 문구가 본문에 없으면 최상단에 자동 추가 (쿠팡/네이버 필수 표기)
+      // 대가성 안내 문구가 본문에 없으면 최상단에 자동 추가 (쿠팡/네이버 필수 표기).
+      // r.disclosure는 이미 가이드 준수 박스 HTML이므로 그대로 삽입한다.
       if (r.disclosure && !next.includes("활동의 일환")) {
-        next = `<p style="font-size:12px;color:#8a8a8a;margin:0 0 16px;line-height:1.5;">${r.disclosure}</p>\n\n${next}`;
+        next = `${r.disclosure}\n\n${next}`;
       }
       setForm((prev) => ({ ...prev, contentMarkdown: next }));
       await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "배너 삽입" });

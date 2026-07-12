@@ -1,6 +1,26 @@
 // goBlog 콘텐츠 스크립트 — 네이버 블로그·티스토리 작성폼 감지 및 입력
 // 편집기 DOM은 수시로 바뀌므로 후보 셀렉터 + 클립보드 폴백 전략을 쓴다.
 
+// 네이버 쇼핑 커넥트 「활동 제한 채널」 — 여기에 커넥트 링크를 게시하면 실적 미인정 + 이용 제재.
+// (2026.06.26 기준. 서비스 판단에 따라 상시 변경될 수 있음)
+const RESTRICTED_CHANNELS = [
+  { host: "ilbe.com", name: "일베저장소" },
+  { host: "todayhumor.co.kr", name: "오늘의유머" },
+  { host: "womad.life", name: "워마드" },
+  { host: "damoang.net", name: "다모앙" },
+  { host: "cafe.naver.com/brownu12nn", name: "소소하지만 확실한 행복(카페)" },
+  { host: "cafe.naver.com/engmstudy", name: "짠돌이카페" },
+  { host: "cafe.naver.com/skybluezw4rh", name: "맘이베베(카페)" },
+  { host: "cafe.naver.com/twinklestarbucks", name: "트윙클 스타벅스(카페)" },
+];
+
+/** 현재 페이지가 쇼핑 커넥트 활동 제한 채널이면 채널명을, 아니면 null 반환. */
+function restrictedChannel() {
+  const url = (location.host + location.pathname).toLowerCase().replace(/^www\./, "");
+  const hit = RESTRICTED_CHANNELS.find((c) => url.includes(c.host));
+  return hit ? hit.name : null;
+}
+
 function detectPlatform() {
   const host = location.host;
   if (host.includes("tistory.com") && /\/manage\/(newpost|post)/.test(location.pathname)) {
@@ -97,7 +117,7 @@ if (!window.__goblogAdapterListener) {
   (async () => {
     try {
       if (message?.type === "DETECT") {
-        sendResponse({ ok: true, platform: detectPlatform() });
+        sendResponse({ ok: true, platform: detectPlatform(), restricted: restrictedChannel() });
         return;
       }
       if (message?.type === "APPLY") {
