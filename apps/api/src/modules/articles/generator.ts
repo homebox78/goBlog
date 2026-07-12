@@ -575,12 +575,16 @@ export { kstToday };
  * 붙여넣은 상품 링크/배너 HTML(쿠팡 [이미지+텍스트] 태그 등)로 스타일 배너 HTML을 만든다.
  * 사용자가 글 상세에서 원하는 위치에 직접 삽입할 때 사용. 쿠팡은 딥링크·이미지 재호스팅 적용.
  */
-export async function buildManualBanner(input: string): Promise<{ banner: string }> {
+export async function buildManualBanner(input: string): Promise<{ banner: string; disclosure: string }> {
   const trimmed = input.trim();
   // 이미 배너 HTML(<a>…<img>…</a>)을 붙여넣었으면 그 형태를 그대로 삽입한다 (사용자 배너 유지).
   // 쿠팡 제휴 배너는 이미 트래킹 링크·전용 배너 이미지라 재생성하지 않는다.
   if (/<a\s/i.test(trimmed) && /<img\s/i.test(trimmed)) {
-    return { banner: `<p style="text-align:center;margin:20px 0;">${trimmed}</p>` };
+    const source = /coupang/i.test(trimmed) ? "COUPANG" : "BRANDCONNECT";
+    return {
+      banner: `<p style="text-align:center;margin:20px 0;">${trimmed}</p>`,
+      disclosure: disclosureText({ source }),
+    };
   }
 
   // 링크 URL만 붙여넣은 경우엔 카드형 배너를 생성한다.
@@ -609,7 +613,7 @@ export async function buildManualBanner(input: string): Promise<{ banner: string
     linkUrl,
     bannerImageUrl,
   );
-  return { banner };
+  return { banner, disclosure: disclosureText({ source: product.source }) };
 }
 
 /**

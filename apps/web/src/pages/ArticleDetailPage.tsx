@@ -162,18 +162,23 @@ export default function ArticleDetailPage() {
 
   const [bannerInput, setBannerInput] = useState("");
   const bannerMutation = useMutation({
-    mutationFn: () => api.post<{ banner: string }>(`/api/articles/${id}/banner`, { input: bannerInput }),
+    mutationFn: () =>
+      api.post<{ banner: string; disclosure: string }>(`/api/articles/${id}/banner`, { input: bannerInput }),
     onSuccess: async (r) => {
       // 본문 소스에서 커서(클릭) 위치에 배너 삽입 후 저장 (중복 삽입 가능)
       const ta = contentRef.current;
       const md = ta?.value ?? form.contentMarkdown;
       const pos = ta ? ta.selectionStart : md.length;
-      const next = `${md.slice(0, pos)}\n\n${r.banner}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
+      let next = `${md.slice(0, pos)}\n\n${r.banner}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
+      // 대가성 안내 문구가 본문에 없으면 최상단에 자동 추가 (쿠팡/네이버 필수 표기)
+      if (r.disclosure && !next.includes("활동의 일환")) {
+        next = `<p style="font-size:12px;color:#8a8a8a;margin:0 0 16px;line-height:1.5;">${r.disclosure}</p>\n\n${next}`;
+      }
       setForm((prev) => ({ ...prev, contentMarkdown: next }));
       await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "배너 삽입" });
       queryClient.invalidateQueries({ queryKey: ["article", id] });
       queryClient.invalidateQueries({ queryKey: ["articles"] });
-      toast.success("커서 위치에 상품 배너를 삽입했습니다.");
+      toast.success("배너를 삽입했습니다. (대가성 문구 자동 확인)");
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "배너 생성 실패"),
   });
