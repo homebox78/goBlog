@@ -189,6 +189,157 @@ export default function ArticleDetailPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "배너 생성 실패"),
   });
 
+  // ── 미리보기에서 배너 클릭 선택 → 삭제/위·아래 이동/드래그 재배치 ──────────────
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [selBanner, setSelBanner] = useState<{ href: string; nth: number } | null>(null);
+  const dropTargetRef = useRef<{ el: HTMLElement; before: boolean } | null>(null);
+
+  const isBannerAnchor = (el: Element | null): el is HTMLAnchorElement =>
+    !!el &&
+    el.tagName === "A" &&
+    (/sponsored/.test(el.getAttribute("rel") ?? "") ||
+      /link\.coupang|coupang\.com|naver\.me|smartstore|brandconnect/i.test(el.getAttribute("href") ?? ""));
+
+  const bannerInfoOf = (a: HTMLAnchorElement): { href: string; nth: number } => {
+    const href = a.getAttribute("href") ?? "";
+    const same = Array.from(previewRef.current?.querySelectorAll("a") ?? []).filter(
+      (x) => isBannerAnchor(x) && x.getAttribute("href") === href,
+    );
+    return { href, nth: Math.max(0, same.indexOf(a)) };
+  };
+
+  const clearBannerSelection = () => {
+    previewRef.current?.querySelectorAll<HTMLElement>("a[data-banner-sel]").forEach((x) => {
+      x.removeAttribute("data-banner-sel");
+      x.style.outline = "";
+      x.style.cursor = "";
+    });
+    setSelBanner(null);
+  };
+
+  const splitBlocks = (md: string) => md.split(/\n{2,}/);
+  const bannerBlockIndex = (blocks: string[], href: string, nth: number) => {
+    const idxs = blocks.map((b, i) => (b.includes(`href="${href}"`) ? i : -1)).filter((i) => i >= 0);
+    return idxs[nth] ?? -1;
+  };
+
+  // 미리보기 요소 → 마크다운 블록 인덱스 (href/src 속성 → 텍스트 → 위치 순으로 매칭)
+  const findBlockIndexForEl = (el: HTMLElement, blocks: string[]): number => {
+    const attrEl = el.matches("[href],[src]") ? el : el.querySelector("[href],[src]");
+    const attr = attrEl?.getAttribute("href") ?? attrEl?.getAttribute("src");
+    if (attr) {
+      const i = blocks.findIndex((b) => b.includes(attr));
+      if (i >= 0) return i;
+    }
+    const text = (el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 20);
+    if (text.length >= 6) {
+      const norm = (s: string) => s.replace(/[#*_>|`[\]]/g, "").replace(/\s+/g, " ");
+      const i = blocks.findIndex((b) => norm(b).includes(text));
+      if (i >= 0) return i;
+    }
+    const idx = Array.from(el.parentElement?.children ?? []).indexOf(el);
+    return Math.max(0, Math.min(idx, blocks.length - 1));
+  };
+
+  const saveMarkdown = async (next: string, note: string) => {
+    setForm((prev) => ({ ...prev, contentMarkdown: next }));
+    await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: note });
+    queryClient.invalidateQueries({ queryKey: ["article", id] });
+    queryClient.invalidateQueries({ queryKey: ["articles"] });
+  };
+
+  const deleteSelectedBanner = async () => {
+    if (!selBanner) return;
+    const blocks = splitBlocks(form.contentMarkdown);
+    const bi = bannerBlockIndex(blocks, selBanner.href, selBanner.nth);
+    if (bi < 0) return toast.error("본문 소스에서 배너를 찾지 못했습니다.");
+    blocks.splice(bi, 1);
+    clearBannerSelection();
+    await saveMarkdown(blocks.join("\n\n"), "배너 삭제");
+    toast.success("배너를 삭제했습니다.");
+  };
+
+  const moveSelectedBanner = async (dir: -1 | 1) => {
+    if (!selBanner) return;
+    const blocks = splitBlocks(form.contentMarkdown);
+    const bi = bannerBlockIndex(blocks, selBanner.href, selBanner.nth);
+    if (bi < 0) return toast.error("본문 소스에서 배너를 찾지 못했습니다.");
+    const ti = bi + dir;
+    if (ti < 0 || ti >= blocks.length) return;
+    const [blk] = blocks.splice(bi, 1);
+    blocks.splice(ti, 0, blk);
+    clearBannerSelection();
+    await saveMarkdown(blocks.join("\n\n"), "배너 위치 이동");
+    toast.success(dir < 0 ? "배너를 위로 옮겼습니다." : "배너를 아래로 옮겼습니다.");
+  };
+
+  const onPreviewClick = (e: React.MouseEvent) => {
+    const a = (e.target as HTMLElement).closest("a");
+    if (isBannerAnchor(a)) {
+      e.preventDefault(); // 링크 이동 방지
+      clearBannerSelection();
+      a.setAttribute("data-banner-sel", "1");
+      a.style.outline = "3px dashed #e52528";
+      a.style.cursor = "grab";
+      a.setAttribute("draggable", "true");
+      setSelBanner(bannerInfoOf(a));
+    } else {
+      clearBannerSelection();
+    }
+  };
+
+  const clearDropIndicator = () => {
+    if (dropTargetRef.current) {
+      dropTargetRef.current.el.style.boxShadow = "";
+      dropTargetRef.current = null;
+    }
+  };
+
+  const onPreviewDragStart = (e: React.DragEvent) => {
+    const a = (e.target as HTMLElement).closest("a");
+    if (!isBannerAnchor(a)) return;
+    setSelBanner(bannerInfoOf(a)); // 드래그 시작 시 자동 선택
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", "goblog-banner");
+  };
+
+  const onPreviewDragOver = (e: React.DragEvent) => {
+    if (!selBanner) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    // 최상위 블록 요소(렌더 래퍼의 직계 자식) 찾기
+    const wrapper = previewRef.current?.firstElementChild as HTMLElement | null;
+    if (!wrapper) return;
+    let el = e.target as HTMLElement | null;
+    while (el && el.parentElement !== wrapper) el = el.parentElement;
+    if (!el || isBannerAnchor(el)) return;
+    const rect = el.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    if (dropTargetRef.current?.el !== el || dropTargetRef.current?.before !== before) {
+      clearDropIndicator();
+      el.style.boxShadow = before ? "0 -3px 0 0 #2f7ed8" : "0 3px 0 0 #2f7ed8";
+      dropTargetRef.current = { el, before };
+    }
+  };
+
+  const onPreviewDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const target = dropTargetRef.current;
+    clearDropIndicator();
+    if (!selBanner || !target) return;
+    const blocks = splitBlocks(form.contentMarkdown);
+    const bi = bannerBlockIndex(blocks, selBanner.href, selBanner.nth);
+    if (bi < 0) return toast.error("본문 소스에서 배너를 찾지 못했습니다.");
+    let ti = findBlockIndexForEl(target.el, blocks);
+    const [blk] = blocks.splice(bi, 1);
+    if (bi < ti) ti -= 1;
+    const insertAt = Math.max(0, Math.min(target.before ? ti : ti + 1, blocks.length));
+    blocks.splice(insertAt, 0, blk);
+    clearBannerSelection();
+    await saveMarkdown(blocks.join("\n\n"), "배너 위치 이동(드래그)");
+    toast.success("배너 위치를 옮겼습니다.");
+  };
+
   const onPickImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = ""; // 같은 파일 재선택 허용
@@ -379,12 +530,35 @@ export default function ArticleDetailPage() {
                   </p>
                 </TabsContent>
                 <TabsContent value="preview">
+                  {selBanner && (
+                    <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs dark:border-red-900 dark:bg-red-950">
+                      <span className="font-medium">🎯 배너 선택됨 — 드래그해서 원하는 위치에 놓거나:</span>
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => moveSelectedBanner(-1)}>
+                        ▲ 위로
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => moveSelectedBanner(1)}>
+                        ▼ 아래로
+                      </Button>
+                      <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" onClick={deleteSelectedBanner}>
+                        🗑 삭제
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={clearBannerSelection}>
+                        취소
+                      </Button>
+                    </div>
+                  )}
                   <div
+                    ref={previewRef}
+                    onClick={onPreviewClick}
+                    onDragStart={onPreviewDragStart}
+                    onDragOver={onPreviewDragOver}
+                    onDrop={onPreviewDrop}
+                    onDragEnd={clearDropIndicator}
                     className="prose prose-sm max-w-none rounded-lg border p-4 dark:prose-invert [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-4 [&_h3]:font-semibold [&_table]:w-full [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:bg-muted [&_th]:p-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2"
                     dangerouslySetInnerHTML={{ __html: article.contentHtml ?? "" }}
                   />
                   <p className="mt-2 text-xs text-muted-foreground">
-                    미리보기는 마지막 저장 시점 기준입니다.
+                    미리보기는 마지막 저장 시점 기준입니다. 삽입된 배너를 클릭하면 삭제·이동(드래그)할 수 있습니다.
                   </p>
                 </TabsContent>
               </Tabs>
