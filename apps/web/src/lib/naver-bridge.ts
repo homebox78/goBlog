@@ -56,7 +56,8 @@ export function parseNaverProductHtml(html: string): NaverProductInfo {
   if (/에러\s*페이지|시스템\s*오류|접근이\s*제한|잘못된\s*접근/.test(rawTitle)) {
     return { name: null, imageUrl: null, price: null };
   }
-  const name = rawTitle.replace(/\s*[:|-]\s*(네이버|스마트스토어|쇼핑|naver).*$/i, "").trim() || null;
+  // og:title은 "상품명 : 스토어명" 형식 — 마지막 ':' 뒤 스토어명 제거
+  const name = rawTitle.replace(/\s*:\s*[^:]+$/, "").replace(/\s*[|-]\s*(네이버|스마트스토어|naver).*$/i, "").trim() || null;
   const imageUrl = meta("og:image");
   let price: number | null = null;
   const m = html.match(/"(?:discountedSalePrice|salePrice|lowPrice|price)"\s*:\s*"?([\d,]+)"?/);
