@@ -95,7 +95,9 @@ productsRouter.post(
         text
           .split(/\r?\n/)
           .map((line) => line.replace(/\s+/g, " ").trim())
-          .filter((line) => line.length >= 2 && line.length <= 120),
+          .filter((line) => line.length >= 2 && line.length <= 120)
+          // '[생활/건강]' 같은 카테고리 헤더 줄(대괄호만으로 구성)은 상품명이 아니므로 제외
+          .filter((line) => !/^\[[^\]]*\]$/.test(line)),
       ),
     ].slice(0, 800);
 
