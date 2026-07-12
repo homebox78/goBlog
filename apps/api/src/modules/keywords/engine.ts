@@ -144,6 +144,10 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
       }),
     });
 
+    // 특정 인물(연예인) 프로필·가십·예능 출연 키워드 제외 — 홍보 가치가 낮고, 이미지 첨부가 초상권에 걸린다.
+    const PERSON_GOSSIP =
+      /프로필|본명|열애|결혼설|이혼설?|재혼|결별설?|불화설|스캔들|근황|전참시|전지적\s*참견|나\s*혼자\s*산다|나혼산|미운\s*우리\s*새끼|런닝맨|무한도전|라디오스타|유\s*퀴즈|아는\s*형님|복면가왕|출연진|등장인물|누구인가|정체는|열애설/;
+
     const cleanCandidates = (candidates ?? [])
       .map((candidate) => ({
         ...candidate,

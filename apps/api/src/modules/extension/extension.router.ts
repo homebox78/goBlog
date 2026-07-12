@@ -27,20 +27,16 @@ extensionRouter.get(
 );
 
 /**
- * 발행 가능한 글 목록 — 글마다 추천 네이버 카테고리 포함.
- * 워드프레스/블로거(서버 발행)로 이미 발행돼 status=PUBLISHED가 된 글도, 아직 네이버에 안 올렸다면
- * 확장 목록에 계속 보여야 한다(한 글을 여러 플랫폼에 발행). → 네이버 발행 성공 이력이 있는 글만 제외.
+ * 발행 대기 글 목록 — 모든 글을 보여주고, 사용자가 '발행완료' 버튼을 눌러 숨긴 글(extensionDoneAt)만 제외한다.
+ * (반자동 운영: 발행 감지가 완전 자동이 아니므로, 무엇을 끝냈는지는 사용자가 직접 체크한다.)
  */
 extensionRouter.get(
   "/articles",
   asyncHandler(async (req, res) => {
     const rows = await prisma.article.findMany({
-      where: {
-        status: { in: ["REVIEW", "APPROVED", "PUBLISHED"] },
-        NOT: { publishJobs: { some: { platform: "NAVER_BLOG", status: "SUCCEEDED" } } },
-      },
+      where: { extensionDoneAt: null },
       orderBy: { updatedAt: "desc" },
-      take: 30,
+      take: 100,
       select: {
         id: true,
         title: true,
@@ -107,6 +103,8 @@ extensionRouter.post(
     const id = Number(req.params.id);
     const platform = String(req.body?.platform ?? "NAVER_BLOG");
     const url = req.body?.url ? String(req.body.url) : null;
+    // hide=true(사용자가 '발행완료' 버튼 클릭)면 대기목록에서 숨긴다. 백그라운드 자동감지는 숨기지 않음.
+    const hide = req.body?.hide === true;
 
     await prisma.publishJob.create({
       data: {
@@ -117,7 +115,10 @@ extensionRouter.post(
         publishedUrl: url,
       },
     });
-    await prisma.article.update({ where: { id }, data: { status: "PUBLISHED" } });
+    await prisma.article.update({
+      where: { id },
+      data: { status: "PUBLISHED", ...(hide ? { extensionDoneAt: new Date() } : {}) },
+    });
     res.json({ ok: true });
   }),
 );

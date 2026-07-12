@@ -96,13 +96,25 @@ async function loadArticles() {
     }
     $("#list").innerHTML = "";
     for (const article of articles) {
-      const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML = `<p></p><small><span class="cat"></span> ${article.qualityScore ?? "—"}점 · ${article.language} · ${article.status}</small>`;
-      div.querySelector("p").textContent = article.title;
-      div.querySelector(".cat").textContent = article.category ? `📁 ${article.category}` : "";
-      div.addEventListener("click", () => openArticle(article.id));
-      $("#list").appendChild(div);
+      const row = document.createElement("div");
+      row.className = "item";
+      const main = document.createElement("div");
+      main.className = "item-main";
+      main.innerHTML = `<p></p><small><span class="cat"></span> ${article.qualityScore ?? "—"}점 · ${article.language} · ${article.status}</small>`;
+      main.querySelector("p").textContent = article.title;
+      main.querySelector(".cat").textContent = article.category ? `📁 ${article.category}` : "";
+      main.addEventListener("click", () => openArticle(article.id));
+      const done = document.createElement("button");
+      done.className = "done-mini ghost";
+      done.textContent = "발행완료";
+      done.title = "이 글을 발행 대기 목록에서 숨깁니다";
+      done.addEventListener("click", (e) => {
+        e.stopPropagation();
+        markDone(article.id);
+      });
+      row.appendChild(main);
+      row.appendChild(done);
+      $("#list").appendChild(row);
     }
   } catch (error) {
     $("#list").innerHTML = `<p class="muted">오류: ${error.message}</p>`;
@@ -205,6 +217,16 @@ async function copyBody() {
   const li = document.createElement("li");
   li.textContent = "본문을 클립보드에 복사했습니다 — 본문칸을 클릭하고 Ctrl+V로 붙여넣으세요.";
   $("#notes").appendChild(li);
+}
+
+// 발행완료 버튼 — 이 글을 발행 대기 목록에서 숨긴다(hide=true). 반자동 운영의 수동 체크.
+async function markDone(id) {
+  await fetch(`${config.apiBase}/api/extension/articles/${id}/published`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Extension-Token": config.token },
+    body: JSON.stringify({ platform: currentPlatform ?? "NAVER_BLOG", hide: true }),
+  });
+  loadArticles();
 }
 
 // 발행 완료는 background가 발행 게시글 URL 이동을 감지해 자동 기록한다.

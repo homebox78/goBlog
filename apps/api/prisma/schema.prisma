@@ -243,6 +243,7 @@ model Article {
   qualityReport   Json?
   adSource        String? // 삽입된 제휴 광고 플랫폼: COUPANG | BRANDCONNECT (없으면 null)
   adProduct       String? // 삽입된 제휴 상품명 (글 목록에서 어떤 광고인지 표시용)
+  extensionDoneAt DateTime? // 확장에서 '발행완료' 버튼을 눌러 대기목록에서 숨긴 시각 (반자동 수동 체크)
   publishAt       DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt

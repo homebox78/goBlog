@@ -78,15 +78,25 @@ button {
 button.ghost { background: #fff; color: #333; border: 1px solid #d6dae3; }
 button.link { background: none; color: #888; font-weight: 400; padding: 4px; }
 .item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 9px;
   margin-bottom: 6px;
   border: 1px solid #e9ecf1;
   border-radius: 8px;
-  cursor: pointer;
 }
 .item:hover { border-color: #1a1a1a; }
+.item-main { flex: 1; min-width: 0; cursor: pointer; }
 .item p { margin: 0; font-weight: 600; font-size: 12px; }
 .item small { color: #888; }
+.done-mini {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 6px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
 .actions { display: flex; gap: 6px; }
 .actions button { flex: 1; }
 #notes { padding-left: 16px; margin: 8px 0; color: #555; font-size: 12px; }
