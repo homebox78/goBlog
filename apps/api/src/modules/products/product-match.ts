@@ -20,17 +20,30 @@ export function isNonCommercialKeyword(text: string): boolean {
   return NON_COMMERCIAL.test(text);
 }
 
+// 상품·키워드 양쪽에 흔히 나오는 일반 단어 — 매칭 근거로 쓰면 오매칭(국내산 채소↔레드미 워치6 국내 구매처)이 난다.
+const STOPWORDS = new Set([
+  "국내", "국내산", "국내제조", "국산", "수입", "정품", "최신", "추천", "추천템", "비교", "가격", "요금", "방법",
+  "후기", "리뷰", "구매", "구매처", "판매", "판매처", "세트", "대용량", "소용량", "무료배송", "로켓배송", "로켓프레시",
+  "특가", "할인", "세일", "브랜드", "종류", "전용", "인기", "순위", "총정리", "가이드", "방식", "이유", "사용",
+  "관련", "최고", "신상", "신형", "정보", "안내", "방문", "대비", "본사직영", "직영",
+]);
+
 function tokenize(text: string | null | undefined): string[] {
   return (text ?? "")
     .toLowerCase()
     .replace(/[^\w가-힣\s]/g, " ")
     .split(/\s+/)
-    .filter((token) => token.length >= 2);
+    .filter((token) => token.length >= 2 && !STOPWORDS.has(token));
 }
 
-/** 두 토큰이 관련 있는가 (동일 또는 한쪽이 다른 쪽을 포함) */
+/**
+ * 두 토큰이 관련 있는가. 부분 포함은 '짧은 쪽이 3자 이상'일 때만 인정한다.
+ * (2자 음절 우연 일치 방지: '하이'↔'하이닉스', '국내'↔'국내산')
+ */
 function related(a: string, b: string): boolean {
-  return a === b || (a.length >= 2 && b.length >= 2 && (a.includes(b) || b.includes(a)));
+  if (a === b) return true;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  return short.length >= 3 && long.includes(short);
 }
 
 export interface MatchProduct {
