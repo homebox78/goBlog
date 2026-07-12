@@ -243,6 +243,81 @@ articlesRouter.post(
   }),
 );
 
+/**
+ * 해시태그 백필 — 본문 끝 해시태그가 20개 미만인 글에 SEO 태그 25개를 생성해 붙인다.
+ * (해시태그 기능 이전에 생성된 옛 글 보정용. Claude 소형 호출 1회/글)
+ */
+articlesRouter.post(
+  "/backfill-hashtags",
+  asyncHandler(async (_req, res) => {
+    const { callClaudeJson } = await import("../ai/claude.js");
+    const { runQualityCheck } = await import("./quality.js");
+    const articles = await prisma.article.findMany({
+      select: { id: true, title: true, excerpt: true, metaDescription: true, contentMarkdown: true, keyword: { select: { text: true } } },
+      take: 500,
+    });
+    const count = (md: string) =>
+      (md.match(/#[0-9A-Za-z가-힣_]{1,30}/g) ?? []).filter((h) => !/^#[0-9a-fA-F]{3,8}$/.test(h)).length;
+    const fixed: Array<{ id: number; title: string; added: number; score: number }> = [];
+    for (const a of articles) {
+      const md = a.contentMarkdown ?? "";
+      if (!md || count(md) >= 20) continue;
+      let tags: string[];
+      try {
+        const out = await callClaudeJson<{ tags: string[] }>({
+          operation: "hashtag-backfill",
+          maxTokens: 2000,
+          system:
+            '한국어 SEO 태그 생성기. 글 제목·키워드·요약을 보고 검색 유입에 도움되는 태그 25개를 만든다. 핵심 키워드·연관 검색어·롱테일·카테고리 포함, 각 1~4단어, # 없이. 출력은 JSON만: {"tags":["태그"]}',
+          user: JSON.stringify({ title: a.title, keyword: a.keyword?.text, excerpt: a.excerpt }),
+        });
+        tags = Array.isArray(out.tags) ? out.tags : [];
+      } catch {
+        continue;
+      }
+      const line = [...new Set(tags.map((t) => t.replace(/^#/, "").replace(/\s+/g, "")).filter((t) => t && t.length <= 30))]
+        .slice(0, 30)
+        .map((t) => `#${t}`)
+        .join(" ");
+      if (!line) continue;
+      const next = `${md}\n\n${line}`;
+      const contentHtml = await renderContentHtml(next);
+      const quality = runQualityCheck({
+        keyword: a.keyword?.text ?? "",
+        title: a.title,
+        metaDescription: a.metaDescription ?? "",
+        excerpt: a.excerpt ?? "",
+        contentMarkdown: next,
+        faqCount: 0,
+        faqRequested: false,
+        imagePromptCount: 1,
+        claimsToVerify: [],
+      });
+      const last = await prisma.articleVersion.findFirst({ where: { articleId: a.id }, orderBy: { version: "desc" } });
+      await prisma.article.update({
+        where: { id: a.id },
+        data: {
+          contentMarkdown: next,
+          contentHtml,
+          qualityScore: quality.score,
+          qualityReport: JSON.parse(JSON.stringify(quality)),
+          versions: {
+            create: {
+              version: (last?.version ?? 0) + 1,
+              title: a.title,
+              contentMarkdown: next,
+              contentHtml,
+              changeNote: "해시태그 백필",
+            },
+          },
+        },
+      });
+      fixed.push({ id: a.id, title: a.title.slice(0, 30), added: count(next), score: quality.score });
+    }
+    res.json({ scanned: articles.length, fixedCount: fixed.length, fixed });
+  }),
+);
+
 /** 품질 보정 — 85점 미만 글의 미달 항목을 Claude로 보강 (Claude 호출, 수십 초) */
 articlesRouter.post(
   "/:id/improve",
