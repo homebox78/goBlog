@@ -177,6 +177,21 @@ export default function ArticleDetailPage() {
   });
   const matchedHits = matchedHitsQuery.data?.hits ?? [];
 
+  // 대가성 고시 수동 삽입 — 이미 있으면 서버가 중복 삽입하지 않는다
+  const disclosureMutation = useMutation({
+    mutationFn: (source: "COUPANG" | "BRANDCONNECT") =>
+      api.post<{ ok: boolean; already: boolean }>(`/api/articles/${id}/disclosure`, { source }),
+    onSuccess: (r) => {
+      if (r.already) {
+        toast.info("대가성 고시가 이미 본문에 있습니다.");
+      } else {
+        toast.success("대가성 고시를 본문 최상단에 삽입했습니다.");
+        queryClient.invalidateQueries({ queryKey: ["article", id] });
+      }
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "고시 삽입 실패"),
+  });
+
   const bannerMutation = useMutation({
     mutationFn: () =>
       api.post<{ banner: string; disclosure: string }>(`/api/articles/${id}/banner`, { input: bannerInput }),
@@ -826,6 +841,31 @@ export default function ArticleDetailPage() {
                 {bannerMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
                 커서 위치에 배너 삽입
               </Button>
+              <div className="border-t pt-2">
+                <p className="mb-1.5 text-[11px] text-muted-foreground">
+                  대가성 고시(경제적 이해관계 문구) — 없으면 최상단에 삽입
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    disabled={disclosureMutation.isPending}
+                    onClick={() => disclosureMutation.mutate("COUPANG")}
+                  >
+                    쿠팡 고시 삽입
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    disabled={disclosureMutation.isPending}
+                    onClick={() => disclosureMutation.mutate("BRANDCONNECT")}
+                  >
+                    네이버 고시 삽입
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

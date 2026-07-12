@@ -161,6 +161,88 @@ articlesRouter.post(
   }),
 );
 
+/**
+ * 대가성 고시(경제적 이해관계 문구) 삽입 — 본문 최상단에 가이드 준수 박스를 넣는다.
+ * 이미 있으면 중복 삽입하지 않는다. 사이드 버튼(수동)과 백필에서 사용.
+ */
+articlesRouter.post(
+  "/:id/disclosure",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const source = req.body?.source === "BRANDCONNECT" ? "BRANDCONNECT" : "COUPANG";
+    const article = await prisma.article.findUnique({
+      where: { id },
+      include: { versions: { orderBy: { version: "desc" }, take: 1 } },
+    });
+    if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
+    const md = article.contentMarkdown ?? "";
+    const { disclosureHtml, hasDisclosure } = await import("./generator.js");
+    if (hasDisclosure(md)) return res.json({ ok: true, already: true });
+
+    const next = `${disclosureHtml({ source })}\n\n${md}`;
+    const contentHtml = await renderContentHtml(next);
+    await prisma.article.update({
+      where: { id },
+      data: {
+        contentMarkdown: next,
+        contentHtml,
+        versions: {
+          create: {
+            version: (article.versions[0]?.version ?? 0) + 1,
+            title: article.title,
+            contentMarkdown: next,
+            contentHtml,
+            changeNote: `대가성 고시 삽입 (${source === "COUPANG" ? "쿠팡" : "네이버"})`,
+          },
+        },
+      },
+    });
+    res.json({ ok: true, already: false });
+  }),
+);
+
+/**
+ * 고시 백필 — 배너(제휴 링크)가 있는데 고시가 없는 모든 글에 소스에 맞는 고시를 삽입한다.
+ */
+articlesRouter.post(
+  "/backfill-disclosures",
+  asyncHandler(async (_req, res) => {
+    const articles = await prisma.article.findMany({
+      select: { id: true, title: true, contentMarkdown: true },
+      take: 500,
+    });
+    const { disclosureHtml, hasDisclosure } = await import("./generator.js");
+    const fixed: Array<{ id: number; title: string; source: string }> = [];
+    for (const a of articles) {
+      const md = a.contentMarkdown ?? "";
+      const hasBanner = /link\.coupang|coupangcdn|smartstore|brandconnect|naver\.me|쿠팡에서 최저가|쇼핑하기/.test(md);
+      if (!hasBanner || hasDisclosure(md)) continue;
+      const source = /link\.coupang|coupangcdn|쿠팡/.test(md) ? ("COUPANG" as const) : ("BRANDCONNECT" as const);
+      const next = `${disclosureHtml({ source })}\n\n${md}`;
+      const contentHtml = await renderContentHtml(next);
+      const last = await prisma.articleVersion.findFirst({ where: { articleId: a.id }, orderBy: { version: "desc" } });
+      await prisma.article.update({
+        where: { id: a.id },
+        data: {
+          contentMarkdown: next,
+          contentHtml,
+          versions: {
+            create: {
+              version: (last?.version ?? 0) + 1,
+              title: a.title,
+              contentMarkdown: next,
+              contentHtml,
+              changeNote: "대가성 고시 백필",
+            },
+          },
+        },
+      });
+      fixed.push({ id: a.id, title: a.title.slice(0, 40), source });
+    }
+    res.json({ scanned: articles.length, fixedCount: fixed.length, fixed });
+  }),
+);
+
 /** 품질 보정 — 85점 미만 글의 미달 항목을 Claude로 보강 (Claude 호출, 수십 초) */
 articlesRouter.post(
   "/:id/improve",
