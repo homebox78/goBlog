@@ -26,6 +26,9 @@ const STOPWORDS = new Set([
   "후기", "리뷰", "구매", "구매처", "판매", "판매처", "세트", "대용량", "소용량", "무료배송", "로켓배송", "로켓프레시",
   "특가", "할인", "세일", "브랜드", "종류", "전용", "인기", "순위", "총정리", "가이드", "방식", "이유", "사용",
   "관련", "최고", "신상", "신형", "정보", "안내", "방문", "대비", "본사직영", "직영",
+  // 범용 수식어 — '스마트 쓰레기통'의 '스마트'가 '스마트워치'에 걸리는 식의 오매칭 방지
+  "스마트", "프리미엄", "디지털", "무선", "유선", "휴대용", "미니", "울트라", "프로", "맥스", "플러스",
+  "라이트", "자동", "수동", "단독", "이벤트", "본사", "공식", "정식", "오리지널", "클래식", "베이직",
 ]);
 
 function tokenize(text: string | null | undefined): string[] {
@@ -43,13 +46,14 @@ function tokenize(text: string | null | undefined): string[] {
 }
 
 /**
- * 두 토큰이 관련 있는가. 부분 포함은 '짧은 쪽이 3자 이상'일 때만 인정한다.
- * (2자 음절 우연 일치 방지: '하이'↔'하이닉스', '국내'↔'국내산')
+ * 두 토큰이 관련 있는가. 부분 포함은 '짧은 쪽이 4자 이상'일 때만 인정한다.
+ * (짧은 음절 우연 일치 방지: '하이'↔'하이닉스', '스마트'↔'스마트워치'.
+ *  정확히 같은 토큰은 길이와 무관하게 항상 매칭.)
  */
 function related(a: string, b: string): boolean {
   if (a === b) return true;
   const [short, long] = a.length <= b.length ? [a, b] : [b, a];
-  return short.length >= 3 && long.includes(short);
+  return short.length >= 4 && long.includes(short);
 }
 
 export interface MatchProduct {
