@@ -205,8 +205,19 @@ export async function deleteArticleImage(articleId: number, mediaId: number): Pr
   return { ok: true };
 }
 
-function contentFigure(image: { webpUrl: string; altText: string; caption: string | null }, slot: number): string {
-  return `<figure data-img="${slot}" style="margin:24px 0;"><img src="${image.webpUrl}" alt="${image.altText}" style="width:100%;height:auto;display:block;border-radius:10px;" />${image.caption ? `<figcaption style="font-size:13px;color:#888;margin-top:6px;text-align:center;">${image.caption}</figcaption>` : ""}</figure>`;
+function contentFigure(
+  image: { webpUrl: string; altText: string; caption: string | null },
+  slot: number,
+  aiGenerated = false,
+): string {
+  const caption = image.caption
+    ? `<figcaption style="font-size:13px;color:#888;margin-top:6px;text-align:center;">${image.caption}</figcaption>`
+    : "";
+  // AI 생성 이미지엔 투명성 표기(작게)
+  const aiNote = aiGenerated
+    ? `<figcaption style="font-size:11px;color:#bbb;margin-top:4px;text-align:center;">AI 생성 이미지입니다.</figcaption>`
+    : "";
+  return `<figure data-img="${slot}" style="margin:24px 0;"><img src="${image.webpUrl}" alt="${image.altText}" style="width:100%;height:auto;display:block;border-radius:10px;" />${caption}${aiNote}</figure>`;
 }
 
 /**
@@ -269,7 +280,7 @@ export async function generateArticleImages(articleId: number): Promise<{ genera
       const image = { webpUrl: asset.webpUrl!, altText: asset.altText ?? "", caption: asset.caption };
       const marker = `[IMAGE:${asset.position}]`;
       if (markdown.includes(marker)) {
-        markdown = markdown.replace(marker, `\n\n${contentFigure(image, asset.position ?? 0)}\n\n`);
+        markdown = markdown.replace(marker, `\n\n${contentFigure(image, asset.position ?? 0, true)}\n\n`);
       } else {
         remaining.push(asset);
       }
@@ -284,7 +295,7 @@ export async function generateArticleImages(articleId: number): Promise<{ genera
       const insertions = new Map<number, string>();
       for (const asset of remaining) {
         const image = { webpUrl: asset.webpUrl!, altText: asset.altText ?? "", caption: asset.caption };
-        const figure = contentFigure(image, asset.position ?? 0);
+        const figure = contentFigure(image, asset.position ?? 0, true);
         if (placed < h2Indexes.length) {
           insertions.set(h2Indexes[placed], figure);
           placed += 1;
