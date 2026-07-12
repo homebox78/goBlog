@@ -154,24 +154,27 @@ function buildProductBanner(product: ProductInput, linkUrl: string, imageUrl: st
   const shadowRgba = isCoupang ? "229,37,40" : "3,199,90";
   const ctaText = isCoupang ? "쿠팡에서 최저가 확인하기" : "네이버에서 상품 보기";
 
-  // Blogger는 <a> 안의 block 요소(div/p)를 제거하므로 배너 전체 링크는 <a> + <span>만으로 구성한다.
+  // 에디터 호환 배너 — 네이버 SmartEditor는 flex·gradient·box-shadow·flex:1을 제거해 레이아웃이 깨진다.
+  // → 중앙정렬 블록 + 단색만 사용해 블로그·티스토리·네이버 어디서나 동일하게 렌더되게 한다.
+  // (Blogger는 <a> 안 div/p를 제거하므로 <span>만 사용, block은 display:block로 표현)
+  void accentDark;
+  void shadowRgba;
   const price = product.price
-    ? `<span style="display:block;margin:0 0 14px;font-size:23px;font-weight:800;color:${accent};line-height:1.2;">${new Intl.NumberFormat("ko-KR").format(product.price)}원${product.isRocket ? ' <span style="font-size:12px;font-weight:700;color:#2c7fff;">🚀 로켓배송</span>' : ""}</span>`
+    ? `<span style="display:block;margin:0 0 12px;font-size:22px;font-weight:800;color:${accent};line-height:1.2;">${new Intl.NumberFormat("ko-KR").format(product.price)}원${product.isRocket ? ' <span style="font-size:12px;font-weight:700;color:#2c7fff;">🚀 로켓배송</span>' : ""}</span>`
     : "";
 
   const image = imageUrl
-    ? `<img src="${imageUrl}" alt="${escapeHtml(product.name)}" style="width:170px;height:170px;object-fit:contain;border-radius:14px;background:#fff;flex-shrink:0;border:1px solid #f0f0f0;" />`
+    ? `<img src="${imageUrl}" alt="${escapeHtml(product.name)}" style="width:180px;height:180px;object-fit:contain;background:#ffffff;border:1px solid #f0f0f0;border-radius:12px;display:inline-block;" />`
     : "";
 
   return [
-    `<a href="${linkUrl}" target="_blank" rel="sponsored nofollow noopener" style="display:flex;gap:20px;align-items:center;border:2px solid ${accent};border-radius:18px;padding:20px;margin:20px 0;background:linear-gradient(135deg,${tintBg},#ffffff);box-shadow:0 6px 20px rgba(${shadowRgba},0.15);position:relative;text-decoration:none;color:inherit;">`,
-    '<span style="position:absolute;top:11px;right:14px;font-size:11px;color:#c4c4c4;">광고</span>',
+    `<a href="${linkUrl}" target="_blank" rel="sponsored nofollow noopener" style="display:block;text-align:center;border:2px solid ${accent};border-radius:14px;padding:20px 18px;margin:22px auto;max-width:440px;background:${tintBg};text-decoration:none;color:inherit;">`,
+    '<span style="display:block;text-align:right;font-size:11px;color:#c4c4c4;margin-bottom:4px;">광고</span>',
     image,
-    '<span style="display:block;min-width:0;flex:1;">',
-    `<span style="display:block;margin:0 0 8px;font-weight:700;font-size:18px;line-height:1.45;color:#1a1a1a;">${escapeHtml(product.name)}</span>`,
+    `<span style="display:block;margin:14px 0 8px;font-weight:700;font-size:18px;line-height:1.45;color:#1a1a1a;">${escapeHtml(product.name)}</span>`,
     price,
-    `<span style="display:inline-block;background:linear-gradient(135deg,${accent},${accentDark});color:#fff;padding:13px 26px;border-radius:12px;font-size:16px;font-weight:800;box-shadow:0 3px 10px rgba(${shadowRgba},0.35);">${ctaText} →</span>`,
-    "</span></a>",
+    `<span style="display:inline-block;background:${accent};color:#ffffff;padding:13px 28px;border-radius:10px;font-size:16px;font-weight:800;">${ctaText} →</span>`,
+    "</a>",
   ].join("");
 }
 

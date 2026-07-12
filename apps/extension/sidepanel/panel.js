@@ -1,4 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let config = { apiBase: "", token: "" };
 let currentArticle = null;
@@ -290,11 +291,19 @@ async function applyToForm() {
       if (!tab?.id) throw new Error("활성 탭 없음");
       const res = await chrome.runtime.sendMessage({ type: "NAVER_AUTO", tabId: tab.id, title, rects });
       if (!res?.ok) throw new Error(res?.error || "자동 입력 실패");
-      showNotes([
-        "✅ 제목·본문 자동 입력 완료!",
-        "내용 확인 후 우측 상단 '발행'에서 카테고리·태그 확인하고 발행하세요.",
-        "혹시 일부만 들어갔다면 '본문 복사' 버튼으로 수동 붙여넣기 하세요.",
-      ]);
+      showNotes(["✅ 제목·본문 자동 입력 완료!", "⏳ 발행 진행 중..."]);
+
+      // 발행 → 발행 레이어 → 최종 발행 (완전 자동). 카테고리는 블로그 기본값 사용.
+      await sleep(500); // 에디터 반영 대기
+      const pub = await chrome.runtime.sendMessage({ type: "NAVER_PUBLISH", tabId: tab.id });
+      if (pub?.ok) {
+        showNotes(["✅ 네이버 발행 완료! (발행완료 자동 기록)"]);
+      } else {
+        showNotes([
+          "✅ 제목·본문 자동 입력 완료!",
+          `⚠ 발행 자동화 실패(${pub?.error || "?"}) — 우측 상단 '발행' → '발행'을 눌러 마무리하세요.`,
+        ]);
+      }
     } catch (error) {
       // 수동 폴백 — 기존 2단계 클립보드 방식
       await navigator.clipboard.writeText(title);

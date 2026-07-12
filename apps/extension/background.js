@@ -318,6 +318,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+// 네이버 발행 마무리 — 발행 버튼 → 발행 레이어 → 최종 발행 (SmartEditor는 #mainFrame iframe → allFrames)
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "NAVER_PUBLISH") return false;
+  (async () => {
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: message.tabId, allFrames: true },
+        world: "MAIN",
+        func: async () => {
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+          const fire = (el) => {
+            for (const t of ["pointerdown", "mousedown", "mouseup", "click"]) {
+              el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }));
+            }
+          };
+          // 1차 발행 버튼(발행 레이어 열기) — 이 프레임에 없으면 발행 UI 프레임이 아님
+          const openBtn = document.querySelector('[data-click-area="tpb.publish"]');
+          if (!openBtn) return null;
+          fire(openBtn);
+          // 발행 레이어의 최종 발행 버튼 대기
+          let tries = 0;
+          while (!document.querySelector('[data-testid="seOnePublishBtn"]') && tries++ < 50) await sleep(150);
+          const finalBtn = document.querySelector('[data-testid="seOnePublishBtn"]');
+          if (!finalBtn) return ["발행 레이어를 열지 못했습니다"];
+          await sleep(500); // 레이어 애니메이션·기본값 로드 대기
+          fire(finalBtn);
+          return ["발행"];
+        },
+      });
+      const done = results.map((r) => r && r.result).find((x) => x);
+      sendResponse({ ok: !!(done && done.includes("발행")), done: done || [], error: done ? null : "발행 버튼을 찾지 못했습니다" });
+    } catch (error) {
+      sendResponse({ ok: false, error: String(error?.message ?? error) });
+    }
+  })();
+  return true;
+});
+
 // 사이드 패널 ↔ 활성 탭 콘텐츠 스크립트 메시지 중계
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.relay !== true) return false;
