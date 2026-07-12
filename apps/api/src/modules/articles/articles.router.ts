@@ -275,8 +275,8 @@ articlesRouter.post(
     });
     const unescape = (s: string) =>
       s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
-    // 옛 flex 배너 <a ...display:flex...>…</a> (중첩 </a> 없음 → 비탐욕)
-    const bannerRe = /<a\b[^>]*style="[^"]*display:flex[^"]*"[^>]*>[\s\S]*?<\/a>/g;
+    // 카드 배너 <a>…</a> (옛 flex / 현재 블록카드 모두. 링크가 통째로 감싸진 형태 → div+분리링크로 교체)
+    const bannerRe = /<a\b[^>]*style="[^"]*display:(?:flex|block;text-align:center;border)[^"]*"[^>]*>[\s\S]*?<\/a>/g;
     const fixed: Array<{ id: number; title: string; count: number }> = [];
 
     for (const a of articles) {
