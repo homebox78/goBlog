@@ -344,6 +344,15 @@ articlesRouter.post(
   }),
 );
 
+/** 이미지 1장 재생성 — 같은 프롬프트로 다시 뽑고 본문 src 교체 */
+articlesRouter.post(
+  "/:id/images/:mediaId/regenerate",
+  asyncHandler(async (req, res) => {
+    const { regenerateArticleImage } = await import("../images/image-service.js");
+    res.json(await regenerateArticleImage(Number(req.params.id), Number(req.params.mediaId)));
+  }),
+);
+
 /** 업로드 이미지(미디어) 삭제 */
 articlesRouter.delete(
   "/:id/images/:mediaId",

@@ -205,6 +205,55 @@ export async function deleteArticleImage(articleId: number, mediaId: number): Pr
   return { ok: true };
 }
 
+/**
+ * 이미지 1장 재생성 — 같은 프롬프트로 Gemini를 다시 돌리고, 본문의 기존 이미지 src를 새 URL로 교체한다.
+ * (마음에 안 드는 이미지만 골라서 다시 뽑는 용도)
+ */
+export async function regenerateArticleImage(
+  articleId: number,
+  mediaId: number,
+): Promise<{ id: number; webpUrl: string }> {
+  const asset = await prisma.mediaAsset.findFirst({ where: { id: mediaId, articleId } });
+  if (!asset) throw new HttpError(404, "이미지를 찾을 수 없습니다.");
+  if (!asset.prompt) throw new HttpError(400, "프롬프트가 없는 이미지(직접 업로드)는 재생성할 수 없습니다.");
+
+  const fileBase = `a${articleId}-m${asset.id}-${Date.now()}`;
+  const characterKeys = asset.characterKeys ? asset.characterKeys.split(",").filter(Boolean) : [];
+  const result = await generateOneImage(asset.prompt, fileBase, characterKeys);
+
+  const oldUrl = asset.webpUrl;
+  const oldFile = asset.fileName;
+  await prisma.mediaAsset.update({
+    where: { id: asset.id },
+    data: {
+      fileName: `${fileBase}.webp`,
+      originalUrl: result.originalUrl,
+      webpUrl: result.webpUrl,
+      width: result.width,
+      height: result.height,
+      bytes: result.bytes,
+    },
+  });
+
+  // 본문에 삽입돼 있던 기존 이미지 src를 새 URL로 교체
+  const article = await prisma.article.findUnique({
+    where: { id: articleId },
+    select: { contentMarkdown: true },
+  });
+  if (oldUrl && article?.contentMarkdown?.includes(oldUrl)) {
+    const markdown = article.contentMarkdown.split(oldUrl).join(result.webpUrl);
+    const contentHtml = await renderContentHtml(markdown);
+    await prisma.article.update({ where: { id: articleId }, data: { contentMarkdown: markdown, contentHtml } });
+  }
+
+  // 옛 파일 정리
+  if (oldFile && oldFile !== `${fileBase}.webp`) {
+    await fs.unlink(path.join(mediaDir(), oldFile)).catch(() => undefined);
+  }
+
+  return { id: asset.id, webpUrl: result.webpUrl };
+}
+
 function contentFigure(
   image: { webpUrl: string; altText: string; caption: string | null },
   slot: number,

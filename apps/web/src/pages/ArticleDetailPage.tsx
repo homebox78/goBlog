@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, Save, Send, Sparkles, Trash2, Upload, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, RefreshCw, Save, Send, Sparkles, Trash2, Upload, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,6 +142,18 @@ export default function ArticleDetailPage() {
       toast.success("커서 위치에 이미지를 삽입했습니다.");
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 업로드 실패"),
+  });
+
+  // 마음에 안 드는 이미지 1장만 같은 프롬프트로 재생성 (본문 src 자동 교체)
+  const regenImageMutation = useMutation({
+    mutationFn: (mediaId: number) =>
+      api.post<{ id: number; webpUrl: string }>(`/api/articles/${id}/images/${mediaId}/regenerate`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      toast.success("이미지를 다시 생성했습니다. (본문에도 반영)");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "이미지 재생성 실패"),
   });
 
   const deleteImageMutation = useMutation({
@@ -725,16 +737,34 @@ export default function ArticleDetailPage() {
                       {asset.position === 1 ? "대표·본문1" : `본문 ${asset.position ?? ""}`}
                     </Badge>
                     {asset.webpUrl && <Badge className="text-[10px]">생성됨</Badge>}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto size-6"
-                      aria-label="이미지 삭제"
-                      disabled={deleteImageMutation.isPending}
-                      onClick={() => deleteImageMutation.mutate({ id: asset.id, webpUrl: asset.webpUrl })}
-                    >
-                      <Trash2 className="size-3.5 text-destructive" />
-                    </Button>
+                    <div className="ml-auto flex items-center gap-0.5">
+                      {asset.prompt && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          title="이 이미지만 다시 생성 (같은 프롬프트, 10~20초)"
+                          disabled={regenImageMutation.isPending || deleteImageMutation.isPending}
+                          onClick={() => regenImageMutation.mutate(asset.id)}
+                        >
+                          {regenImageMutation.isPending && regenImageMutation.variables === asset.id ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="size-3.5 text-blue-600" />
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-6"
+                        aria-label="이미지 삭제"
+                        disabled={deleteImageMutation.isPending || regenImageMutation.isPending}
+                        onClick={() => deleteImageMutation.mutate({ id: asset.id, webpUrl: asset.webpUrl })}
+                      >
+                        <Trash2 className="size-3.5 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                   {asset.webpUrl ? (
                     <img

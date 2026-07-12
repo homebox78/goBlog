@@ -118,14 +118,17 @@ if [ ! -f /etc/systemd/system/goblog-api.service ]; then
   echo SYSTEMD_CONFIGURED
 fi
 
-# 고아 프로세스가 8788을 잡고 있으면 restart가 헛돌아 옛 코드가 계속 서빙된다 → 확실히 정리 후 시작
+# 배포 스탬프 — 실행 중인 프로세스가 이번 배포 코드인지 /api/health로 검증할 수 있게 한다
+date +%Y%m%d%H%M%S > ~/goblog-api/.deploy-stamp
+
+# 고아 프로세스가 8788을 잡고 있으면 restart가 헛돌아 옛 코드가 계속 서빙된다 → 포트 기준으로 확실히 정리
 sudo systemctl stop goblog-api
-sudo pkill -f 'goblog-api/src' 2>/dev/null || true
+sudo fuser -k 8788/tcp 2>/dev/null || true
 sleep 1
 sudo systemctl start goblog-api
 sleep 3
 sudo systemctl is-active goblog-api
-# 실행 중인 프로세스가 진짜 새 코드인지 확인 (분석 실패 마커는 d33965e부터 존재)
+echo -n "listeners on 8788: "; ss -tlnp 2>/dev/null | grep -c 8788 || true
 curl -s http://127.0.0.1:8788/api/health || true
 rm -f /tmp/api.tar.gz /tmp/web.tar.gz
 echo DEPLOY_DONE

@@ -37,7 +37,15 @@ export function createApp() {
   app.use(cookieParser());
 
   const healthHandler = async (req: express.Request, res: express.Response) => {
-    res.json({ ok: true, db: await checkDatabase() });
+    // stamp = 배포 시각 (deploy.ps1이 기록) — 실행 중인 프로세스가 최신 배포인지 확인용
+    let stamp: string | null = null;
+    try {
+      const { readFileSync } = await import("node:fs");
+      stamp = readFileSync(".deploy-stamp", "utf8").trim();
+    } catch {
+      // 로컬 개발 등 스탬프 없음
+    }
+    res.json({ ok: true, db: await checkDatabase(), stamp });
   };
   app.get("/health", healthHandler);
   // 운영 프록시(/goBlog/api → /api)에서도 접근 가능한 별칭

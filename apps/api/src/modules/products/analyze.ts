@@ -84,8 +84,10 @@ async function naverShopLookup(
 }
 
 /**
- * 네이버 커넥트 붙여넣기: naver.me(또는 스마트스토어) 링크 + 상품명(한 줄) [+ 이미지 URL 한 줄].
- * 네이버는 서버 크롤링이 차단되므로, 상품명으로 쇼핑 검색 API에서 이미지·가격을 찾고 링크는 트래킹 링크를 유지한다.
+ * 네이버 커넥트 붙여넣기 (여러 줄):
+ *   ① naver.me 트래킹 링크 + 스마트스토어 상품 URL  → 상품 페이지에서 상품명·원본 이미지·가격 추출, 링크는 naver.me
+ *   ② naver.me 트래킹 링크 + 상품명(텍스트 한 줄)   → 쇼핑 검색 API로 이미지·가격 조회
+ *   (이미지 URL 한 줄을 추가하면 그 이미지를 우선 사용)
  */
 async function analyzeNaverPaste(trimmed: string): Promise<AnalyzedProduct | null> {
   const lines = trimmed
@@ -93,31 +95,49 @@ async function analyzeNaverPaste(trimmed: string): Promise<AnalyzedProduct | nul
     .map((l) => l.trim())
     .filter(Boolean);
   if (lines.length < 1) return null;
-  const linkLine = lines.find((l) => /^https?:\/\//i.test(l) && /naver\.me|smartstore\.naver|shopping\.naver|brandconnect/i.test(l));
-  if (!linkLine) return null;
 
-  const imgLine = lines.find(
-    (l) => l !== linkLine && /^https?:\/\//i.test(l) && /pstatic\.net|\.(jpe?g|png|webp|gif)(\?|$)/i.test(l),
-  );
-  const nameLine = lines.find((l) => l !== linkLine && l !== imgLine && !/^https?:\/\//i.test(l) && l.length >= 2);
+  const urls = lines.filter((l) => /^https?:\/\//i.test(l));
+  const trackingLine = urls.find((l) => /naver\.me/i.test(l));
+  const storeLine = urls.find((l) => /smartstore\.naver|shopping\.naver|brand\.naver/i.test(l));
+  if (!trackingLine && !storeLine) return null;
+  const linkLine = trackingLine ?? storeLine!; // 배너에 걸 링크 — 트래킹 링크 우선(수수료 집계)
 
-  if (!nameLine) {
-    throw new HttpError(
-      422,
-      "네이버는 링크만으로 상품 정보를 가져올 수 없습니다(크롤링 차단). 링크 아랫줄에 상품명을 함께 붙여넣어 주세요.\n예)\nhttps://naver.me/xxxxx\n퍼니몽키 강아지 노즈워크 장난감",
-    );
+  const imgLine = urls.find((l) => /pstatic\.net|\.(jpe?g|png|webp|gif)(\?|$)/i.test(l));
+  const nameLine = lines.find((l) => !/^https?:\/\//i.test(l) && l.length >= 2);
+
+  // ① 스마트스토어 상품 URL이 있으면 페이지에서 직접 추출 시도 (원본 이미지·정확한 상품명)
+  if (storeLine) {
+    try {
+      const page = await analyzeProductUrl(storeLine);
+      return {
+        ...page,
+        source: "BRANDCONNECT",
+        name: nameLine ?? page.name,
+        imageUrl: imgLine ?? page.imageUrl,
+        productUrl: linkLine,
+      };
+    } catch {
+      // 네이버가 서버 요청을 차단(429)하면 아래 상품명 경로로 폴백
+    }
   }
 
-  // 상품명으로 네이버 쇼핑에서 이미지·가격 검색 (실패해도 이름·링크만으로 배너 생성 가능)
-  const found = await naverShopLookup(nameLine);
-  return {
-    source: "BRANDCONNECT",
-    name: nameLine,
-    price: found?.price ?? null,
-    imageUrl: imgLine ?? found?.imageUrl ?? null,
-    description: null,
-    productUrl: linkLine, // 트래킹 링크(naver.me) 그대로 유지 — 수수료 집계용
-  };
+  // ② 상품명이 있으면 쇼핑 검색 API로 이미지·가격 조회
+  if (nameLine) {
+    const found = await naverShopLookup(nameLine);
+    return {
+      source: "BRANDCONNECT",
+      name: nameLine,
+      price: found?.price ?? null,
+      imageUrl: imgLine ?? found?.imageUrl ?? null,
+      description: null,
+      productUrl: linkLine,
+    };
+  }
+
+  throw new HttpError(
+    422,
+    "네이버 상품 정보를 가져오지 못했습니다(크롤링 차단). 트래킹 링크 아랫줄에 상품명을 함께 붙여넣어 주세요.\n예)\nhttps://naver.me/xxxxx\n퍼니몽키 강아지 노즈워크 장난감",
+  );
 }
 
 /**
