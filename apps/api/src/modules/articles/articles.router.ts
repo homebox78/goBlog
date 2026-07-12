@@ -138,10 +138,13 @@ articlesRouter.get(
     });
     const exact = recent.filter((h) => keywordText && h.keyword === keywordText);
     const exactIds = new Set(exact.map((h) => h.id));
-    const fuzzy = keywordText
+    // 키워드 + 제목을 함께 매칭 (제목에만 등장하는 브랜드·주제도 잡는다: 예 'SK하이닉스發' 기사에 하이닉스 상품).
+    // 수동 추천 맥락이므로 뉴스·금융 키워드 가드는 건너뛴다 — 삽입 여부는 사람이 결정.
+    const matchText = `${keywordText} ${article.title}`.trim();
+    const fuzzy = matchText
       ? recent
           .filter((h) => !exactIds.has(h.id))
-          .map((h) => ({ ...h, matchScore: overlapScore({ name: h.name }, keywordText) }))
+          .map((h) => ({ ...h, matchScore: overlapScore({ name: h.name }, matchText, { ignoreNonCommercial: true }) }))
           .filter((h) => h.matchScore >= 1)
           .sort((a, b) => b.matchScore - a.matchScore)
       : [];

@@ -67,8 +67,14 @@ export interface MatchProduct {
  * 키워드 문구가 상품과 얼마나 맞는지 점수. 아이템(비브랜드) 겹침에 가중치를 준다.
  * 정보성 키워드거나, 아이템 토큰이 하나도 안 겹치면(브랜드만 겹침) 0.
  */
-export function overlapScore(product: MatchProduct, keywordText: string): number {
-  if (NON_COMMERCIAL.test(keywordText)) return 0;
+export function overlapScore(
+  product: MatchProduct,
+  keywordText: string,
+  opts?: { ignoreNonCommercial?: boolean },
+): number {
+  // 자동 광고 삽입 경로는 뉴스·금융 키워드에 상품을 붙이지 않지만,
+  // 수동 배너 '추천' 맥락(ignoreNonCommercial)에서는 사람이 판단하므로 가드를 건너뛴다.
+  if (!opts?.ignoreNonCommercial && NON_COMMERCIAL.test(keywordText)) return 0;
   const brandTokens = tokenize(product.brand);
   const nameTokens = tokenize(product.name);
   const kTokens = tokenize(keywordText);
