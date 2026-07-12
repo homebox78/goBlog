@@ -239,6 +239,85 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+// 티스토리 발행 마무리 — 완료 다이얼로그 열고 홈주제 자동 선택 후 공개 발행 (MAIN 월드, async)
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "TISTORY_PUBLISH") return false;
+  (async () => {
+    try {
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: message.tabId },
+        world: "MAIN",
+        func: async (category) => {
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+          const done = [];
+          // goBlog 카테고리 → 티스토리 홈주제(리프) 매핑
+          const MAP = {
+            "it·디지털": "IT 인터넷",
+            "재테크·금융": "경제",
+            "건강·헬스": "건강",
+            "생활·살림": "생활정보",
+            "쇼핑·리뷰": "IT 제품리뷰",
+            "여행·맛집": "맛집",
+            "뷰티·패션": "패션·뷰티",
+            "트렌드·이슈": "사회",
+          };
+          const normCat = (s) => (s || "").toLowerCase().replace(/\s+/g, "").replace(/[ㆍ・]/g, "·").trim();
+          const subject = MAP[normCat(category)] || null;
+
+          // ① 완료 → 발행 다이얼로그 오픈
+          const layerBtn = document.querySelector("#publish-layer-btn");
+          if (layerBtn) layerBtn.click();
+          // ② 다이얼로그(#home_subject) 렌더 대기
+          let tries = 0;
+          while (!document.querySelector("#home_subject") && tries++ < 50) await sleep(150);
+          if (!document.querySelector("#publish-btn")) return ["발행 다이얼로그를 열지 못했습니다"];
+
+          // ③ 홈주제 선택
+          if (subject) {
+            const wrap = document.querySelector("#home_subject");
+            const btn = wrap && wrap.querySelector(".select_btn");
+            if (btn) {
+              btn.click();
+              await sleep(250);
+            }
+            const norm = (s) => (s || "").replace(/^[-\s·ㆍ]+/, "").replace(/\s+/g, "").replace(/[ㆍ・]/g, "·").trim();
+            const items = wrap ? wrap.querySelectorAll('[role="menuitem"]') : [];
+            let picked = null;
+            for (const it of items) {
+              if (it.classList.contains("disabled")) continue; // 상위(대분류)는 선택 불가
+              const t = (it.querySelector(".mce-text") || {}).textContent || "";
+              if (norm(t) === norm(subject)) {
+                picked = it;
+                break;
+              }
+            }
+            if (picked) {
+              for (const type of ["mousedown", "mouseup", "click"]) {
+                picked.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+              }
+              done.push(`홈주제(${subject})`);
+              await sleep(350);
+            }
+          }
+
+          // ④ 공개 발행
+          const pub = document.querySelector("#publish-btn");
+          if (pub) {
+            pub.click();
+            done.push("공개 발행");
+          }
+          return done;
+        },
+        args: [message.category ?? ""],
+      });
+      sendResponse({ ok: true, done: result?.result ?? [] });
+    } catch (error) {
+      sendResponse({ ok: false, error: String(error?.message ?? error) });
+    }
+  })();
+  return true;
+});
+
 // 사이드 패널 ↔ 활성 탭 콘텐츠 스크립트 메시지 중계
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.relay !== true) return false;

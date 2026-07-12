@@ -322,10 +322,26 @@ async function applyToForm() {
         category: currentArticle.category || "",
       });
       if (!res?.ok) throw new Error(res?.error || "자동 입력 실패");
-      showNotes([
-        `✅ 자동 입력 완료: ${res.done.join(" · ")}`,
-        "내용 확인 후 '완료(발행)'에서 카테고리·공개설정 확인하고 발행하세요.",
-      ]);
+      showNotes([`✅ 자동 입력 완료: ${res.done.join(" · ")}`, "⏳ 홈주제 선택 + 공개 발행 진행 중..."]);
+
+      // 발행 완료 자동 기록용 (background가 발행 게시글 URL 이동을 감지)
+      await chrome.storage.local.set({ pendingPublish: { articleId: currentArticle.id, platform: "TISTORY" } });
+
+      // 완료 → 홈주제 자동 선택 → 공개 발행 (원클릭 완전 자동)
+      const pub = await chrome.runtime.sendMessage({
+        type: "TISTORY_PUBLISH",
+        tabId: tab.id,
+        category: currentArticle.category || "",
+      });
+      if (pub?.ok && pub.done?.includes("공개 발행")) {
+        showNotes([`✅ 티스토리 발행 완료: ${res.done.join(" · ")} · ${pub.done.join(" · ")}`]);
+      } else {
+        showNotes([
+          `✅ 자동 입력 완료: ${res.done.join(" · ")}`,
+          `⚠ 발행 자동화 일부 실패(${pub?.error || pub?.done?.join(",") || "?"}).`,
+          "우측 상단 '완료' → 홈주제 선택 → '공개 발행'을 눌러 마무리하세요.",
+        ]);
+      }
     } catch (error) {
       // 폴백 — 기존 콘텐츠 스크립트 APPLY(iframe DOM 주입)
       const response = await chrome.runtime.sendMessage({
