@@ -112,7 +112,7 @@ async function loadCategories() {
   try {
     const { categories } = await api("/api/extension/categories");
     if (categories?.length) {
-      $("#catList").textContent = `네이버에 만들 카테고리: ${categories.join(" · ")}`;
+      $("#catList").textContent = categories.join(" · ");
     }
   } catch {
     // 카테고리 안내는 실패해도 무시
