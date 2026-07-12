@@ -43,6 +43,11 @@ interface ArticleDetail {
     webpUrl: string | null;
   }>;
   versions: Array<{ id: number; version: number; title: string; changeNote: string | null; createdAt: string }>;
+  instagram: {
+    slides: Array<{ position: number; title: string; summary: string }>;
+    caption: string;
+    hashtags: string[];
+  } | null;
 }
 
 export default function ArticleDetailPage() {
@@ -525,6 +530,36 @@ export default function ArticleDetailPage() {
               ))}
             </CardContent>
           </Card>
+
+          {article.instagram && (article.instagram.slides.length > 0 || article.instagram.caption) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">📷 인스타그램 캐러셀</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                <p className="text-muted-foreground">
+                  이미지는 위 본문 3장을 그대로 사용합니다. 크롬 확장에서 인스타그램 탭을 열면 캡션 복사·이미지 저장이 가능합니다.
+                </p>
+                {article.instagram.slides.map((s) => (
+                  <div key={s.position} className="rounded-md border p-2">
+                    <b>
+                      슬라이드 {s.position}. {s.title}
+                    </b>
+                    <p className="text-muted-foreground">{s.summary}</p>
+                  </div>
+                ))}
+                <div>
+                  <p className="mb-1 font-medium">캡션</p>
+                  <p className="whitespace-pre-wrap rounded-md bg-muted p-2 leading-relaxed">
+                    {article.instagram.caption}
+                  </p>
+                </div>
+                {article.instagram.hashtags.length > 0 && (
+                  <p className="break-all text-blue-600">{article.instagram.hashtags.join(" ")}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

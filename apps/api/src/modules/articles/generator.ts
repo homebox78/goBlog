@@ -61,6 +61,11 @@ interface GeneratedContent {
     characters?: string[];
   }>;
   claimsToVerify: string[];
+  // 인스타그램 캐러셀용 — 3장 슬라이드 각 짧은 제목 + 캡션(요약본). 이미지는 블로그 3장을 그대로 사용.
+  instagram?: {
+    slides: Array<{ title: string; summary: string }>;
+    caption: string;
+  };
 }
 
 const VALID_CHARACTER_KEYS = ["girl", "boy", "man_20s", "woman_20s", "man_middle", "woman_middle"];
@@ -238,6 +243,18 @@ export async function generateArticle(
       "- 사람들이 함께 검색하는 연관 질문·롱테일 표현을 본문·소제목·FAQ에 자연스럽게 녹여 검색 노출 범위를 넓힌다.",
       "- '저장/스크랩하고 싶다'는 느낌이 들도록 표·체크리스트·핵심 요약을 배치한다.",
       "",
+      "[검색엔진 최적화(SEO) — 네이버·구글·다음 색인·상위노출 강화. 반드시 준수]",
+      `- 핵심 키워드는 '${topic}'다. 이 키워드(또는 자연스러운 변형)를 ① 제목 앞부분, ② 도입부 첫 문장, ③ H2 소제목 최소 1곳, ④ 마무리, ⑤ metaDescription 앞부분에 반드시 배치한다.`,
+      "- 제목은 공백 포함 32자 내외로 맞춘다(네이버 검색결과 제목 잘림 방지). 핵심 키워드를 앞에 둔다.",
+      "- 본문 전체에서 핵심 키워드를 자연스럽게 3~6회 노출한다. 단 어색한 반복(키워드 스터핑)은 검색 페널티이므로 금지 — 동의어·연관어(LSI)로 분산한다.",
+      "- 사람들이 함께 검색하는 '연관 검색어·롱테일 질문'을 H2/H3 소제목과 FAQ로 흡수해 색인 키워드 범위를 넓힌다.",
+      "- 도입부 첫 100자 안에서 검색 질문에 대한 핵심 답을 먼저 제시한다(검색 스니펫·체류시간 유리).",
+      "- 각 이미지의 altText에는 핵심 키워드나 연관어를 자연스럽게 포함한다(이미지 검색 유입).",
+      "- H1은 제목 하나뿐이라고 가정하고, 본문 구조는 H2>H3 위계를 지킨다(제목 건너뛰기 금지).",
+      "- 표·번호목록·불릿을 적극 사용해 구조화한다(구글 리치결과·발췌 노출에 유리).",
+      "- metaDescription은 150자 내외로, 핵심 키워드를 앞부분에 넣고 클릭을 부르는 요약으로 쓴다.",
+      "- 본문은 목표 분량 이상으로 충분히 채워 정보량·체류시간을 확보한다(얇은 콘텐츠는 색인·순위에 불리).",
+      "",
       "[문체 — AI가 글 성격에 맞게 스스로 판단]",
       "- 문체를 고정하지 말고 글의 주제·독자·목적에 맞춰 가장 자연스러운 톤을 스스로 고른다 (정보성은 차분한 설명체, 생활/후기성은 친근한 대화체 등).",
       tone ? `- 참고 톤 힌트: ${tone} (절대적 규칙 아님, 글에 안 맞으면 무시).` : "",
@@ -267,6 +284,10 @@ export async function generateArticle(
       "- 첫 문단에서 검색자의 핵심 질문에 바로 답한다.",
       "- H2(##)·H3(###) 구조를 지킨다.",
       "- 이미지는 정확히 3장. 본문 흐름에 맞는 3곳에 [IMAGE:1] [IMAGE:2] [IMAGE:3] 마커를 넣고, imagePrompts도 position 1·2·3으로 정확히 3개만 만든다. 첫 번째 이미지가 대표(썸네일)가 된다.",
+      "[인스타그램 캐러셀]",
+      "- instagram 필드를 반드시 채운다. 블로그 이미지 3장을 그대로 캐러셀 3장으로 쓰므로, 각 슬라이드(1·2·3)에 어울리는 '짧은 제목'(공백 포함 18자 이내, 후킹되게)과 한 줄 요약을 만든다.",
+      "- instagram.caption은 인스타그램 게시물 캡션용 요약본(300~500자, 이모지 자연스럽게, 첫 줄에 후킹 문장). 블로그 전문을 복붙하지 말고 핵심만 재구성한다. 광고 클릭 유도·과장 금지.",
+      "- 인스타 해시태그는 별도로 만들지 말고 tags를 그대로 재사용한다(캡션 하단에 붙는다).",
       "- 확인할 수 없는 통계·가격·법률·의료·금융 정보는 단정하지 않고 claimsToVerify에 표시한다. 공식 확인이 필요한 부분은 본문에서 '최신 기준은 공식 사이트에서 확인' 식으로 안내한다.",
       "- 존재하지 않는 URL·출처·개인 경험담·허위 후기·가상의 전문가 인용을 만들지 않는다.",
       "- 존재하지 않는 혜택·신청 기능·다운로드를 있는 것처럼 쓰지 않는다.",
@@ -339,6 +360,14 @@ export async function generateArticle(
           },
         ],
         claimsToVerify: ["발행 전 확인이 필요한 주장·수치"],
+        instagram: {
+          slides: [
+            { title: "슬라이드1 짧은 제목(18자 이내)", summary: "슬라이드1 한 줄 요약" },
+            { title: "슬라이드2 짧은 제목", summary: "슬라이드2 한 줄 요약" },
+            { title: "슬라이드3 짧은 제목", summary: "슬라이드3 한 줄 요약" },
+          ],
+          caption: "인스타그램 캡션 요약본 (300~500자, 이모지, 첫 줄 후킹)",
+        },
       },
       ...(revision
         ? {
@@ -462,6 +491,19 @@ export async function generateArticle(
   const imagePrompts = (generated.imagePrompts ?? []).filter((prompt) => prompt.prompt);
   const claims = generated.claimsToVerify ?? [];
 
+  // 인스타그램 캐러셀 데이터 — 슬라이드 3개 제목 + 캡션 + 해시태그(tags 재사용). 상품 글이면 대가성 문구도 캡션 상단에 붙인다.
+  const igSlides = (generated.instagram?.slides ?? [])
+    .filter((s) => s?.title)
+    .slice(0, 3)
+    .map((s, i) => ({ position: i + 1, title: String(s.title).trim(), summary: String(s.summary ?? "").trim() }));
+  const igHashtags = tags.map((t) => `#${t.replace(/\s+/g, "")}`);
+  let igCaption = (generated.instagram?.caption ?? generated.excerpt ?? "").trim();
+  if (product) igCaption = `${disclosureText(product)}\n\n${igCaption}`;
+  const instagram =
+    igSlides.length > 0 || igCaption
+      ? { slides: igSlides, caption: igCaption, hashtags: igHashtags }
+      : null;
+
   const quality = runQualityCheck({
     keyword: topic,
     title: generated.title,
@@ -498,6 +540,7 @@ export async function generateArticle(
       qualityReport: JSON.parse(JSON.stringify(quality)),
       adSource,
       adProduct,
+      instagram: instagram ? JSON.parse(JSON.stringify(instagram)) : undefined,
       versions: {
         create: {
           version: 1,
@@ -533,6 +576,8 @@ export async function generateArticle(
         schemaType: mainSchema,
         headline: generated.title,
         description: generated.metaDescription || generated.excerpt || "",
+        keywords: [topic, ...tags],
+        inLanguage: language,
       }),
       isEnabled: true,
     },

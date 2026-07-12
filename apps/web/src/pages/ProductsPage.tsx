@@ -141,9 +141,9 @@ const SORT_LABELS: Record<BulkSort, string> = {
 };
 
 function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
-  const textKey = `goblog:bulkmatch:${source}:text`;
   const queryClient = useQueryClient();
-  const [text, setText] = useState(() => localStorage.getItem(textKey) ?? "");
+  // 입력창은 저장하지 않는다 — 새로고침하면 비워지고, 매칭된 결과만 DB에 기록된다.
+  const [text, setText] = useState("");
   const [lastRun, setLastRun] = useState<{ scanned: number; added: number } | null>(null);
   const [sort, setSort] = useState<BulkSort>("keyword");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -189,7 +189,7 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
     mutationFn: () => api.post<BulkResult>("/api/products/bulk-match", { source, text }),
     onSuccess: (data) => {
       setLastRun({ scanned: data.scanned, added: data.added });
-      localStorage.setItem(textKey, text);
+      setText(""); // 입력 내용은 비운다 (매칭 결과만 남긴다)
       queryClient.invalidateQueries({ queryKey: ["bulk-history", source] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "매칭 실패"),
@@ -231,10 +231,7 @@ function BulkMatcher({ source }: { source: "COUPANG" | "BRANDCONNECT" }) {
           className="font-mono text-xs"
           placeholder={"상품명을 줄바꿈으로 붙여넣으세요 (가격·평점 등이 섞여 있어도 매칭 안 되는 줄은 자동 무시)\n예)\n삼성 갤럭시워치7 프로 44mm\n무선 청소기 차이슨 ...\n..."}
           value={text}
-          onChange={(event) => {
-            setText(event.target.value);
-            localStorage.setItem(textKey, event.target.value);
-          }}
+          onChange={(event) => setText(event.target.value)}
         />
         <Button
           className="w-full"

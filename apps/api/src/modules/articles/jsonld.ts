@@ -25,14 +25,22 @@ export function buildArticleJsonLd(options: {
   description: string;
   authorName?: string;
   datePublished?: string;
+  keywords?: string[]; // 핵심 키워드·태그 (검색엔진 색인 강화)
+  inLanguage?: string; // ko 등
 }) {
+  const now = new Date().toISOString();
+  const published = options.datePublished ?? now;
+  const keywords = (options.keywords ?? []).filter(Boolean).slice(0, 10);
   return {
     "@context": "https://schema.org",
     "@type": options.schemaType,
     headline: options.headline.slice(0, 110),
     description: options.description,
     author: { "@type": "Person", name: options.authorName ?? "관리자" },
-    datePublished: options.datePublished ?? new Date().toISOString(),
+    datePublished: published,
+    dateModified: now, // 최신성 신호 — 검색엔진 재색인·순위에 유리
+    inLanguage: options.inLanguage ?? "ko",
+    ...(keywords.length ? { keywords: keywords.join(", ") } : {}),
   };
 }
 

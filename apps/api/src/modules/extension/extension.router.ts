@@ -90,6 +90,7 @@ extensionRouter.get(
         tags: article.tags.map((row) => row.tag.name),
         hashtags: article.tags.map((row) => `#${row.tag.name.replace(/\s+/g, "")}`).join(" "),
         images: article.media.map((asset) => ({ url: asset.webpUrl, alt: asset.altText })),
+        instagram: article.instagram ?? null, // 캐러셀: { slides:[{position,title,summary}], caption, hashtags:[] }
       },
     });
   }),

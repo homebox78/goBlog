@@ -32,6 +32,12 @@ async function init() {
   $("#applyBtn").addEventListener("click", applyToForm);
   $("#copyBtn").addEventListener("click", copyBody);
   $("#doneBtn").addEventListener("click", markPublished);
+  $("#igCopyBtn").addEventListener("click", async () => {
+    await copyIgCaption();
+    const li = document.createElement("li");
+    li.textContent = "인스타 캡션+해시태그를 복사했습니다. 문구칸에 Ctrl+V 하세요.";
+    $("#notes").appendChild(li);
+  });
 
   detectPlatform();
   if (!config.token) {
@@ -69,6 +75,9 @@ async function detectPlatform() {
     chip.classList.add("on");
   } else if (currentPlatform === "TISTORY") {
     chip.textContent = "티스토리";
+    chip.classList.add("on");
+  } else if (currentPlatform === "INSTAGRAM") {
+    chip.textContent = "인스타그램";
     chip.classList.add("on");
   } else {
     chip.textContent = "작성폼 아님";
@@ -141,7 +150,43 @@ async function openArticle(id) {
   $("#detail").classList.remove("hidden");
   $("#actionBar").classList.remove("hidden");
   $("#notes").innerHTML = "";
+  renderInstagram(article);
   detectPlatform();
+}
+
+// 인스타그램 캐러셀 카드 렌더 — 슬라이드 제목·요약, 블로그 이미지 3장(저장 링크), 캡션, 해시태그
+function renderInstagram(article) {
+  const ig = article.instagram;
+  const section = $("#igSection");
+  if (!ig || (!ig.slides?.length && !ig.caption)) {
+    section.classList.add("hidden");
+    return;
+  }
+  const images = article.images || [];
+  const slidesEl = $("#igSlides");
+  slidesEl.innerHTML = "";
+  (ig.slides || []).forEach((s, i) => {
+    const img = images[i];
+    const card = document.createElement("div");
+    card.className = "ig-slide";
+    card.innerHTML =
+      (img?.url ? `<img src="${img.url}" alt="" />` : `<div class="ig-noimg">이미지 없음</div>`) +
+      `<div class="ig-slide-body"><b></b><span></span>` +
+      (img?.url ? `<a href="${img.url}" download target="_blank" class="ig-dl">이미지 저장</a>` : "") +
+      `</div>`;
+    card.querySelector("b").textContent = `${i + 1}. ${s.title || ""}`;
+    card.querySelector("span").textContent = s.summary || "";
+    slidesEl.appendChild(card);
+  });
+  $("#igCaption").value = igFullCaption(ig);
+  $("#igHashtags").textContent = (ig.hashtags || []).join(" ");
+  section.classList.remove("hidden");
+}
+
+// 캡션 + 해시태그 합본 (인스타 붙여넣기용)
+function igFullCaption(ig) {
+  const tags = (ig.hashtags || []).join(" ");
+  return [ig.caption || "", tags].filter(Boolean).join("\n\n");
 }
 
 function plainText(html) {
@@ -197,6 +242,18 @@ async function applyToForm() {
     });
   }
 
+  // 인스타그램: 이미지는 파일 업로더라 자동 삽입 불가 → 캡션+해시태그를 클립보드에 담고 안내
+  if (currentPlatform === "INSTAGRAM") {
+    await copyIgCaption();
+    showNotes([
+      "인스타그램 캡션(요약+해시태그)을 클립보드에 복사했습니다.",
+      "① 캐러셀 이미지는 아래 '인스타그램 캐러셀' 카드에서 3장을 저장해 순서대로 올리세요.",
+      "② 문구칸을 클릭하고 Ctrl+V로 캡션을 붙여넣으세요.",
+      "③ 슬라이드 제목은 이미지 위 텍스트로 활용하세요.",
+    ]);
+    return;
+  }
+
   const title = naverTitle();
   const html = buildBodyHtml();
 
@@ -225,6 +282,11 @@ async function applyToForm() {
     },
   });
   showNotes(response?.ok ? response.notes : [response?.error || "적용 실패"]);
+}
+
+async function copyIgCaption() {
+  if (!currentArticle?.instagram) return;
+  await navigator.clipboard.writeText(igFullCaption(currentArticle.instagram));
 }
 
 async function copyBody() {

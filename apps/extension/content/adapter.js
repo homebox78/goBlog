@@ -23,6 +23,16 @@ function restrictedChannel() {
 
 function detectPlatform() {
   const host = location.host;
+  if (host.includes("instagram.com")) {
+    // 새 게시물 만들기 다이얼로그(문구 입력칸) 또는 create 경로
+    if (
+      /\/create\//.test(location.pathname) ||
+      document.querySelector('textarea[aria-label*="문구"], textarea[aria-label*="caption" i], div[aria-label="새 게시물 만들기"]')
+    ) {
+      return "INSTAGRAM";
+    }
+    return "INSTAGRAM"; // 인스타 탭이면 캡션 복사 흐름을 열어준다
+  }
   if (host.includes("tistory.com") && /\/manage\/(newpost|post)/.test(location.pathname)) {
     return "TISTORY";
   }
