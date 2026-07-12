@@ -36,9 +36,9 @@ articlesRouter.get(
           orderBy: { position: "asc" },
           select: { webpUrl: true, prompt: true },
         },
-        // WordPress·Blogger 발행 상태 (최신 작업 기준)
+        // 발행 상태 (최신 작업 기준) — API 발행(WP·Blogger) + 확장 발행(네이버·티스토리)
         publishJobs: {
-          where: { platform: { in: ["WORDPRESS", "BLOGGER"] } },
+          where: { platform: { in: ["WORDPRESS", "BLOGGER", "NAVER_BLOG", "TISTORY"] } },
           orderBy: { id: "desc" },
           select: { platform: true, status: true, publishedUrl: true },
         },
@@ -51,6 +51,8 @@ articlesRouter.get(
         const latest = (platform: string) => publishJobs.find((j) => j.platform === platform);
         const wp = latest("WORDPRESS");
         const blog = latest("BLOGGER");
+        const nv = latest("NAVER_BLOG");
+        const ts = latest("TISTORY");
         // 광고 감지: adProduct(자동 매칭) 없어도 본문에 수동 삽입 배너가 있으면 광고로 표시
         const md = contentMarkdown ?? "";
         const hasBanner = /link\.coupang|coupangcdn|smartstore|brandconnect|naver\.me|쿠팡에서 최저가|쇼핑하기|활동의 일환/.test(md);
@@ -65,6 +67,9 @@ articlesRouter.get(
           // 발행 상태: status(SUCCEEDED/QUEUED/RUNNING/FAILED) + url. 없으면 null(미발행)
           wordpress: wp ? { status: wp.status, url: wp.publishedUrl } : null,
           blogger: blog ? { status: blog.status, url: blog.publishedUrl } : null,
+          // 네이버·티스토리는 확장 발행 — URL 기록만(발행 버튼 없음)
+          naver: nv ? { status: nv.status, url: nv.publishedUrl } : null,
+          tistory: ts ? { status: ts.status, url: ts.publishedUrl } : null,
         };
       }),
     });

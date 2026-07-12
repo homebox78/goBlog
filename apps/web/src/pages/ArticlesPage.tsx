@@ -44,6 +44,8 @@ interface ArticleListItem {
   pendingImages: number;
   wordpress: { status: string; url: string | null } | null;
   blogger: { status: string; url: string | null } | null;
+  naver: { status: string; url: string | null } | null;
+  tistory: { status: string; url: string | null } | null;
 }
 
 type ListFilter = "all" | "review" | "noimage" | "lowq" | "unpublished" | "ad";
@@ -320,6 +322,9 @@ export default function ArticlesPage() {
                               publishMutation.mutate({ id: article.id, platform: "BLOGGER" });
                             }}
                           />
+                          {/* 네이버·티스토리는 확장 발행 — 발행됨이면 링크만 표시 */}
+                          <ExtLinkChip label="네이버" state={article.naver} />
+                          <ExtLinkChip label="티스토리" state={article.tistory} />
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-mono">
@@ -455,5 +460,22 @@ function PublishChip({
     >
       {failed ? `↻ ${label}` : `+ ${label}`}
     </button>
+  );
+}
+
+/** 확장 발행 플랫폼(네이버·티스토리) — 발행됨이면 게시글 링크, 아니면 미표시(발행 버튼 없음) */
+function ExtLinkChip({ label, state }: { label: string; state: { status: string; url: string | null } | null }) {
+  if (state?.status !== "SUCCEEDED") return null; // 미발행이면 아무것도 안 보임 (확장에서만 발행)
+  const chip = (
+    <span className="inline-flex items-center gap-0.5 rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+      ✓ {label}
+    </span>
+  );
+  return state.url ? (
+    <a href={state.url} target="_blank" rel="noreferrer" title={`${label} 발행글 보기`}>
+      {chip}
+    </a>
+  ) : (
+    <span title={`${label} 발행됨 (URL 미기록)`}>{chip}</span>
   );
 }
