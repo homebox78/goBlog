@@ -662,10 +662,12 @@ export default function ArticleDetailPage() {
                   <TabsTrigger value="preview">미리보기</TabsTrigger>
                 </TabsList>
                 <TabsContent value="edit">
+                  {/* Textarea 기본 클래스의 field-sizing-content 는 높이를 '내용'에 맡겨 글마다 편집기 크기가 들쭉날쭉해진다.
+                      본문 편집기는 높이를 고정하고 안에서 스크롤한다 (field-sizing-fixed 로 되돌린 뒤 h 지정). */}
                   <Textarea
                     ref={contentRef}
                     rows={24}
-                    className="font-mono text-sm"
+                    className="field-sizing-fixed h-[70vh] resize-y overflow-y-auto font-mono text-sm"
                     value={form.contentMarkdown}
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, contentMarkdown: event.target.value }))
