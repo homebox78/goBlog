@@ -2,7 +2,7 @@
 #   web  -> /var/www/html/goBlog          (https://hom2box.com/goBlog)
 #   api  -> ~/goblog-api  (systemd: goblog-api, 127.0.0.1:8788, Apache proxy /goBlog/api)
 # First run also enables Apache proxy modules + conf and installs the systemd unit (sudo).
-# Requires: config/google_key.pem, root .env, apps/api/.env (tunnel URL; password reused for server URL).
+# Requires: config/google_key.pem, root .env (single source - MYSQL_URL tunnel port 3307 is rewritten to 3306 for the server).
 # ASCII only (PS5.1 BOM pitfall).
 
 param([switch]$SkipBuild)
@@ -51,9 +51,9 @@ function Get-EnvValue([string]$file, [string]$name) {
     return $line.Substring($name.Length + 1).Trim()
 }
 
+# 환경변수는 루트 .env 한 파일이 단일 소스. 로컬은 SSH 터널(3307), 서버는 로컬 DB(3306).
 $rootEnv = Join-Path $root ".env"
-$apiEnv = Join-Path $root "apps\api\.env"
-$mysqlUrl = (Get-EnvValue $apiEnv "MYSQL_URL") -replace "127\.0\.0\.1:3307", "127.0.0.1:3306"
+$mysqlUrl = (Get-EnvValue $rootEnv "MYSQL_URL") -replace "127\.0\.0\.1:3307", "127.0.0.1:3306"
 
 $serverEnv = @(
     "NODE_ENV=production",

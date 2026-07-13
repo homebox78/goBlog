@@ -12,11 +12,15 @@ pnpm install
 cp .env.example .env   # 관리자 계정·암호화 키 채우기
 pnpm db:tunnel         # 별도 창: 운영 서버 MariaDB SSH 터널 (localhost:3307)
 pnpm db:push           # Prisma 스키마 반영 (최초 1회)
-pnpm dev               # api :8787 + web :5173
+pnpm dev               # api :8787 + web :5273
 ```
 
+환경변수는 **루트 `.env` 한 파일이 단일 소스**다. 앱별로 나눠 두지 않는다.
+- 서버용 `.env`는 `scripts/deploy.ps1`이 이 파일에서 만들어 올린다 (터널 포트 3307 → 서버 3306 자동 치환).
+- Prisma CLI는 모노레포 루트 `.env`를 스스로 읽지 못해서, `db:push`/`db:migrate`가 `dotenv -e ../../.env`로 주입한다.
+
 DB는 **운영 서버(hom2box.com)의 MariaDB `goBlog`**를 SSH 터널로 사용한다.
-- `.env`와 `apps/api/.env`의 `MYSQL_URL`은 `mysql://goblog:<비밀번호>@127.0.0.1:3307/goBlog`
+- `MYSQL_URL`은 `mysql://goblog:<비밀번호>@127.0.0.1:3307/goBlog`
 - 터널에는 `config/google_key.pem`이 필요하다 (git 제외 — PC 간 수동 복사)
 - 로컬 Docker(MySQL)를 쓰려면 `pnpm db:up` 후 `MYSQL_URL`을 `localhost:3306/publisher`로 변경
 

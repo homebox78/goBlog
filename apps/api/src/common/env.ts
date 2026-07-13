@@ -10,7 +10,8 @@ if (!globalThis.crypto) {
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-// 루트 .env 를 우선 사용하고, apps/api/.env 가 있으면 함께 로드한다.
+// 환경변수는 루트 .env 한 파일이 단일 소스다.
+// 운영 서버는 앱만 떼어 배포하므로(~/goblog-api) 앱 폴더의 .env 도 함께 본다 — deploy.ps1 이 루트 .env 에서 만들어 올린다.
 dotenv.config({ path: path.resolve(here, "../../../../.env") });
 dotenv.config({ path: path.resolve(here, "../../.env") });
 
