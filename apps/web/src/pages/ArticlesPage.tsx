@@ -199,7 +199,174 @@ export default function ArticlesPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <>
+        {/* 모바일: 표 대신 카드 목록 (가로 스크롤 없이 한 화면에서 읽고 조작한다) */}
+        <div className="space-y-3 md:hidden">
+          {filtered.map((article) => {
+            const status = STATUS_BADGE[article.status] ?? {
+              label: article.status,
+              variant: "secondary" as const,
+            };
+            const rowBusy = busy[article.id];
+            return (
+              <Card key={article.id}>
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex gap-3">
+                    <Link to={`/articles/${article.id}`} className="shrink-0">
+                      {article.thumbnailUrl ? (
+                        <img
+                          src={article.thumbnailUrl}
+                          alt=""
+                          className="h-14 w-20 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-20 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+                          이미지 없음
+                        </div>
+                      )}
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={`/articles/${article.id}`}
+                        className="line-clamp-2 text-sm font-medium break-keep hover:underline"
+                      >
+                        {article.title}
+                      </Link>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {article.keyword?.text ?? "키워드 없음"} ·{" "}
+                        {new Date(article.createdAt).toLocaleDateString("ko-KR")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {article.status === "PUBLISHED" ? (
+                      <Badge variant={status.variant}>{status.label}</Badge>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={approveMutation.isPending}
+                        onClick={() => approveMutation.mutate(article)}
+                      >
+                        <Badge
+                          variant={article.status === "APPROVED" ? "default" : "secondary"}
+                          className={
+                            article.status === "APPROVED"
+                              ? "cursor-pointer bg-emerald-600"
+                              : "cursor-pointer"
+                          }
+                        >
+                          {approveMutation.isPending && approveMutation.variables?.id === article.id ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : article.status === "APPROVED" ? (
+                            "✓ 승인됨"
+                          ) : (
+                            "검수 완료 →"
+                          )}
+                        </Badge>
+                      </button>
+                    )}
+                    <Badge variant="outline" className="font-mono">
+                      {article.qualityScore ?? "—"}점
+                    </Badge>
+                    {article.adProduct && (
+                      // Badge는 inline-flex라 truncate가 안 먹는다 — 안쪽 span에 걸고 배지는 폭만 제한한다
+                      <Badge variant="outline" className="max-w-full min-w-0">
+                        <span className="truncate">
+                          {article.adSource === "COUPANG" ? "쿠팡" : "네이버"} · {article.adProduct}
+                        </span>
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <PublishChip
+                        label="WP"
+                        state={article.wordpress}
+                        busy={publishing === `${article.id}:WORDPRESS`}
+                        onPublish={() => {
+                          setPublishing(`${article.id}:WORDPRESS`);
+                          publishMutation.mutate({ id: article.id, platform: "WORDPRESS" });
+                        }}
+                      />
+                      <PublishChip
+                        label="Blogger"
+                        state={article.blogger}
+                        busy={publishing === `${article.id}:BLOGGER`}
+                        onPublish={() => {
+                          setPublishing(`${article.id}:BLOGGER`);
+                          publishMutation.mutate({ id: article.id, platform: "BLOGGER" });
+                        }}
+                      />
+                      <ExtLinkChip label="네이버" state={article.naver} />
+                      <ExtLinkChip label="티스토리" state={article.tistory} />
+                    </div>
+
+                    <div className="flex items-center gap-0.5">
+                      {article.pendingImages > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`이미지 ${article.pendingImages}장 생성`}
+                          disabled={!!rowBusy}
+                          onClick={() => runRowAction(article.id, "images")}
+                        >
+                          {rowBusy === "images" ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <ImagePlus className="size-4 text-blue-600" />
+                          )}
+                        </Button>
+                      )}
+                      {article.qualityScore !== null && article.qualityScore < 85 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`품질 보정 (현재 ${article.qualityScore}점)`}
+                          disabled={!!rowBusy}
+                          onClick={() => runRowAction(article.id, "improve")}
+                        >
+                          {rowBusy === "improve" ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Wand2 className="size-4 text-amber-600" />
+                          )}
+                        </Button>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label="글 삭제">
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>글을 삭제할까요?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{article.title}" 글과 관련 이미지·발행 기록이 모두 삭제됩니다. 되돌릴 수 없습니다.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>취소</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(article.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              삭제
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <Card className="hidden md:block">
           <CardContent className="pt-4">
             <Table>
               <TableHeader>
@@ -409,6 +576,7 @@ export default function ArticlesPage() {
             </Table>
           </CardContent>
         </Card>
+        </>
       )}
     </div>
   );

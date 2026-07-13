@@ -265,14 +265,15 @@ export default function KeywordsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">키워드</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm break-keep text-muted-foreground">
             하루 4회(06·12·18·00시) 이슈·트렌드에서 수익 키워드를 자동 발굴합니다.
             {view === "today" && query.data?.date ? ` (${query.data.date})` : ""}
           </p>
-          <div className="mt-2 flex gap-1">
+          {/* 모바일에서 4개 버튼이 한 줄에 안 들어간다 — 가로로 밀지 말고 줄바꿈 */}
+          <div className="mt-2 flex flex-wrap gap-1">
             <Button
               variant={view === "today" ? "default" : "outline"}
               size="sm"
@@ -338,7 +339,91 @@ export default function KeywordsPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <>
+        {/* 모바일: 지표 12칸짜리 표는 가로 스크롤이 답이 아니다 — 핵심 지표만 담은 카드 목록으로 */}
+        <div className="space-y-3 md:hidden">
+          {sortedItems.map((item) => {
+            const type = TYPE_LABEL[item.type ?? ""] ?? null;
+            return (
+              <Card key={item.id} className={item.status === "EXCLUDED" ? "opacity-40" : ""}>
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 text-xs text-muted-foreground">{item.rank}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium break-keep">
+                        {item.keyword}
+                        {item.status === "SAVED" && (
+                          <Bookmark className="ml-1 inline size-3.5 fill-current text-amber-500" />
+                        )}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {item.reason ?? "추천 이유 없음"}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-lg font-bold">{item.scores.final ?? "—"}</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {view === "today" && <TrendBadge info={trendInfo.get(item.keyword)} rank={item.rank} />}
+                    {type && <Badge className={type.className}>{type.label}</Badge>}
+                    <Badge variant="outline" className="font-mono">
+                      검색 {numberFormat(item.metrics.naverMonthlySearches)}
+                    </Badge>
+                    <Badge variant="outline" className="font-mono">
+                      경쟁문서 {numberFormat(item.totalDocs)}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1 border-t pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setGenerateTarget({
+                          id: item.id,
+                          keyword: item.keyword,
+                          articleType: suggestArticleType(item),
+                        })
+                      }
+                    >
+                      <PenLine className="size-4" /> 글 생성
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="저장"
+                      onClick={() =>
+                        statusMutation.mutate({
+                          id: item.id,
+                          status: item.status === "SAVED" ? "RECOMMENDED" : "SAVED",
+                        })
+                      }
+                    >
+                      <Bookmark
+                        className={`size-4 ${item.status === "SAVED" ? "fill-current text-amber-500" : ""}`}
+                      />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="제외 (다시 추천 안 함)"
+                      onClick={() =>
+                        statusMutation.mutate({
+                          id: item.id,
+                          status: item.status === "EXCLUDED" ? "RECOMMENDED" : "EXCLUDED",
+                        })
+                      }
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <Card className="hidden md:block">
           <CardContent className="overflow-x-auto pt-4">
             <Table>
               <TableHeader>
@@ -493,6 +578,7 @@ export default function KeywordsPage() {
             </p>
           </CardContent>
         </Card>
+        </>
       )}
 
       <GenerateDialog

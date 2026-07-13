@@ -269,7 +269,9 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="claude">
-        <TabsList>
+        {/* 탭이 8개라 모바일 한 줄에 안 들어간다 — 가로로 밀지 말고 줄바꿈으로 접는다.
+            (기본 TabsList는 h-9 고정이라 !h-auto 로 풀어야 두 줄이 된다) */}
+        <TabsList className="!h-auto w-full flex-wrap justify-start">
           {GROUPS.map((group) => (
             <TabsTrigger key={group.id} value={group.id}>
               {group.label}
