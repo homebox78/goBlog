@@ -326,13 +326,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const results = await chrome.scripting.executeScript({
         target: { tabId: message.tabId, allFrames: true },
         world: "MAIN",
-        func: async () => {
+        func: async (category) => {
           const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
           const fire = (el) => {
             for (const t of ["pointerdown", "mousedown", "mouseup", "click"]) {
               el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }));
             }
           };
+          const norm = (s) => String(s || "").replace(/\s|·|\.|\//g, "").toLowerCase();
+
           // 1차 발행 버튼(발행 레이어 열기) — 이 프레임에 없으면 발행 UI 프레임이 아님
           const openBtn = document.querySelector('[data-click-area="tpb.publish"]');
           if (!openBtn) return null;
@@ -342,12 +344,90 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           while (!document.querySelector('[data-testid="seOnePublishBtn"]') && tries++ < 50) await sleep(150);
           const finalBtn = document.querySelector('[data-testid="seOnePublishBtn"]');
           if (!finalBtn) return ["발행 레이어를 열지 못했습니다"];
-          await sleep(500); // 레이어 애니메이션·기본값 로드 대기
+          await sleep(600); // 레이어 애니메이션·카테고리 목록 로드 대기
+
+          const done = [];
+
+          // ── 카테고리 선택 ─────────────────────────────────────────────────
+          // 이 단계가 없어서 **모든 글이 네이버 기본 카테고리(첫 항목)로 발행**되고 있었다.
+          // SE ONE 발행 레이어의 카테고리 UI는 셀렉터가 자주 바뀌므로, 특정 셀렉터에 의존하지 않고
+          // "레이어 안에서 원하는 카테고리 '글자'를 가진 클릭 가능한 요소"를 찾아 누른다.
+          if (category) {
+            const want = norm(category);
+            const layer =
+              document.querySelector('[class*="publish"], [class*="Publish"]') || document.body;
+
+            const clickableWithText = (text) =>
+              [...layer.querySelectorAll('button, a, li, [role="option"], [role="button"], label, span, div')].filter(
+                (el) => {
+                  if (el.offsetParent === null) return false; // 화면에 없는 요소 제외
+                  // 자식이 많은 컨테이너 말고 '잎' 요소만 (텍스트가 그 요소 자체의 것)
+                  const own = [...el.childNodes]
+                    .filter((n) => n.nodeType === 3)
+                    .map((n) => n.textContent)
+                    .join("");
+                  return norm(own) === text;
+                },
+              );
+
+            // 이미 원하는 카테고리가 선택돼 있는지 먼저 확인 (선택된 항목은 보통 aria-selected/checked)
+            let picked = false;
+            const direct = clickableWithText(want);
+            if (direct.length > 0) {
+              fire(direct[direct.length - 1]); // 목록이 열려 있으면 바로 선택
+              await sleep(400);
+              picked = true;
+            } else {
+              // 목록이 접혀 있다 → 카테고리 드롭다운을 연다.
+              // 현재 선택된 카테고리 이름(= 우리 8개 중 하나)을 가진 버튼이 곧 드롭다운 트리거다.
+              const CATS = ["IT·디지털", "재테크·금융", "건강·헬스", "생활·살림", "쇼핑·리뷰", "여행·맛집", "뷰티·패션", "트렌드·이슈"];
+              let opener = null;
+              for (const c of CATS) {
+                const hits = clickableWithText(norm(c));
+                if (hits.length > 0) {
+                  opener = hits[0];
+                  break;
+                }
+              }
+              // 이름으로 못 찾으면 '카테고리' 라벨 옆 버튼을 시도
+              if (!opener) {
+                opener = layer.querySelector('[class*="category"] button, button[class*="category"], #category-btn');
+              }
+              if (opener) {
+                fire(opener);
+                await sleep(500);
+                const after = clickableWithText(want);
+                if (after.length > 0) {
+                  fire(after[after.length - 1]);
+                  await sleep(400);
+                  picked = true;
+                }
+              }
+            }
+
+            if (!picked) {
+              // ⚠️ 잘못된 카테고리로 발행하느니 멈춘다. 사용자가 직접 고르고 '발행'을 누르면 된다.
+              return ["카테고리선택실패", category];
+            }
+            done.push(`카테고리(${category})`);
+          }
+
           fire(finalBtn);
-          return ["발행"];
+          done.push("발행");
+          return done;
         },
+        args: [message.category ?? ""],
       });
       const done = results.map((r) => r && r.result).find((x) => x);
+      if (done && done[0] === "카테고리선택실패") {
+        sendResponse({
+          ok: false,
+          done,
+          needsManualCategory: true,
+          error: `'${done[1]}' 카테고리를 자동 선택하지 못했습니다. 발행 레이어에서 카테고리를 직접 고르고 '발행'을 눌러주세요. (잘못된 카테고리로 발행되지 않도록 자동 발행을 멈췄습니다)`,
+        });
+        return;
+      }
       sendResponse({ ok: !!(done && done.includes("발행")), done: done || [], error: done ? null : "발행 버튼을 찾지 못했습니다" });
     } catch (error) {
       sendResponse({ ok: false, error: String(error?.message ?? error) });

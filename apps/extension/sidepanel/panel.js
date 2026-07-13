@@ -374,12 +374,25 @@ async function applyToForm() {
 
       // 발행 → 발행 레이어 → 최종 발행 (완전 자동). 카테고리는 블로그 기본값 사용.
       await sleep(500); // 에디터 반영 대기
-      const pub = await chrome.runtime.sendMessage({ type: "NAVER_PUBLISH", tabId: tab.id });
+      // ⚠️ 카테고리를 넘기지 않아 모든 글이 네이버 기본 카테고리(IT·디지털)로 발행되던 버그가 있었다.
+      const pub = await chrome.runtime.sendMessage({
+        type: "NAVER_PUBLISH",
+        tabId: tab.id,
+        category: currentArticle.category || "",
+      });
       if (pub?.ok) {
-        showNotes(["✅ 네이버 발행 완료! ⏳ 발행완료 기록 중..."]);
+        const cat = pub.done?.find((d) => d.startsWith("카테고리"));
+        showNotes([`✅ 네이버 발행 완료!${cat ? ` ${cat}` : ""} ⏳ 발행완료 기록 중...`]);
         const url = await recordPublished(tab.id, currentArticle.id, "NAVER_BLOG", title);
         showNotes([url ? "✅ 네이버 발행 완료 (목록에 링크 기록됨)" : "✅ 네이버 발행 완료 (URL 미확인 — 기록만)"]);
         loadArticles();
+      } else if (pub?.needsManualCategory) {
+        // 잘못된 카테고리로 발행되는 것을 막으려고 자동 발행을 멈춘 상태 — 사용자가 마무리한다.
+        showNotes([
+          "✅ 제목·본문 자동 입력 완료!",
+          `⚠ ${pub.error}`,
+          `📁 이 글의 카테고리: ${currentArticle.category || "(미지정)"}`,
+        ]);
       } else {
         showNotes([
           "✅ 제목·본문 자동 입력 완료!",
