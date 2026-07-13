@@ -127,6 +127,13 @@ fi
 date +%Y%m%d%H%M%S > ~/goblog-api/.deploy-stamp
 
 # 고아 프로세스가 8788을 잡고 있으면 restart가 헛돌아 옛 코드가 계속 서빙된다 → 포트 기준으로 확실히 정리
+
+# 진행 중인 요청(글 생성은 3~4분)을 마칠 시간을 준다. 기본 90초면 SIGKILL로 잘려 생성이 통째로 날아간다.
+# 유닛 파일 자체는 손대지 않는다(ExecStart의 node 경로가 손으로 바뀌어 있음) - drop-in으로 덧붙인다.
+sudo mkdir -p /etc/systemd/system/goblog-api.service.d
+printf '[Service]\nTimeoutStopSec=300\nKillSignal=SIGTERM\n' | sudo tee /etc/systemd/system/goblog-api.service.d/graceful.conf > /dev/null
+sudo systemctl daemon-reload
+
 sudo systemctl stop goblog-api
 sudo fuser -k 8788/tcp 2>/dev/null || true
 sleep 1

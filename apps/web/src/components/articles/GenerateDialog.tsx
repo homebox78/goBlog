@@ -116,7 +116,15 @@ export function GenerateDialog({
       navigate(`/articles/${result.articleId}`);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "글 생성에 실패했습니다.");
+      const message = error instanceof Error ? error.message : "글 생성에 실패했습니다.";
+      // 연결이 끊긴 경우(서버 재시작·네트워크) 서버에선 생성이 계속 진행 중일 수 있다.
+      // 그냥 "실패"라고만 하면 사용자가 다시 눌러 같은 글을 두 번 만든다.
+      const disconnected = /fetch|network|failed to fetch|502|503|504/i.test(message);
+      toast.error(
+        disconnected
+          ? "응답을 받지 못했습니다. 서버에서 계속 생성 중일 수 있으니, 다시 누르기 전에 잠시 후 글 관리 목록을 확인하세요."
+          : message,
+      );
     },
   });
 
