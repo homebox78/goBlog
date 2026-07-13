@@ -31,6 +31,12 @@ export async function renderContentHtml(markdown: string): Promise<string> {
     )
     .replace(/<th>/g, '<th style="border:1px solid #dde1e8;padding:11px 12px;background:#f4f5f7;font-weight:700;text-align:left;">')
     .replace(/<td>/g, '<td style="border:1px solid #dde1e8;padding:11px 12px;">')
+    // 본문 링크(공식 사이트 안내 등) — 항상 새 창으로 연다. 독자가 글을 떠나지 않게.
+    // marked가 뽑는 순수 <a href="..."> 만 대상으로 한다 — 상품 배너 <a>는 이미 target·rel을 갖고 있어 걸리지 않는다.
+    .replace(
+      /<a href="([^"]+)">/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#1a56db;text-decoration:underline;font-weight:600;">',
+    )
     // 대가성 고지 문구 등 인용구 — 본문보다 25% 작게 (식별은 가능하되 눈에 덜 띄게)
     .replace(
       /<blockquote>/g,
