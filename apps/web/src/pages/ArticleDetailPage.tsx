@@ -549,7 +549,8 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      {/* 모바일: 제목 아래로 액션을 내려 접는다 (한 줄에 밀어 넣으면 제목이 '주...'로 뭉개진다) */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <Link
             to="/articles"
@@ -557,12 +558,12 @@ export default function ArticleDetailPage() {
           >
             <ArrowLeft className="size-3" /> 글 목록
           </Link>
-          <h1 className="truncate text-xl font-bold">{article.title}</h1>
+          <h1 className="line-clamp-2 text-xl font-bold break-keep sm:truncate">{article.title}</h1>
           <p className="text-sm text-muted-foreground">
             키워드: {article.keyword?.text ?? "—"} · {article.language} · {article.articleType}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 flex-wrap items-center gap-3">
           <div className="text-right">
             <p className="text-2xl font-bold">
               {article.qualityScore ?? "—"}
@@ -614,8 +615,10 @@ export default function ArticleDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      {/* grid-cols-1(=minmax(0,1fr))이 없으면 모바일에서 트랙이 auto(내용 최대폭)로 잡혀
+          칼럼이 화면 밖으로 부풀고, 자식의 min-w-0 만으로는 막지 못한다. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="min-w-0 space-y-4 lg:col-span-2">
           <Card>
             <CardContent className="space-y-4 pt-6">
               <div className="space-y-1.5">
@@ -667,7 +670,7 @@ export default function ArticleDetailPage() {
                   <Textarea
                     ref={contentRef}
                     rows={24}
-                    className="field-sizing-fixed h-[70vh] resize-y overflow-y-auto font-mono text-sm"
+                    className="field-sizing-fixed h-[55dvh] resize-y overflow-y-auto font-mono text-sm md:h-[70vh]"
                     value={form.contentMarkdown}
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, contentMarkdown: event.target.value }))

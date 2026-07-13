@@ -1,4 +1,5 @@
-import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
@@ -8,6 +9,8 @@ import {
   Settings,
   LogOut,
   Loader2,
+  Menu,
+  X,
   ShoppingBag,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
@@ -30,6 +33,12 @@ const NAV_ITEMS = [
 export default function AppLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  // 모바일 서랍 메뉴 — 데스크톱(md+)에서는 사이드바가 항상 보이므로 이 상태를 쓰지 않는다.
+  const [navOpen, setNavOpen] = useState(false);
+
+  // 메뉴를 눌러 화면이 바뀌면 서랍은 닫는다 (열린 채로 남으면 본문을 가린다).
+  useEffect(() => setNavOpen(false), [location.pathname]);
 
   const meQuery = useQuery({
     queryKey: ["me"],
@@ -70,7 +79,30 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen bg-background">
-      <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar">
+      {/* 모바일 서랍이 열렸을 때 본문을 덮는 반투명 막 — 탭하면 닫힌다 */}
+      {navOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setNavOpen(false)}
+          aria-hidden
+        />
+      )}
+
+      <aside
+        className={cn(
+          // 모바일: 화면 밖에 대기하다 열리면 슬라이드인 / 데스크톱(md+): 항상 보이는 고정 사이드바
+          "fixed inset-y-0 left-0 z-50 flex w-60 shrink-0 flex-col border-r bg-sidebar transition-transform md:static md:translate-x-0",
+          navOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <button
+          type="button"
+          className="absolute top-4 right-3 rounded-md p-1.5 text-muted-foreground hover:bg-accent md:hidden"
+          onClick={() => setNavOpen(false)}
+          aria-label="메뉴 닫기"
+        >
+          <X className="size-4" />
+        </button>
         <div className="flex items-center gap-2 px-5 py-5">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
             P
@@ -117,8 +149,21 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="px-8 py-8">
+      {/* min-w-0 이 없으면 넓은 표·코드블록이 있는 페이지에서 본문이 화면 밖으로 밀려 가로 스크롤이 생긴다 */}
+      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur md:hidden">
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
+            onClick={() => setNavOpen(true)}
+            aria-label="메뉴 열기"
+          >
+            <Menu className="size-5" />
+          </button>
+          <span className="text-sm font-semibold">AI Publisher</span>
+        </header>
+
+        <div className="px-4 py-5 md:px-8 md:py-8">
           <Outlet />
         </div>
       </main>
