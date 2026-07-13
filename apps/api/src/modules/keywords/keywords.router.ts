@@ -231,7 +231,12 @@ keywordsRouter.post(
 keywordsRouter.get(
   "/citations/insights",
   asyncHandler(async (_req, res) => {
-    const rows = await prisma.citationInsight.findMany({ orderBy: { updatedAt: "desc" }, take: 60 });
+    // __STYLE__ 은 키워드가 아니라 전역 문체 프로파일 행이므로 목록에서 뺀다.
+    const rows = await prisma.citationInsight.findMany({
+      where: { keywordText: { not: "__STYLE__" } },
+      orderBy: { updatedAt: "desc" },
+      take: 60,
+    });
     res.json({
       items: rows.map((row) => ({
         keyword: row.keywordText,
@@ -240,6 +245,26 @@ keywordsRouter.get(
         ...(row.data as object),
       })),
     });
+  }),
+);
+
+/** 말투 프로파일 — 인용 상위 블로거들의 문체를 실측한 결과 (모든 글 생성에 적용됨) */
+keywordsRouter.get(
+  "/citations/style",
+  asyncHandler(async (_req, res) => {
+    const { getStyleForPrompt } = await import("./citation-study.js");
+    res.json({ style: await getStyleForPrompt() });
+  }),
+);
+
+/** 말투 학습 — 인용 상위 블로거 글들을 읽고 문체를 실측해 규칙화 (1~2분 소요) */
+keywordsRouter.post(
+  "/citations/study-style",
+  asyncHandler(async (_req, res) => {
+    const { studyStyle } = await import("./citation-study.js");
+    const style = await studyStyle();
+    if (!style) throw new HttpError(404, "학습할 인용 글이 부족합니다. 먼저 '지금 수집'을 눌러주세요.");
+    res.json({ style });
   }),
 );
 

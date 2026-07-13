@@ -229,8 +229,10 @@ export async function generateArticle(
 
   // 인용 학습 — 이 키워드에서 AI 브리핑에 실제로 인용된 글들을 읽고 뽑아낸 인사이트.
   // 말투·구조·정보 담는 방식과 "이미 다뤄진 각도 / 빈 각도"를 프롬프트에 넣어, 인용될 만한 글을 쓴다.
-  const { getInsightForPrompt } = await import("../keywords/citation-study.js");
+  const { getInsightForPrompt, getStyleForPrompt } = await import("../keywords/citation-study.js");
   const insight = keyword ? await getInsightForPrompt(keyword.text).catch(() => null) : null;
+  // 말투 프로파일 — 인용 상위 블로거들의 문체를 **실측**한 결과. 전 키워드 공통.
+  const style = await getStyleForPrompt().catch(() => null);
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
   const tone = options.tone;
   const language = LANGUAGE_NAME[options.language] ? options.language : "ko";
@@ -289,6 +291,18 @@ export async function generateArticle(
       "- metaDescription은 150자 내외로, 핵심 키워드를 앞부분에 넣고 클릭을 부르는 요약으로 쓴다.",
       "- 본문은 목표 분량 이상으로 충분히 채워 정보량·체류시간을 확보한다(얇은 콘텐츠는 색인·순위에 불리).",
       "",
+      style
+        ? [
+            "",
+            "[🗣️ 말투 — 인용되는 글들의 문체를 실측한 결과. 반드시 따른다]",
+            `- 측정 표본: 인용 상위 블로거 ${style.metrics.posts}명의 글.`,
+            `- **문장 어미**: 하십시오체(~습니다/~입니다) ${style.metrics.formalRatio}% · 해요체(~이에요/~해요) ${style.metrics.politeCasualRatio}% · 신문체(~이다/~한다) ${style.metrics.plainRatio}%.`,
+            `- **평균 문장 길이 ${style.metrics.avgSentenceChars}자** — 짧고 단정적으로 쓴다. 한 문장에 한 가지만 말한다.`,
+            `- **수치 밀도**: 본문 1,000자당 수치 표현 ${style.metrics.numbersPer1000Chars}개. AI 는 수치를 근거로 인용하므로 이 밀도 이상으로 구체적 숫자(금액·%·연도·기간·개수)를 넣는다.`,
+            `- **1인칭**: 글 1편당 ${style.metrics.firstPersonPerPost}회 — 자기 얘기보다 사실과 근거로 쓴다(없는 경험은 지어내지 않는다).`,
+            ...style.rules.map((r) => `- ${r}`),
+          ].join("\n")
+        : "",
       insight
         ? [
             "",
@@ -313,7 +327,13 @@ export async function generateArticle(
       "- 각 소제목·문단을 똑같은 틀(정의→예시→정리)로 찍어내지 말고 흐름을 자연스럽게 변주한다.",
       "- 실제 사람이 조언하듯 구체적이고 솔직하게 쓴다 (단, 없는 개인 경험·후기는 지어내지 않는다).",
       "- 불필요한 요약 반복, 뻔한 마무리 인사('오늘은 ~에 대해 알아봤습니다')를 피한다.",
-      "- 문단 끝이나 소제목 옆에 어울리는 이모지(😊 🥲 😋 😙 👍 ✨ 💡 ☺️ 등)를 자연스럽게 군데군데 넣어 블로그처럼 친근하고 생기 있게 만든다. 단 과하지 않게 — 한 문단에 1개 정도, 딱딱한 정보·수치 문장에는 넣지 않는다.",
+      // 이모지 규칙은 **측정값을 따른다**. 인용되는 글들이 이모지를 거의 안 쓰는데 우리만 넣으면
+      // 그만큼 인용에서 멀어진다. 문체 학습 전이면 기존(친근) 규칙을 유지한다.
+      style
+        ? style.metrics.emojiPerPost < 3
+          ? `- 이모지는 쓰지 않거나 글 전체에 1~2개만 쓴다. (AI 브리핑에 인용되는 상위 글들은 글 1편당 이모지가 평균 ${style.metrics.emojiPerPost}개로, 사실상 쓰지 않는다.)`
+          : `- 이모지는 글 전체에 ${Math.round(style.metrics.emojiPerPost)}개 안팎으로만 쓴다(인용 상위 글 실측 평균). 수치·정보 문장에는 넣지 않는다.`
+        : "- 문단 끝이나 소제목 옆에 어울리는 이모지(😊 💡 ✨ 등)를 자연스럽게 군데군데 넣는다. 단 과하지 않게 — 한 문단에 1개 정도, 딱딱한 정보·수치 문장에는 넣지 않는다.",
       "",
       "[독자를 사로잡는 글쓰기]",
       "- 첫 2~3문장에서 독자의 고민·상황에 공감하며 후킹하고, 이 글을 끝까지 읽으면 무엇을 얻는지 자연스럽게 제시한다.",
@@ -381,6 +401,7 @@ export async function generateArticle(
             rocketDelivery: product.isRocket,
           }
         : null,
+      styleProfile: style ? { measured: style.metrics, rules: style.rules, sampleSentences: style.samples } : null,
       // 이 키워드에서 AI 브리핑에 인용되는 글들을 실제로 읽고 뽑은 패턴.
       // coveredAngles 는 반복 금지, gaps 는 우리가 파고들 틈이다.
       citationInsight: insight

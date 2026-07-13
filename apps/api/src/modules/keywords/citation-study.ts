@@ -88,6 +88,184 @@ export async function fetchPostBody(url: string): Promise<PostBody | null> {
   };
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * 말투 학습 (StyleProfile)
+ *
+ * ⚠️ Claude 에게 "말투를 요약해줘"라고 물으면 인상평을 지어낸다. 실제로 첫 분석에서
+ * "존댓말 기반 친근한 반말체(~이에요/~해요)"라고 했지만, 인용 상위 10개 글을 실측하니
+ * **'~습니다/~입니다'가 압도적이고 '해요체'는 거의 없었다.** 이모지도 8/10 글이 0개인데,
+ * 우리 생성 프롬프트는 "문단마다 이모지를 넣어라"고 지시하고 있었다(정반대).
+ *
+ * 그래서 말투는 **결정적으로 측정**한 뒤, 그 수치를 Claude 에게 주고 규칙만 뽑게 한다.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+const ENDINGS = ["습니다", "합니다", "입니다", "이에요", "예요", "해요", "죠", "네요", "거든요", "이다", "한다"];
+
+export interface StyleMetrics {
+  posts: number;
+  avgSentenceChars: number;
+  /** 어미 사용 비율 (%) — 하십시오체(습니다/입니다) vs 해요체(이에요/해요) vs 평서체(이다/한다) */
+  endingRatio: Record<string, number>;
+  formalRatio: number; // 습니다·입니다·합니다 비율
+  politeCasualRatio: number; // 이에요·예요·해요·죠·네요 비율
+  plainRatio: number; // 이다·한다 (신문체)
+  emojiPerPost: number;
+  questionsPerPost: number;
+  firstPersonPerPost: number;
+  /** 1,000자당 수치 표현(퍼센트·원·년·배 등) 개수 — AI 인용의 핵심 신호 */
+  numbersPer1000Chars: number;
+  avgChars: number;
+}
+
+/** 인용된 글들의 문체를 결정적으로 측정한다 (LLM 인상평 금지). */
+export function measureStyle(bodies: PostBody[]): StyleMetrics {
+  let sentTotal = 0;
+  let sentChars = 0;
+  const endCount: Record<string, number> = {};
+  let endTotal = 0;
+  let emoji = 0;
+  let questions = 0;
+  let firstPerson = 0;
+  let numbers = 0;
+  let chars = 0;
+
+  for (const b of bodies) {
+    chars += b.charCount;
+    const sentences = b.text
+      .split(/(?<=[.!?])\s+|\n/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 3);
+    sentTotal += sentences.length;
+    sentChars += sentences.reduce((sum, s) => sum + s.length, 0);
+
+    for (const s of sentences) {
+      const stripped = s.replace(/[.!?…\s]+$/, "");
+      for (const e of ENDINGS) {
+        if (stripped.endsWith(e)) {
+          endCount[e] = (endCount[e] ?? 0) + 1;
+          endTotal += 1;
+          break;
+        }
+      }
+      if (s.includes("?")) questions += 1;
+    }
+    emoji += (b.text.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) ?? []).length;
+    firstPerson += (b.text.match(/저는|제가|저도|필자|직접 (?:써|해|가)/g) ?? []).length;
+    numbers += (b.text.match(/\d[\d,.]*\s*(?:%|원|만|억|년|배|개|위|월|일)/g) ?? []).length;
+  }
+
+  const n = Math.max(bodies.length, 1);
+  const pct = (keys: string[]) =>
+    endTotal === 0 ? 0 : Math.round((keys.reduce((sum, k) => sum + (endCount[k] ?? 0), 0) / endTotal) * 100);
+
+  const endingRatio: Record<string, number> = {};
+  for (const [k, v] of Object.entries(endCount)) {
+    endingRatio[k] = Math.round((v / Math.max(endTotal, 1)) * 100);
+  }
+
+  return {
+    posts: bodies.length,
+    avgSentenceChars: sentTotal ? Math.round(sentChars / sentTotal) : 0,
+    endingRatio,
+    formalRatio: pct(["습니다", "합니다", "입니다"]),
+    politeCasualRatio: pct(["이에요", "예요", "해요", "죠", "네요", "거든요"]),
+    plainRatio: pct(["이다", "한다"]),
+    emojiPerPost: Math.round((emoji / n) * 10) / 10,
+    questionsPerPost: Math.round((questions / n) * 10) / 10,
+    firstPersonPerPost: Math.round((firstPerson / n) * 10) / 10,
+    numbersPer1000Chars: chars ? Math.round((numbers / chars) * 1000 * 10) / 10 : 0,
+    avgChars: Math.round(chars / n),
+  };
+}
+
+export interface StyleProfile {
+  metrics: StyleMetrics;
+  /** 측정값을 근거로 뽑은, 글 생성에 바로 넣을 문체 규칙 */
+  rules: string[];
+  /** 관찰된 말투 요약 (측정값에 근거) */
+  summary: string;
+  /** 인용 상위 블로거들이 실제로 쓴 문장 예시 */
+  samples: string[];
+}
+
+const STYLE_KEY = "__STYLE__"; // CitationInsight 를 전역 문체 저장에 재사용 (키워드와 충돌하지 않는 예약어)
+
+/**
+ * 인용 상위 글들을 읽어 **전 키워드 공통 말투 프로파일**을 학습한다.
+ * 측정값(결정적)을 먼저 뽑고, 그 수치를 Claude 에게 근거로 줘서 규칙만 쓰게 한다.
+ */
+export async function studyStyle(maxPosts = 12): Promise<StyleProfile | null> {
+  const citations = await prisma.blogCitation.findMany({
+    orderBy: { citedCount: "desc" },
+    take: maxPosts * 2,
+    distinct: ["blogId"], // 같은 블로거 글이 여러 개면 한 번만 — 특정 블로거에 치우치지 않게
+  });
+
+  const bodies: PostBody[] = [];
+  for (const citation of citations) {
+    if (bodies.length >= maxPosts) break;
+    const body = await fetchPostBody(citation.url);
+    if (body && body.charCount > 500) bodies.push(body);
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  if (bodies.length < 3) return null; // 표본이 너무 적으면 학습하지 않는다
+
+  const metrics = measureStyle(bodies);
+
+  // 문장 표본 — Claude 가 실제 문장을 보고 규칙을 쓰게 한다
+  const samples = bodies
+    .flatMap((b) => b.text.split(/\n/).filter((s) => s.length > 25 && s.length < 120))
+    .slice(0, 40);
+
+  const result = await callClaudeJson<{ rules: string[]; summary: string }>({
+    operation: "style-study",
+    maxTokens: 4000,
+    system: [
+      "당신은 한국어 문체 분석가다. 네이버 AI 브리핑에 인용된 상위 블로그 글들의 말투를 분석한다.",
+      "⚠️ 인상으로 짐작하지 마라. 반드시 주어진 **측정값(metrics)** 에 근거해서만 판단한다.",
+      "측정값과 어긋나는 서술을 하면 안 된다 (예: 이모지가 0개인데 '이모지를 활발히 쓴다'고 쓰면 틀린 것).",
+      "결과는 글 생성 프롬프트에 그대로 넣을 수 있는 구체적 규칙이어야 한다. '자연스럽게 쓰세요' 같은 일반론 금지.",
+      "반드시 JSON만 출력한다.",
+    ].join(" "),
+    user: JSON.stringify({
+      task: "AI 브리핑에 인용되는 글들의 말투를 규칙으로 정리하라.",
+      metrics,
+      metricsGuide: {
+        formalRatio: "문장 어미 중 '~습니다/~입니다/~합니다'(하십시오체) 비율 %",
+        politeCasualRatio: "'~이에요/~해요/~죠/~네요'(해요체) 비율 %",
+        plainRatio: "'~이다/~한다'(신문체) 비율 %",
+        emojiPerPost: "글 1편당 이모지 개수",
+        firstPersonPerPost: "글 1편당 1인칭 표현('저는','제가') 개수",
+        numbersPer1000Chars: "본문 1,000자당 수치 표현 개수 (AI가 인용할 팩트 밀도)",
+        avgSentenceChars: "평균 문장 길이(자)",
+      },
+      sentenceSamples: samples,
+      outputFormat: {
+        summary: "측정값에 근거한 말투 요약 2~3문장 (어미·문장길이·이모지·수치밀도를 수치와 함께 언급)",
+        rules: [
+          "글 생성 프롬프트에 넣을 문체 규칙 6~10개. 각각 측정값에 근거한 명령형 한 문장.",
+          "예: '문장 어미는 ~습니다/~입니다로 통일한다(인용 상위 글의 XX%가 하십시오체).'",
+        ],
+      },
+    }),
+  });
+
+  const profile: StyleProfile = { metrics, rules: result.rules, summary: result.summary, samples: samples.slice(0, 8) };
+
+  await prisma.citationInsight.upsert({
+    where: { keywordText: STYLE_KEY },
+    update: { data: profile as unknown as object, postsStudied: bodies.length, updatedAt: new Date() },
+    create: { keywordText: STYLE_KEY, data: profile as unknown as object, postsStudied: bodies.length },
+  });
+  return profile;
+}
+
+/** 글 생성 시 프롬프트에 넣을 말투 프로파일 (없으면 null) */
+export async function getStyleForPrompt(): Promise<StyleProfile | null> {
+  const row = await prisma.citationInsight.findUnique({ where: { keywordText: STYLE_KEY } });
+  return (row?.data as StyleProfile | undefined) ?? null;
+}
+
 export interface CitationInsightData {
   /** 왜 이 글들이 AI 브리핑에 인용되는가 — 관찰된 공통점 */
   whyCited: string[];
@@ -188,6 +366,7 @@ export async function studyPendingKeywords(limit = 5): Promise<{ studied: number
   });
   const done = await prisma.citationInsight.findMany({ select: { keywordText: true } });
   const doneSet = new Set(done.map((d) => d.keywordText));
+  doneSet.add(STYLE_KEY); // 전역 문체 행은 키워드가 아니다
 
   let studied = 0;
   for (const group of groups) {

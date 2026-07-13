@@ -247,9 +247,12 @@ export async function scheduleFromSettings(): Promise<void> {
           const result = await collectBlogCitations();
           console.log(`[scheduler] 인용 수집: 키워드 ${result.keywords}개 → 게시물 ${result.posts}건`);
           // 수집한 인용 글을 실제로 읽고 학습 — 말투·구조·빈 각도를 뽑아 글 생성에 쓴다 (Claude 비용이라 5개씩)
-          const { studyPendingKeywords } = await import("../keywords/citation-study.js");
+          const { studyPendingKeywords, studyStyle } = await import("../keywords/citation-study.js");
           const study = await studyPendingKeywords(5);
           console.log(`[scheduler] 인용 학습: 키워드 ${study.studied}개 분석 완료`);
+          // 말투 프로파일 — 인용 상위 블로거들의 문체를 실측해 전 글 생성에 적용한다 (하루 1회 갱신)
+          const style = await studyStyle();
+          if (style) console.log(`[scheduler] 말투 학습: ${style.metrics.posts}명 실측 (하십시오체 ${style.metrics.formalRatio}%)`);
         } catch (error) {
           console.error("[scheduler] 인용 수집 실패:", (error as Error).message);
         }
