@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ImagePlus, Loader2, Trash2, Wand2 } from "lucide-react";
+import { ImagePlus, Loader2, Search, Trash2, Wand2, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -84,12 +85,111 @@ const STATUS_BADGE: Record<string, { label: string; variant: "default" | "second
   FAILED: { label: "실패", variant: "destructive" },
 };
 
+/** 제목·키워드·광고상품을 한 번에 검색한다 (공백으로 나눈 모든 낱말이 다 들어 있어야 매칭 — AND). */
+function matchSearch(article: ArticleListItem, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [article.title, article.keyword?.text, article.adProduct, String(article.id)]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return q.split(/\s+/).every((word) => haystack.includes(word));
+}
+
+type SortKey = "title" | "keyword" | "ad" | "language" | "status" | "publish" | "quality" | "date";
+
+// 상태는 사전순이 아니라 작업 흐름 순으로 정렬해야 쓸모가 있다 (초안 → … → 발행 완료).
+const STATUS_ORDER: Record<string, number> = {
+  DRAFT: 0,
+  REVIEW: 1,
+  APPROVED: 2,
+  SCHEDULED: 3,
+  PUBLISHED: 4,
+  FAILED: 5,
+};
+
+/** 발행처 개수 — 어디에도 안 올라간 글을 위로 올리거나 다 올린 글을 모아 보려고 쓴다. */
+function publishCount(a: ArticleListItem): number {
+  return [a.wordpress, a.blogger, a.naver, a.tistory].filter((p) => p?.status === "SUCCEEDED").length;
+}
+
+function sortValue(a: ArticleListItem, key: SortKey): string | number {
+  switch (key) {
+    case "title":
+      return a.title;
+    case "keyword":
+      return a.keyword?.text ?? "";
+    case "ad":
+      return a.adProduct ?? "";
+    case "language":
+      return a.language;
+    case "status":
+      return STATUS_ORDER[a.status] ?? 99;
+    case "publish":
+      return publishCount(a);
+    case "quality":
+      return a.qualityScore ?? -1; // 미채점은 맨 아래
+    case "date":
+      return new Date(a.createdAt).getTime();
+  }
+}
+
+function SortHead({
+  k,
+  sort,
+  onSort,
+  className,
+  children,
+}: {
+  k: SortKey;
+  sort: { key: SortKey; dir: "asc" | "desc" };
+  onSort: (k: SortKey) => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const active = sort.key === k;
+  return (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-0.5 hover:text-foreground ${
+          active ? "font-bold text-foreground" : "text-muted-foreground"
+        }`}
+      >
+        {children}
+        <span className="text-[10px]">{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </TableHead>
+  );
+}
+
 export default function ArticlesPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = (searchParams.get("filter") as ListFilter) || "all";
+  const search = searchParams.get("q") ?? "";
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
   // 행별 진행 중 작업 (이미지 생성/보정은 수십 초 걸림)
   const [busy, setBusy] = useState<Record<number, "images" | "improve">>({});
+
+  // 필터·검색어를 한 곳에서 갱신한다 — 따로 setSearchParams를 부르면 서로를 지운다.
+  const updateParams = (patch: { filter?: ListFilter; q?: string }) => {
+    const next: Record<string, string> = {};
+    const nextFilter = patch.filter ?? filter;
+    const nextQ = patch.q ?? search;
+    if (nextFilter !== "all") next.filter = nextFilter;
+    if (nextQ.trim()) next.q = nextQ;
+    setSearchParams(next, { replace: true });
+  };
+
+  const toggleSort = (k: SortKey) =>
+    setSort((prev) =>
+      prev.key === k
+        ? { key: k, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : // 숫자·날짜는 큰 값부터, 글자는 가나다순이 자연스럽다
+          { key: k, dir: ["title", "keyword", "ad", "language"].includes(k) ? "asc" : "desc" },
+    );
 
   const query = useQuery({
     queryKey: ["articles"],
@@ -158,7 +258,18 @@ export default function ArticlesPage() {
     }
   };
 
-  const filtered = (query.data?.articles ?? []).filter((a) => matchFilter(a, filter));
+  const all = query.data?.articles ?? [];
+  const filtered = all
+    .filter((a) => matchFilter(a, filter) && matchSearch(a, search))
+    .sort((a, b) => {
+      const va = sortValue(a, sort.key);
+      const vb = sortValue(b, sort.key);
+      const cmp =
+        typeof va === "number" && typeof vb === "number"
+          ? va - vb
+          : String(va).localeCompare(String(vb), "ko"); // 한글 가나다순
+      return sort.dir === "asc" ? cmp : -cmp;
+    });
 
   return (
     <div className="space-y-6">
@@ -169,24 +280,53 @@ export default function ArticlesPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {FILTERS.map(({ key, label }) => {
-          const count = key === "all" ? undefined : (query.data?.articles ?? []).filter((a) => matchFilter(a, key)).length;
-          return (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.map(({ key, label }) => {
+            // 개수는 검색어까지 반영해야 "필터를 눌렀는데 0건"인 상황이 안 생긴다.
+            const count = key === "all" ? undefined : all.filter((a) => matchFilter(a, key) && matchSearch(a, search)).length;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => updateParams({ filter: key })}
+                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                  filter === key ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {label}
+                {count !== undefined && count > 0 && <span className="ml-1 font-semibold">{count}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="relative sm:w-72">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => updateParams({ q: e.target.value })}
+            placeholder="제목·키워드·광고상품 검색"
+            className="pl-8"
+          />
+          {search && (
             <button
-              key={key}
               type="button"
-              onClick={() => setSearchParams(key === "all" ? {} : { filter: key })}
-              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                filter === key ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-              }`}
+              aria-label="검색어 지우기"
+              onClick={() => updateParams({ q: "" })}
+              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              {label}
-              {count !== undefined && count > 0 && <span className="ml-1 font-semibold">{count}</span>}
+              <X className="size-4" />
             </button>
-          );
-        })}
+          )}
+        </div>
       </div>
+
+      {search.trim() && !query.isPending && (
+        <p className="-mt-3 text-xs text-muted-foreground">
+          "{search.trim()}" 검색 결과 <span className="font-semibold text-foreground">{filtered.length}건</span>
+        </p>
+      )}
 
       {query.isPending ? (
         <Skeleton className="h-72" />
@@ -195,7 +335,11 @@ export default function ArticlesPage() {
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            {filter === "all" ? "아직 생성된 글이 없습니다." : "조건에 맞는 글이 없습니다. ✓ 다 처리됐어요!"}
+            {search.trim()
+              ? `"${search.trim()}"와(과) 일치하는 글이 없습니다.`
+              : filter === "all"
+                ? "아직 생성된 글이 없습니다."
+                : "조건에 맞는 글이 없습니다. ✓ 다 처리됐어요!"}
           </CardContent>
         </Card>
       ) : (
@@ -372,14 +516,14 @@ export default function ArticlesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">이미지</TableHead>
-                  <TableHead>제목</TableHead>
-                  <TableHead className="text-center">키워드</TableHead>
-                  <TableHead className="text-center">광고</TableHead>
-                  <TableHead className="text-center">언어</TableHead>
-                  <TableHead className="text-center">상태</TableHead>
-                  <TableHead className="text-center">발행처</TableHead>
-                  <TableHead className="text-right">품질</TableHead>
-                  <TableHead className="text-center">생성일</TableHead>
+                  <SortHead k="title" sort={sort} onSort={toggleSort}>제목</SortHead>
+                  <SortHead k="keyword" sort={sort} onSort={toggleSort} className="text-center">키워드</SortHead>
+                  <SortHead k="ad" sort={sort} onSort={toggleSort} className="text-center">광고</SortHead>
+                  <SortHead k="language" sort={sort} onSort={toggleSort} className="text-center">언어</SortHead>
+                  <SortHead k="status" sort={sort} onSort={toggleSort} className="text-center">상태</SortHead>
+                  <SortHead k="publish" sort={sort} onSort={toggleSort} className="text-center">발행처</SortHead>
+                  <SortHead k="quality" sort={sort} onSort={toggleSort} className="text-right">품질</SortHead>
+                  <SortHead k="date" sort={sort} onSort={toggleSort} className="text-center">생성일</SortHead>
                   <TableHead className="text-center">관리</TableHead>
                 </TableRow>
               </TableHeader>
