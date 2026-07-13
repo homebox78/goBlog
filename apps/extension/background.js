@@ -100,9 +100,92 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+/**
+ * 네이버 글쓰기 화면에 떠 있는 팝업을 닫는다.
+ * ⚠️ 이걸 안 하면 '작성 중이던 글이 있습니다(임시저장 복구)' 레이어가 좌표 클릭을 가로채,
+ * 제목 입력이 통째로 실패하고 **복구된 초안의 제목이 그대로 발행된다**
+ * (실제로 글 하나가 제목 "🔥" 로 발행됨 — logNo 224345223842).
+ */
+async function seDismissPopups(tabId) {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: () => {
+      const visible = (el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      };
+      const closed = [];
+      // 임시저장 복구 레이어는 '취소'(= 새로 작성)를 눌러야 빈 문서로 시작한다.
+      for (const pop of document.querySelectorAll('.se-popup, .se-popup-container, [class*="popup"]')) {
+        if (!visible(pop)) continue;
+        const btn = [...pop.querySelectorAll("button, a")].find(
+          (b) => visible(b) && /취소|닫기|새로\s*작성/.test(b.textContent || ""),
+        );
+        if (btn) {
+          btn.click();
+          closed.push((btn.textContent || "").trim());
+        }
+      }
+      return closed;
+    },
+  });
+  return results.flatMap((r) => r.result ?? []);
+}
+
+/** 제목·본문의 최상위 뷰포트 좌표 (팝업을 닫아 레이아웃이 바뀐 뒤 다시 재는 게 중요하다) */
+async function seRects(tabId) {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: () => {
+      const titleEl = document.querySelector(".se-title-text");
+      const bodyEl = document.querySelector(".se-component.se-text .se-module-text");
+      if (!titleEl || !bodyEl) return null;
+      titleEl.scrollIntoView({ block: "center" });
+      const absCenter = (el) => {
+        const r = el.getBoundingClientRect();
+        let x = r.left + r.width / 2;
+        let y = r.top + r.height / 2;
+        let win = window;
+        while (win !== win.top) {
+          try {
+            const fe = win.frameElement;
+            if (!fe) break;
+            const fr = fe.getBoundingClientRect();
+            x += fr.left;
+            y += fr.top;
+            win = win.parent;
+          } catch {
+            break;
+          }
+        }
+        return { x: Math.round(x), y: Math.round(y) };
+      };
+      return { title: absCenter(titleEl), body: absCenter(bodyEl) };
+    },
+  });
+  return results.map((r) => r.result).find(Boolean) ?? null;
+}
+
+/** 제목칸에 실제로 들어간 텍스트를 읽는다 (placeholder '제목'은 제외). */
+async function seReadTitle(tabId) {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: () => {
+      const el = document.querySelector(".se-title-text");
+      if (!el) return null;
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll(".se-placeholder").forEach((n) => n.remove());
+      return (clone.innerText || "").replace(/​/g, "").trim();
+    },
+  });
+  return results.map((r) => r.result).find((v) => v !== null && v !== undefined) ?? null;
+}
+
+const normTitle = (s) => String(s || "").replace(/\s+/g, " ").trim();
+
 // 네이버 스마트에디터 완전 자동 입력 — chrome.debugger(CDP)로 '신뢰된' 입력 이벤트를 만든다.
 // SE ONE은 모델 기반이라 DOM 주입·합성 이벤트는 무시하지만, CDP 입력은 실제 키보드/마우스와 동일.
-// 흐름: 제목 클릭 → Input.insertText(클립보드 불사용) → 본문 클릭 → Ctrl+V(클립보드의 HTML — 패널이 미리 담음)
+// 흐름: 팝업 닫기 → 좌표 재측정 → 제목 클릭·전체선택·삭제·insertText → **제목 검증** → 본문 클릭 → Ctrl+V
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== "NAVER_AUTO") return false;
   (async () => {
@@ -114,19 +197,62 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
       await send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
     };
+    // 제목칸 전체선택 — 이어지는 insertText가 선택 영역을 '덮어쓴다'(별도 삭제키 불필요)
+    const selectAll = async () => {
+      await send("Input.dispatchKeyEvent", {
+        type: "keyDown", modifiers: 2, key: "a", code: "KeyA",
+        windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65, commands: ["selectAll"],
+      });
+      await send("Input.dispatchKeyEvent", {
+        type: "keyUp", modifiers: 2, key: "a", code: "KeyA",
+        windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65,
+      });
+      await sleep(120);
+    };
     try {
       try {
         await chrome.debugger.attach(dbg, "1.3");
       } catch (e) {
         if (!String(e?.message ?? e).includes("attached")) throw e;
       }
-      // ① 제목: 클릭 → 텍스트 삽입
-      await click(message.rects.title.x, message.rects.title.y);
+
+      // ⓪ 임시저장 복구 등 팝업 제거 후 좌표를 다시 잰다 (팝업이 열려 있으면 클릭이 먹히지 않는다)
+      await seDismissPopups(message.tabId);
+      await sleep(300);
+      const rects = (await seRects(message.tabId)) ?? message.rects;
+
+      // ① 제목: 클릭 → (찌꺼기가 있으면 전체선택해 덮어쓰기) → 텍스트 삽입
+      //    빈 제목이면 전체선택을 하지 않는다 — 문서 전체가 잡히는 사고를 피한다.
+      const before = await seReadTitle(message.tabId);
+      await click(rects.title.x, rects.title.y);
       await sleep(350);
+      if (before) await selectAll();
       await send("Input.insertText", { text: message.title });
-      await sleep(350);
-      // ② 본문: 클릭 → 붙여넣기 (keyDown에 편집명령 paste 동봉 — 단축키+명령 이중 보장)
-      await click(message.rects.body.x, message.rects.body.y);
+      await sleep(400);
+
+      // ② 제목 검증 — 여기서 막지 않으면 엉뚱한 제목(빈칸·이전 초안 찌꺼기)으로 발행된다.
+      let actual = await seReadTitle(message.tabId);
+      for (let retry = 0; retry < 2 && normTitle(actual) !== normTitle(message.title); retry++) {
+        await click(rects.title.x, rects.title.y);
+        await sleep(250);
+        if (actual) await selectAll();
+        await send("Input.insertText", { text: message.title });
+        await sleep(450);
+        actual = await seReadTitle(message.tabId);
+      }
+      if (normTitle(actual) !== normTitle(message.title)) {
+        // 발행하지 않고 멈춘다 — 잘못된 제목으로 발행되는 것보다 수동 전환이 낫다.
+        sendResponse({
+          ok: false,
+          titleMismatch: true,
+          titleActual: actual,
+          error: `제목 입력 검증 실패 (에디터 제목: "${actual ?? "(읽기 실패)"}") — 발행을 중단했습니다.`,
+        });
+        return;
+      }
+
+      // ③ 본문: 클릭 → 붙여넣기 (keyDown에 편집명령 paste 동봉 — 단축키+명령 이중 보장)
+      await click(rects.body.x, rects.body.y);
       await sleep(350);
       await send("Input.dispatchKeyEvent", {
         type: "keyDown", modifiers: 2, key: "v", code: "KeyV",
@@ -137,7 +263,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         windowsVirtualKeyCode: 86, nativeVirtualKeyCode: 86,
       });
       await sleep(600);
-      sendResponse({ ok: true });
+      sendResponse({ ok: true, titleActual: actual });
     } catch (error) {
       sendResponse({ ok: false, error: String(error?.message ?? error) });
     } finally {
@@ -323,6 +449,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== "NAVER_PUBLISH") return false;
   (async () => {
     try {
+      // 2차 안전망 — 제목에 글자(한글·영문·숫자)가 하나도 없으면 발행하지 않는다.
+      // 이모지만 남은 제목("🔥")으로 발행된 사고가 실제로 있었다. 발행은 되돌리기 어렵다.
+      const titleNow = await seReadTitle(message.tabId);
+      if (!/[0-9A-Za-z가-힣]/.test(titleNow || "")) {
+        sendResponse({
+          ok: false,
+          error: `제목이 비어 있거나 이모지뿐입니다("${titleNow ?? ""}") — 발행을 중단했습니다. 제목을 확인하세요.`,
+        });
+        return;
+      }
+
       const results = await chrome.scripting.executeScript({
         target: { tabId: message.tabId, allFrames: true },
         world: "MAIN",
