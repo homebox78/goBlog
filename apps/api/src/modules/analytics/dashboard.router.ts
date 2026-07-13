@@ -120,6 +120,16 @@ dashboardRouter.get(
   }),
 );
 
+/** Search Console 성과 수집 (수동 실행 — 스케줄러도 같은 함수를 쓴다) */
+dashboardRouter.post(
+  "/collect",
+  asyncHandler(async (req, res) => {
+    const days = Math.min(Math.max(Number(req.body?.days) || 3, 2), 30);
+    const { collectSearchConsole } = await import("./collectors/search-console.js");
+    res.json(await collectSearchConsole(days));
+  }),
+);
+
 /**
  * 최근 N일 추이 — 대시보드 그래프용.
  * 날짜별 집계는 Prisma groupBy로 못 하므로(날짜 자르기 필요) 원시 쿼리를 쓴다.

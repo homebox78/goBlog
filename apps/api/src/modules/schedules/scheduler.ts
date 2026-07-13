@@ -7,6 +7,7 @@ import { overlapScore, isNonCommercialKeyword } from "../products/product-match.
 
 let keywordJob: Cron | null = null;
 let citationJob: Cron | null = null;
+let analyticsJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -259,6 +260,27 @@ export async function scheduleFromSettings(): Promise<void> {
       },
     );
     console.log("[scheduler] AI 브리핑 인용 수집 1회/일 (07:30 KST)");
+
+    // 성과 수집 — GSC는 데이터가 2~3일 지연되므로 매일 새벽에 '3일 전~2일 전' 구간을 다시 긁는다.
+    // (지연 구간을 재수집하므로 upsert로 덮어쓴다 — 중복 걱정 없음)
+    analyticsJob?.stop();
+    analyticsJob = new Cron(
+      "0 5 * * *",
+      { timezone: "Asia/Seoul", protect: true },
+      async () => {
+        try {
+          const { collectSearchConsole } = await import("../analytics/collectors/search-console.js");
+          const result = await collectSearchConsole(5);
+          console.log(
+            `[scheduler] 성과 수집: 속성 ${result.sites}개 · 행 ${result.rows}건 → 글 매칭 ${result.matched}건 (미매칭 ${result.unmatched})`,
+          );
+        } catch (error) {
+          // 설정 누락·권한 없음도 여기서 드러나야 한다 — 조용히 0건으로 넘어가지 않는다
+          console.error("[scheduler] 성과 수집 실패:", (error as Error).message);
+        }
+      },
+    );
+    console.log("[scheduler] Search Console 성과 수집 1회/일 (05:00 KST)");
   } catch (error) {
     console.warn("[scheduler] 예약 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }

@@ -64,6 +64,9 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "blogger.clientId", group: "platforms", label: "Blogger OAuth Client ID", secret: false },
   { key: "blogger.clientSecret", group: "platforms", label: "Blogger OAuth Client Secret", secret: true },
   { key: "blogger.refreshToken", group: "platforms", label: "Blogger OAuth Refresh Token", secret: true },
+  // 성과 수집(Search Console) — Blogger와 같은 구글 클라이언트로 재동의해 받은 토큰(스코프에 webmasters 포함)
+  { key: "google.analyticsRefreshToken", group: "platforms", label: "구글 성과수집 Refresh Token", secret: true },
+  { key: "gsc.siteUrls", group: "platforms", label: "Search Console 속성 URL (줄바꿈 구분)", secret: false },
   { key: "naverBlog.writeUrl", group: "platforms", label: "네이버 블로그 작성 URL", secret: false },
   // 브랜드커넥트는 공개 API가 없어 Chrome 확장(6단계)에서 브라우저 세션으로 연동한다.
   { key: "naverBrandConnect.url", group: "platforms", label: "네이버 브랜드커넥트 크리에이터 URL", secret: false },
