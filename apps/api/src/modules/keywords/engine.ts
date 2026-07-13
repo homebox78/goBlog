@@ -10,6 +10,7 @@ import {
   type KeywordMetricData,
 } from "./metrics.js";
 import { fetchNaverBlogCompetition, lowCompetitionScore } from "./competition.js";
+import { findNearDuplicate } from "./near-duplicate.js";
 import { bestKeywordForProduct } from "../products/product-match.js";
 
 /**
@@ -140,6 +141,10 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
     });
     const excludedTexts = existing.map((row) => row.text);
 
+    // 근접 중복 비교 대상은 '모든' 키워드다. 위 existing은 USED·EXCLUDED·최근 추천만 담아서,
+    // 아직 안 쓴 추천 키워드끼리의 중복(실제로 가장 많았다)을 못 걸렀다.
+    const allKeywordTexts = (await prisma.keyword.findMany({ select: { text: true } })).map((row) => row.text);
+
     // 3) Claude로 후보 키워드 발굴·분류
     const askCount = Math.min(dailyCount * 2, 40);
     const { candidates } = await callClaudeJson<{ candidates: Candidate[] }>({
@@ -207,7 +212,27 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
           !isExcludedTopic(candidate.keyword) &&
           !excludedTexts.some((text) => normalizeKeyword(text) === normalizeKeyword(candidate.keyword)) &&
           list.findIndex((c) => normalizeKeyword(c.keyword) === normalizeKeyword(candidate.keyword)) === index,
-      );
+      )
+      // 근접 중복 제거 — 위 필터는 '완전일치'만 잡아서 단어 순서만 바꾼 키워드가 통과했다.
+      // (예: "폭염 전기세 에어컨 절약법" vs "폭염 에어컨 전기세 절약법")
+      // 실측 지표(검색량·경쟁문서) 조회 '전에' 걸러야 쓸데없는 API 호출도 아낀다.
+      .filter((candidate, index, list) => {
+        const dupOfExisting = findNearDuplicate(candidate.keyword, allKeywordTexts);
+        if (dupOfExisting) {
+          console.log(`[keywords] 근접 중복 제외: "${candidate.keyword}" ≈ 기존 "${dupOfExisting}"`);
+          return false;
+        }
+        // 이번 배치 안에서의 중복 — 먼저 나온 후보(= Claude가 더 적합하다고 본 것)를 남긴다
+        const dupOfEarlier = findNearDuplicate(
+          candidate.keyword,
+          list.slice(0, index).map((c) => c.keyword),
+        );
+        if (dupOfEarlier) {
+          console.log(`[keywords] 근접 중복 제외: "${candidate.keyword}" ≈ "${dupOfEarlier}" (같은 배치)`);
+          return false;
+        }
+        return true;
+      });
 
     if (cleanCandidates.length === 0) {
       throw new HttpError(502, "키워드 후보 생성에 실패했습니다.");

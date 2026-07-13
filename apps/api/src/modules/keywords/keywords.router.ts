@@ -237,13 +237,28 @@ keywordsRouter.get(
       orderBy: { updatedAt: "desc" },
       take: 60,
     });
+
+    // 제외된(근접 중복) 키워드의 인사이트는 감춘다.
+    // 이걸 안 하면 사실상 같은 키워드가 여러 그룹으로 나뉘어 **같은 인용 글이 반복 표시된다**
+    // (예: "…스마트 글래스 가격 기능" / "…스마트 글래스 기능 비교" 가 같은 글 1건을 각각 보여줌).
+    const excluded = new Set(
+      (
+        await prisma.keyword.findMany({
+          where: { status: "EXCLUDED", text: { in: rows.map((row) => row.keywordText) } },
+          select: { text: true },
+        })
+      ).map((row) => row.text),
+    );
+
     res.json({
-      items: rows.map((row) => ({
-        keyword: row.keywordText,
-        postsStudied: row.postsStudied,
-        updatedAt: row.updatedAt,
-        ...(row.data as object),
-      })),
+      items: rows
+        .filter((row) => !excluded.has(row.keywordText))
+        .map((row) => ({
+          keyword: row.keywordText,
+          postsStudied: row.postsStudied,
+          updatedAt: row.updatedAt,
+          ...(row.data as object),
+        })),
     });
   }),
 );
