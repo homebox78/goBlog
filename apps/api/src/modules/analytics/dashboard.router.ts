@@ -120,6 +120,58 @@ dashboardRouter.get(
   }),
 );
 
+/**
+ * 글별 검색 성과 — 최근 N일 합계 기준 상위/하위.
+ * 데이터가 0건이면 빈 배열을 준다(화면에서 "아직 수집 전"으로 안내한다).
+ */
+dashboardRouter.get(
+  "/performance",
+  asyncHandler(async (req, res) => {
+    const days = Math.min(Math.max(Number(req.query.days) || 28, 7), 90);
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    since.setDate(since.getDate() - days);
+
+    const rows = await prisma.analyticsDaily.groupBy({
+      by: ["articleId"],
+      where: { source: "SEARCH_CONSOLE", date: { gte: since }, articleId: { not: null } },
+      _sum: { impressions: true, clicks: true },
+      _avg: { avgPosition: true },
+    });
+
+    if (rows.length === 0) {
+      res.json({ days, collected: false, articles: [] });
+      return;
+    }
+
+    const articles = await prisma.article.findMany({
+      where: { id: { in: rows.map((row) => row.articleId!).filter(Boolean) } },
+      select: { id: true, title: true, qualityScore: true },
+    });
+    const titleMap = new Map(articles.map((article) => [article.id, article]));
+
+    const merged = rows
+      .map((row) => {
+        const impressions = row._sum.impressions ?? 0;
+        const clicks = row._sum.clicks ?? 0;
+        const article = titleMap.get(row.articleId!);
+        return {
+          articleId: row.articleId!,
+          title: article?.title ?? "(삭제된 글)",
+          qualityScore: article?.qualityScore ?? null,
+          impressions,
+          clicks,
+          // CTR은 저장값을 평균 내지 않고 합계로 다시 계산한다 — 일별 CTR 평균은 노출수를 무시해 왜곡된다
+          ctr: impressions > 0 ? clicks / impressions : 0,
+          avgPosition: row._avg.avgPosition ?? null,
+        };
+      })
+      .sort((a, b) => b.impressions - a.impressions);
+
+    res.json({ days, collected: true, articles: merged });
+  }),
+);
+
 /** Search Console 성과 수집 (수동 실행 — 스케줄러도 같은 함수를 쓴다) */
 dashboardRouter.post(
   "/collect",

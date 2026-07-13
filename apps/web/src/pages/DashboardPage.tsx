@@ -41,6 +41,16 @@ const COST_CHART: ChartConfig = {
   costKrw: { label: "AI 비용", color: "var(--chart-4)" },
 };
 
+interface PerformanceArticle {
+  articleId: number;
+  title: string;
+  qualityScore: number | null;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  avgPosition: number | null;
+}
+
 interface DashboardData {
   db: boolean;
   keywordsToday: number;
@@ -162,6 +172,15 @@ export default function DashboardPage() {
   const trends = useQuery({
     queryKey: ["dashboard-trends"],
     queryFn: () => api.get<{ days: number; series: TrendPoint[] }>("/api/analytics/trends?days=14"),
+  });
+
+  // 검색 성과 — Search Console 수집분. 아직 수집 전이면 collected:false 로 온다.
+  const perf = useQuery({
+    queryKey: ["dashboard-performance"],
+    queryFn: () =>
+      api.get<{ days: number; collected: boolean; articles: PerformanceArticle[] }>(
+        "/api/analytics/performance?days=28",
+      ),
   });
 
   if (query.isPending) {
@@ -309,6 +328,44 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {perf.data && (
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle className="text-base">검색 성과 (최근 {perf.data.days}일 · Search Console)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!perf.data.collected ? (
+              // 0을 그럴듯하게 보여주지 않는다 — 아직 안 들어온 것과 성과가 없는 것은 다르다
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                아직 수집된 성과 데이터가 없습니다. Search Console은 데이터가 2~3일 늦게 들어옵니다.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {perf.data.articles.slice(0, 10).map((row, index) => (
+                  <Link
+                    key={row.articleId}
+                    to={`/articles/${row.articleId}`}
+                    className="-mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-accent"
+                  >
+                    <span className="w-4 shrink-0 text-xs text-muted-foreground">{index + 1}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm">{row.title}</span>
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      노출 {row.impressions.toLocaleString("ko-KR")}
+                    </span>
+                    <Badge variant="outline" className="shrink-0 font-mono">
+                      클릭 {row.clicks.toLocaleString("ko-KR")}
+                    </Badge>
+                    <Badge variant="secondary" className="hidden shrink-0 font-mono sm:inline-flex">
+                      {row.avgPosition ? `${row.avgPosition.toFixed(1)}위` : "—"}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {data.usage && (
