@@ -15,3 +15,6 @@ apps/web/.vite/
 coverage/
 *.log
 storage/
+
+# Playwright MCP 작업 흔적 (페이지 스냅샷·콘솔 로그)
+.playwright-mcp/
