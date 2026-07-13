@@ -189,6 +189,24 @@ model BlogCitation {
 }
 
 /**
+ * 인용 학습 결과 — AI 브리핑에 인용된 글들을 실제로 읽고 뽑아낸 인사이트.
+ *
+ * 네이버 공식 5원칙은 원론이라 프롬프트에 그대로 넣어도 글이 안 바뀐다.
+ * 대신 그 키워드에서 진짜 인용되는 글들의 말투·구조·정보 담는 방식·빈 각도를 뽑아
+ * 글 생성 프롬프트에 주입한다. (data = CitationInsightData)
+ */
+model CitationInsight {
+  id           Int      @id @default(autoincrement())
+  keywordText  String   @unique
+  data         Json // whyCited / tone / structure / infoStyle / coveredAngles / gaps / writingRules
+  postsStudied Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("citation_insights")
+}
+
+/**
  * 사용자가 직접 등록하는 제휴 상품 풀 (쿠팡 파트너스 검색 API가 없어 수동 등록).
  * 등록 시 오늘의 키워드와 매칭해 두면, 그 키워드의 자동 글에 상품 배너가 삽입된다.
  */

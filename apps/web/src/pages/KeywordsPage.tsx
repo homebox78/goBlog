@@ -520,6 +520,18 @@ interface CitationItem {
   postedAt: string | null;
 }
 
+interface Insight {
+  keyword: string;
+  postsStudied: number;
+  whyCited?: string[];
+  tone?: string;
+  structure?: string;
+  infoStyle?: string[];
+  coveredAngles?: string[];
+  gaps?: string[];
+  writingRules?: string[];
+}
+
 interface CitationsResponse {
   total: number;
   collectedDates: string[];
@@ -556,6 +568,27 @@ function CitationsView() {
     onError: () => toast.error("인용 수집에 실패했습니다."),
   });
 
+  // 인용 학습 — 인용된 글을 실제로 읽고 말투·구조·빈 각도를 뽑아 글 생성 프롬프트에 주입한다
+  const insights = useQuery({
+    queryKey: ["citation-insights"],
+    queryFn: () => api.get<{ items: Insight[] }>("/api/keywords/citations/insights"),
+  });
+
+  const study = useMutation({
+    mutationFn: () => api.post<{ studied: number }>("/api/keywords/citations/study", {}),
+    onSuccess: (r) => {
+      toast.success(`${r.studied}개 키워드의 인용 글을 학습했습니다. 이후 글 생성에 반영됩니다.`);
+      queryClient.invalidateQueries({ queryKey: ["citation-insights"] });
+    },
+    onError: () => toast.error("인용 학습에 실패했습니다."),
+  });
+
+  const insightByKeyword = useMemo(() => {
+    const map = new Map<string, Insight>();
+    for (const i of insights.data?.items ?? []) map.set(i.keyword, i);
+    return map;
+  }, [insights.data]);
+
   // 키워드별로 묶어 보여준다 — "이 키워드에선 누가 AI에 인용되고 있나"가 한눈에 들어오게
   const byKeyword = useMemo(() => {
     const map = new Map<string, CitationItem[]>();
@@ -584,10 +617,16 @@ function CitationsView() {
               {query.data?.total ? ` · 현재 ${query.data.total}건` : ""}
             </p>
           </div>
-          <Button onClick={() => collect.mutate()} disabled={collect.isPending}>
-            {collect.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            지금 수집
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => collect.mutate()} disabled={collect.isPending}>
+              {collect.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              지금 수집
+            </Button>
+            <Button onClick={() => study.mutate()} disabled={study.isPending}>
+              {study.isPending ? <Loader2 className="size-4 animate-spin" /> : "🧠"}
+              인용 글 학습
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -641,6 +680,9 @@ function CitationsView() {
                       <Badge variant="outline">최고 {citedText(top, null)} 인용</Badge>
                     )}
                   </div>
+                  {insightByKeyword.get(keyword) && (
+                    <InsightBox insight={insightByKeyword.get(keyword)!} />
+                  )}
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -683,6 +725,71 @@ function CitationsView() {
             );
           })}
         </>
+      )}
+    </div>
+  );
+}
+
+/** 인용 학습 결과 — 이 키워드에서 왜 인용되는지, 우리가 뭘 공략할지. 글 생성 프롬프트에 그대로 들어간다. */
+function InsightBox({ insight }: { insight: Insight }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-3 rounded-md border border-emerald-200 bg-emerald-50/50 p-3 text-xs dark:border-emerald-900 dark:bg-emerald-950/30">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between font-medium"
+      >
+        <span>🧠 인용 학습 완료 — 글 {insight.postsStudied}개 분석 (글 쓸 때 자동 반영됨)</span>
+        <span className="text-muted-foreground">{open ? "접기 ▲" : "펼치기 ▼"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-3">
+          {insight.whyCited?.length ? (
+            <div>
+              <p className="mb-1 font-semibold">왜 인용되는가</p>
+              <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
+                {insight.whyCited.map((x, i) => <li key={i}>{x}</li>)}
+              </ul>
+            </div>
+          ) : null}
+          {insight.tone && (
+            <div>
+              <p className="mb-1 font-semibold">말투</p>
+              <p className="text-muted-foreground">{insight.tone}</p>
+            </div>
+          )}
+          {insight.structure && (
+            <div>
+              <p className="mb-1 font-semibold">글 구조</p>
+              <p className="text-muted-foreground">{insight.structure}</p>
+            </div>
+          )}
+          {insight.coveredAngles?.length ? (
+            <div>
+              <p className="mb-1 font-semibold text-rose-600">이미 다뤄진 각도 (반복 금지)</p>
+              <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
+                {insight.coveredAngles.map((x, i) => <li key={i}>{x}</li>)}
+              </ul>
+            </div>
+          ) : null}
+          {insight.gaps?.length ? (
+            <div>
+              <p className="mb-1 font-semibold text-emerald-700">공략할 빈 각도</p>
+              <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
+                {insight.gaps.map((x, i) => <li key={i}>{x}</li>)}
+              </ul>
+            </div>
+          ) : null}
+          {insight.writingRules?.length ? (
+            <div>
+              <p className="mb-1 font-semibold">글 생성에 적용되는 지시문</p>
+              <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
+                {insight.writingRules.map((x, i) => <li key={i}>{x}</li>)}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       )}
     </div>
   );

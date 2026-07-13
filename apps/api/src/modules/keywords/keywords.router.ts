@@ -227,6 +227,37 @@ keywordsRouter.post(
   }),
 );
 
+/** 인용 학습 결과 — 인용된 글들을 읽고 뽑은 말투·구조·빈 각도 (글 생성 프롬프트에 주입됨) */
+keywordsRouter.get(
+  "/citations/insights",
+  asyncHandler(async (_req, res) => {
+    const rows = await prisma.citationInsight.findMany({ orderBy: { updatedAt: "desc" }, take: 60 });
+    res.json({
+      items: rows.map((row) => ({
+        keyword: row.keywordText,
+        postsStudied: row.postsStudied,
+        updatedAt: row.updatedAt,
+        ...(row.data as object),
+      })),
+    });
+  }),
+);
+
+/** 특정 키워드 인용 학습 (인용된 글들을 실제로 읽고 Claude 분석 — 1~2분 소요) */
+keywordsRouter.post(
+  "/citations/study",
+  asyncHandler(async (req, res) => {
+    const { studyKeyword, studyPendingKeywords } = await import("./citation-study.js");
+    const keyword = typeof req.body?.keyword === "string" ? req.body.keyword : null;
+    if (keyword) {
+      const insight = await studyKeyword(keyword);
+      if (!insight) throw new HttpError(404, "이 키워드에는 수집된 인용 글이 없습니다. 먼저 '지금 수집'을 눌러주세요.");
+      return res.json({ keyword, insight });
+    }
+    res.json(await studyPendingKeywords(5));
+  }),
+);
+
 const manualSchema = z.object({
   text: z.string().min(2).max(80),
   category: z.string().max(40).optional(),

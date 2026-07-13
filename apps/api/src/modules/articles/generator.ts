@@ -226,6 +226,11 @@ export async function generateArticle(
   // 실시간 그라운딩 — 생성 시점의 최신 뉴스를 주입해 학습 데이터의 옛 사실(상장·출시·발표 등) 오류를 막는다.
   const { fetchRecentNews } = await import("./grounding.js");
   const recentNews = await fetchRecentNews(topic).catch(() => []);
+
+  // 인용 학습 — 이 키워드에서 AI 브리핑에 실제로 인용된 글들을 읽고 뽑아낸 인사이트.
+  // 말투·구조·정보 담는 방식과 "이미 다뤄진 각도 / 빈 각도"를 프롬프트에 넣어, 인용될 만한 글을 쓴다.
+  const { getInsightForPrompt } = await import("../keywords/citation-study.js");
+  const insight = keyword ? await getInsightForPrompt(keyword.text).catch(() => null) : null;
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
   const tone = options.tone;
   const language = LANGUAGE_NAME[options.language] ? options.language : "ko";
@@ -283,6 +288,20 @@ export async function generateArticle(
       "- 표·번호목록·불릿을 적극 사용해 구조화한다(구글 리치결과·발췌 노출에 유리).",
       "- metaDescription은 150자 내외로, 핵심 키워드를 앞부분에 넣고 클릭을 부르는 요약으로 쓴다.",
       "- 본문은 목표 분량 이상으로 충분히 채워 정보량·체류시간을 확보한다(얇은 콘텐츠는 색인·순위에 불리).",
+      "",
+      insight
+        ? [
+            "",
+            "[🏆 AI 브리핑 인용 학습 — 이 키워드에서 실제로 인용된 글들을 분석한 결과. 최우선으로 반영]",
+            "- userPayload.citationInsight 는 네이버 AI 브리핑이 '출처'로 인용한 상위 블로그 글들을 실제로 읽고 뽑은 패턴이다. 추측이 아니라 관찰이다.",
+            "- observedTone·observedStructure 를 참고해 이 주제에서 통하는 말투·구조로 쓴다(그대로 베끼지는 말고 우리 글로 소화한다).",
+            "- howTheyPackInfo 를 따라, AI가 사실을 뽑아 쓰기 좋게 정보를 담는다. AI는 이미지를 못 읽으므로 핵심 정보(수치·조건·날짜·절차)는 반드시 '본문 텍스트'에 쓴다 — 이미지로만 전달하지 않는다.",
+            "- alreadyCoveredAngles 에 있는 각도는 이미 상위 글들이 다 다뤘다. 같은 얘기를 반복하면 인용될 이유가 없다 — 되풀이하지 않는다.",
+            "- openGapsToAttack 에 있는 빈 각도를 반드시 우리 글에서 채운다. 이게 우리가 인용될 유일한 근거다.",
+            "- rules 의 지시문을 하나하나 지킨다.",
+            "- 단, 겪지 않은 경험을 지어내지 않는다. 직접 경험이 없으면 공식 자료·수치·출처로 신뢰도를 대신 채운다(허위 후기 금지).",
+          ].join("\n")
+        : "",
       "",
       "[문체 — AI가 글 성격에 맞게 스스로 판단]",
       "- 문체를 고정하지 말고 글의 주제·독자·목적에 맞춰 가장 자연스러운 톤을 스스로 고른다 (정보성은 차분한 설명체, 생활/후기성은 친근한 대화체 등).",
@@ -360,6 +379,19 @@ export async function generateArticle(
             price: product.price,
             description: product.description,
             rocketDelivery: product.isRocket,
+          }
+        : null,
+      // 이 키워드에서 AI 브리핑에 인용되는 글들을 실제로 읽고 뽑은 패턴.
+      // coveredAngles 는 반복 금지, gaps 는 우리가 파고들 틈이다.
+      citationInsight: insight
+        ? {
+            whyTheyGetCited: insight.whyCited,
+            observedTone: insight.tone,
+            observedStructure: insight.structure,
+            howTheyPackInfo: insight.infoStyle,
+            alreadyCoveredAngles: insight.coveredAngles,
+            openGapsToAttack: insight.gaps,
+            rules: insight.writingRules,
           }
         : null,
       articleType: options.articleType,
