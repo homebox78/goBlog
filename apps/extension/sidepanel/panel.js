@@ -52,7 +52,19 @@ async function init() {
     $("#notes").appendChild(li);
   });
 
-  detectPlatform();
+  // 사이드패널은 계속 떠 있으므로 탭을 바꾸면 플랫폼을 다시 감지해야 한다.
+  // (안 하면 티스토리 탭에서 열어둔 상태가 네이버 탭으로 옮겨도 "티스토리"로 남는다)
+  const resync = async () => {
+    const before = currentPlatform;
+    await detectPlatform();
+    if (currentPlatform !== before && config.token) loadArticles();
+  };
+  chrome.tabs.onActivated.addListener(resync);
+  chrome.tabs.onUpdated.addListener((_id, info, tab) => {
+    if (info.status === "complete" && tab.active) resync();
+  });
+
+  await detectPlatform();
   if (!config.token) {
     $("#setup").classList.remove("hidden");
     $("#list").innerHTML = '<p class="muted">설정에서 서버 주소와 토큰을 입력해주세요.</p>';
@@ -127,9 +139,12 @@ async function loadArticles() {
   loadCategories();
   $("#list").innerHTML = '<p class="muted">불러오는 중...</p>';
   try {
-    const { articles } = await api("/api/extension/articles");
+    // 플랫폼별로 아직 발행 안 한 글만 받는다 — 티스토리에 올린 글이 네이버 목록에서 사라지면 안 된다.
+    const q = currentPlatform === "NAVER_BLOG" || currentPlatform === "TISTORY" ? `?platform=${currentPlatform}` : "";
+    const { articles } = await api("/api/extension/articles" + q);
     if (articles.length === 0) {
-      $("#list").innerHTML = '<p class="muted">발행 대기 글이 없습니다.</p>';
+      const where = currentPlatform === "TISTORY" ? "티스토리" : currentPlatform === "NAVER_BLOG" ? "네이버" : "";
+      $("#list").innerHTML = `<p class="muted">${where ? where + "에 " : ""}발행할 글이 없습니다.</p>`;
       return;
     }
     $("#list").innerHTML = "";
@@ -305,7 +320,7 @@ async function applyToForm() {
       const pub = await chrome.runtime.sendMessage({ type: "NAVER_PUBLISH", tabId: tab.id });
       if (pub?.ok) {
         showNotes(["✅ 네이버 발행 완료! ⏳ 발행완료 기록 중..."]);
-        const url = await recordPublished(tab.id, currentArticle.id, "NAVER_BLOG");
+        const url = await recordPublished(tab.id, currentArticle.id, "NAVER_BLOG", title);
         showNotes([url ? "✅ 네이버 발행 완료 (목록에 링크 기록됨)" : "✅ 네이버 발행 완료 (URL 미확인 — 기록만)"]);
         loadArticles();
       } else {
@@ -354,7 +369,7 @@ async function applyToForm() {
       });
       if (pub?.ok && pub.done?.includes("공개 발행")) {
         showNotes([`✅ 티스토리 발행 완료: ${pub.done.join(" · ")} ⏳ 기록 중...`]);
-        const url = await recordPublished(tab.id, currentArticle.id, "TISTORY");
+        const url = await recordPublished(tab.id, currentArticle.id, "TISTORY", title);
         showNotes([url ? "✅ 티스토리 발행 완료 (목록에 링크 기록됨)" : "✅ 티스토리 발행 완료 (기록됨)"]);
         loadArticles();
       } else {
@@ -395,7 +410,7 @@ async function applyToForm() {
 
 // 발행 완료를 패널에서 직접 기록 — background 서비스워커가 잠들어 URL 감지를 놓치는 문제 방지.
 // 발행 후 탭이 게시글 URL로 이동할 때까지 폴링해서 URL을 잡고 /published에 기록한다.
-async function recordPublished(tabId, articleId, platform) {
+async function recordPublished(tabId, articleId, platform, title) {
   const re =
     platform === "NAVER_BLOG"
       ? /^https:\/\/blog\.naver\.com\/[^/?#]+\/(\d{6,})/
@@ -413,6 +428,13 @@ async function recordPublished(tabId, articleId, platform) {
       /* 탭 접근 실패 무시 */
     }
   }
+
+  // 티스토리는 발행 후 게시글이 아니라 관리 목록(/manage/posts)으로 이동한다 → 탭 URL 폴링으론 못 잡는다.
+  // 블로그 RSS 에서 방금 올린 글(제목 일치, 없으면 최신 글)의 주소를 가져온다.
+  if (!url && platform === "TISTORY") {
+    url = await findTistoryUrlByTitle(title);
+  }
+
   try {
     await fetch(`${config.apiBase}/api/extension/articles/${articleId}/published`, {
       method: "POST",
@@ -424,6 +446,34 @@ async function recordPublished(tabId, articleId, platform) {
     /* 기록 실패 시 background 폴백에 맡김 */
   }
   return url;
+}
+
+/** 티스토리 RSS 에서 제목이 일치하는 글의 주소를 찾는다 (발행 반영까지 몇 초 걸려 재시도). */
+async function findTistoryUrlByTitle(title) {
+  const blog = config.tistoryBlog || "hom2box";
+  const norm = (s) => String(s || "").replace(/\s+/g, "").toLowerCase();
+  const want = norm(title);
+
+  for (let i = 0; i < 6; i++) {
+    try {
+      const res = await fetch(`https://${blog}.tistory.com/rss`, { cache: "no-store" });
+      if (res.ok) {
+        const xml = await res.text();
+        const doc = new DOMParser().parseFromString(xml, "text/xml");
+        const items = [...doc.querySelectorAll("item")].map((it) => ({
+          title: it.querySelector("title")?.textContent ?? "",
+          link: it.querySelector("link")?.textContent ?? "",
+        }));
+        const hit = want ? items.find((it) => norm(it.title) === want) : null;
+        const link = (hit ?? items[0])?.link;
+        if (link && /\.tistory\.com\/\d+/.test(link)) return link;
+      }
+    } catch {
+      /* RSS 실패 무시 — 다음 시도 */
+    }
+    await sleep(2000); // 발행 직후엔 RSS 반영이 늦다
+  }
+  return null;
 }
 
 async function copyIgCaption() {

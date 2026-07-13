@@ -27,14 +27,22 @@ extensionRouter.get(
 );
 
 /**
- * 발행 대기 글 목록 — 모든 글을 보여주고, 사용자가 '발행완료' 버튼을 눌러 숨긴 글(extensionDoneAt)만 제외한다.
- * (반자동 운영: 발행 감지가 완전 자동이 아니므로, 무엇을 끝냈는지는 사용자가 직접 체크한다.)
+ * 발행 대기 글 목록 — **플랫폼별로** 아직 발행하지 않은 글만 내려준다.
+ *
+ * 예전엔 글 단위 플래그(extensionDoneAt)로 숨겨서, 티스토리에 발행하면 네이버 목록에서도
+ * 사라져 "발행 대기 글이 없습니다"가 됐다. 한 글을 여러 플랫폼에 올리는 게 정상이므로
+ * 해당 플랫폼에 SUCCEEDED 발행 기록이 있는 글만 제외한다.
  */
 extensionRouter.get(
   "/articles",
   asyncHandler(async (req, res) => {
+    const platform = typeof req.query.platform === "string" ? req.query.platform : null;
+    const isExtPlatform = platform === "NAVER_BLOG" || platform === "TISTORY";
+
     const rows = await prisma.article.findMany({
-      where: { extensionDoneAt: null },
+      where: isExtPlatform
+        ? { publishJobs: { none: { platform, status: "SUCCEEDED" } } }
+        : { extensionDoneAt: null }, // 플랫폼 미지정(감지 전)은 기존 동작 유지
       orderBy: { updatedAt: "desc" },
       take: 100,
       select: {
@@ -45,11 +53,17 @@ extensionRouter.get(
         language: true,
         updatedAt: true,
         keyword: { select: { category: true, text: true } },
+        // 어디에 이미 올렸는지 보여준다 (목록에서 바로 판단 가능하게)
+        publishJobs: {
+          where: { status: "SUCCEEDED" },
+          select: { platform: true, publishedUrl: true },
+        },
       },
     });
-    const articles = rows.map(({ keyword, ...a }) => ({
+    const articles = rows.map(({ keyword, publishJobs, ...a }) => ({
       ...a,
       category: suggestNaverCategory(keyword?.category, keyword?.text ?? a.title),
+      published: publishJobs.map((j) => ({ platform: j.platform, url: j.publishedUrl })),
     }));
     res.json({ articles });
   }),
@@ -96,29 +110,49 @@ extensionRouter.get(
   }),
 );
 
-/** 발행 결과 기록 (확장에서 수동 발행 완료 보고) */
+/**
+ * 발행 결과 기록 (확장에서 발행 완료 보고).
+ *
+ * 티스토리는 발행 후 게시글이 아니라 관리 목록으로 이동해서, 확장이 탭 URL 폴링만으론
+ * 게시글 주소를 못 잡는다(그래서 목록에 링크가 안 걸렸다). 확장이 뒤늦게 URL 을 찾아
+ * 같은 플랫폼으로 다시 보고하면, 새 기록을 만들지 않고 **기존 기록의 URL 만 채운다.**
+ */
 extensionRouter.post(
   "/articles/:id/published",
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    const platform = String(req.body?.platform ?? "NAVER_BLOG");
+    const raw = String(req.body?.platform ?? "NAVER_BLOG");
+    const platform = raw === "TISTORY" ? "TISTORY" : "NAVER_BLOG";
     const url = req.body?.url ? String(req.body.url) : null;
-    // hide=true(사용자가 '발행완료' 버튼 클릭)면 대기목록에서 숨긴다. 백그라운드 자동감지는 숨기지 않음.
+    // hide=true(사용자가 '발행완료' 버튼 클릭)면 그 플랫폼 기준으로 완료 처리한다.
     const hide = req.body?.hide === true;
 
-    await prisma.publishJob.create({
-      data: {
-        articleId: id,
-        platform: platform === "TISTORY" ? "TISTORY" : "NAVER_BLOG",
-        status: "SUCCEEDED",
-        finishedAt: new Date(),
-        publishedUrl: url,
-      },
+    const existing = await prisma.publishJob.findFirst({
+      where: { articleId: id, platform, status: "SUCCEEDED" },
+      orderBy: { id: "desc" },
     });
+
+    if (existing) {
+      // 이미 기록된 발행 — URL 이 비어 있을 때만 뒤늦게 보강한다 (중복 기록 방지).
+      if (url && !existing.publishedUrl) {
+        await prisma.publishJob.update({ where: { id: existing.id }, data: { publishedUrl: url } });
+      }
+    } else {
+      await prisma.publishJob.create({
+        data: {
+          articleId: id,
+          platform,
+          status: "SUCCEEDED",
+          finishedAt: new Date(),
+          publishedUrl: url,
+        },
+      });
+    }
+
     await prisma.article.update({
       where: { id },
       data: { status: "PUBLISHED", ...(hide ? { extensionDoneAt: new Date() } : {}) },
     });
-    res.json({ ok: true });
+    res.json({ ok: true, url });
   }),
 );

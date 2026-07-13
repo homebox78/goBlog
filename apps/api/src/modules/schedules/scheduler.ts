@@ -139,6 +139,15 @@ async function autoGenerateTopArticles(count: number): Promise<number> {
       await finishArticlePipeline(result.articleId, result.qualityScore);
       made += 1;
     } catch (error) {
+      // 중복(409)이면 그 키워드는 이미 다룬 소재다 — 그대로 두면 회차마다(하루 4회) 계속 재시도된다.
+      // EXCLUDED 로 내려 다음 키워드로 넘어간다.
+      if ((error as { status?: number }).status === 409) {
+        console.log(`[scheduler] 중복 소재 스킵 (${rec.keyword.text}): ${(error as Error).message}`);
+        await prisma.keyword
+          .update({ where: { id: rec.keywordId }, data: { status: "EXCLUDED" } })
+          .catch(() => undefined);
+        continue;
+      }
       console.error(`[scheduler] 자동 글 생성 실패 (${rec.keyword.text}):`, (error as Error).message);
     }
   }
