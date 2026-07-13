@@ -115,6 +115,16 @@ export interface StyleMetrics {
   /** 1,000자당 수치 표현(퍼센트·원·년·배 등) 개수 — AI 인용의 핵심 신호 */
   numbersPer1000Chars: number;
   avgChars: number;
+
+  /* ── 줄바꿈·문단 형태 (사람이 쓴 티가 가장 크게 나는 지점) ────────────────
+   * AI 글은 한 문단에 3~5문장을 몰아넣는다. 사람이 쓴 네이버 블로그는 **한 문장을 쓰고 엔터**를 친다.
+   * 실측: 인용 상위 8명 중 한 문장짜리 문단이 85%, 30자 이하 짧은 문단이 63%. */
+  paragraphsPerPost: number;
+  avgParagraphChars: number;
+  /** 한 문장으로만 이뤄진 문단 비율 (%) — 이게 높을수록 사람이 쓴 글처럼 보인다 */
+  oneSentenceParagraphRatio: number;
+  /** 30자 이하 짧은 문단 비율 (%) */
+  shortParagraphRatio: number;
 }
 
 /** 인용된 글들의 문체를 결정적으로 측정한다 (LLM 인상평 금지). */
@@ -128,9 +138,23 @@ export function measureStyle(bodies: PostBody[]): StyleMetrics {
   let firstPerson = 0;
   let numbers = 0;
   let chars = 0;
+  let paraTotal = 0;
+  let paraChars = 0;
+  let oneSentParas = 0;
+  let shortParas = 0;
 
   for (const b of bodies) {
     chars += b.charCount;
+
+    // 문단(= 사람이 엔터를 친 단위) 형태 측정
+    const paras = b.text.split("\n").map((p) => p.trim()).filter(Boolean);
+    paraTotal += paras.length;
+    paraChars += paras.reduce((sum, p) => sum + p.length, 0);
+    for (const p of paras) {
+      const sentences = (p.match(/[.!?]/g) ?? []).length || 1;
+      if (sentences === 1) oneSentParas += 1;
+      if (p.length <= 30) shortParas += 1;
+    }
     const sentences = b.text
       .split(/(?<=[.!?])\s+|\n/)
       .map((s) => s.trim())
@@ -175,6 +199,10 @@ export function measureStyle(bodies: PostBody[]): StyleMetrics {
     firstPersonPerPost: Math.round((firstPerson / n) * 10) / 10,
     numbersPer1000Chars: chars ? Math.round((numbers / chars) * 1000 * 10) / 10 : 0,
     avgChars: Math.round(chars / n),
+    paragraphsPerPost: Math.round(paraTotal / n),
+    avgParagraphChars: paraTotal ? Math.round(paraChars / paraTotal) : 0,
+    oneSentenceParagraphRatio: paraTotal ? Math.round((oneSentParas / paraTotal) * 100) : 0,
+    shortParagraphRatio: paraTotal ? Math.round((shortParas / paraTotal) * 100) : 0,
   };
 }
 
@@ -188,10 +216,23 @@ export interface StyleProfile {
   samples: string[];
 }
 
-const STYLE_KEY = "__STYLE__"; // CitationInsight 를 전역 문체 저장에 재사용 (키워드와 충돌하지 않는 예약어)
+/**
+ * 문체는 **플랫폼마다 다르다.**
+ *  · NAVER  — AI 브리핑 인용이 목표. 인용 상위 블로거를 실측해 학습한다(하십시오체·짧은 문단).
+ *  · 그 외   — 학습 데이터가 없다(인용 배지는 네이버만 노출). 기본 문체 규칙을 쓴다.
+ * CitationInsight 를 `__STYLE__:<플랫폼>` 예약 키로 재사용한다(마이그레이션 불필요).
+ */
+export type StylePlatform = "NAVER" | "BLOGGER" | "WORDPRESS" | "TISTORY";
+const styleKey = (platform: StylePlatform) => `__STYLE__:${platform}`;
+const LEGACY_STYLE_KEY = "__STYLE__"; // 플랫폼 분기 이전에 저장된 행 (네이버 학습분)
+
+/** 예약 키(전역 문체)인가 — 키워드 목록·학습 대상에서 제외해야 한다 */
+export function isStyleKey(keywordText: string): boolean {
+  return keywordText.startsWith(LEGACY_STYLE_KEY);
+}
 
 /**
- * 인용 상위 글들을 읽어 **전 키워드 공통 말투 프로파일**을 학습한다.
+ * 인용 상위 글들을 읽어 **네이버 말투 프로파일**을 학습한다.
  * 측정값(결정적)을 먼저 뽑고, 그 수치를 Claude 에게 근거로 줘서 규칙만 쓰게 한다.
  */
 export async function studyStyle(maxPosts = 12): Promise<StyleProfile | null> {
@@ -221,14 +262,16 @@ export async function studyStyle(maxPosts = 12): Promise<StyleProfile | null> {
     operation: "style-study",
     maxTokens: 4000,
     system: [
-      "당신은 한국어 문체 분석가다. 네이버 AI 브리핑에 인용된 상위 블로그 글들의 말투를 분석한다.",
+      "당신은 한국어 문체 분석가다. 네이버 AI 브리핑에 인용된 상위 블로그 글들의 말투와 '사람이 쓴 티'를 분석한다.",
       "⚠️ 인상으로 짐작하지 마라. 반드시 주어진 **측정값(metrics)** 에 근거해서만 판단한다.",
       "측정값과 어긋나는 서술을 하면 안 된다 (예: 이모지가 0개인데 '이모지를 활발히 쓴다'고 쓰면 틀린 것).",
+      "특히 **줄바꿈·문단 형태**를 중요하게 다뤄라. AI 글은 한 문단에 여러 문장을 몰아넣지만,",
+      "사람이 쓴 네이버 블로그는 한 문장 쓰고 엔터를 친다 — 이게 사람 글처럼 보이는 가장 큰 신호다.",
       "결과는 글 생성 프롬프트에 그대로 넣을 수 있는 구체적 규칙이어야 한다. '자연스럽게 쓰세요' 같은 일반론 금지.",
       "반드시 JSON만 출력한다.",
     ].join(" "),
     user: JSON.stringify({
-      task: "AI 브리핑에 인용되는 글들의 말투를 규칙으로 정리하라.",
+      task: "AI 브리핑에 인용되는 글들의 말투와 문단 형태를 규칙으로 정리하라. 'AI가 쓴 티'를 없애는 데 초점을 둔다.",
       metrics,
       metricsGuide: {
         formalRatio: "문장 어미 중 '~습니다/~입니다/~합니다'(하십시오체) 비율 %",
@@ -238,13 +281,19 @@ export async function studyStyle(maxPosts = 12): Promise<StyleProfile | null> {
         firstPersonPerPost: "글 1편당 1인칭 표현('저는','제가') 개수",
         numbersPer1000Chars: "본문 1,000자당 수치 표현 개수 (AI가 인용할 팩트 밀도)",
         avgSentenceChars: "평균 문장 길이(자)",
+        paragraphsPerPost: "글 1편당 문단(엔터로 나뉜 덩어리) 수",
+        avgParagraphChars: "문단 평균 길이(자)",
+        oneSentenceParagraphRatio: "한 문장만으로 이뤄진 문단의 비율 % — 높을수록 '한 줄 쓰고 엔터' 스타일",
+        shortParagraphRatio: "30자 이하 짧은 문단 비율 %",
       },
       sentenceSamples: samples,
       outputFormat: {
-        summary: "측정값에 근거한 말투 요약 2~3문장 (어미·문장길이·이모지·수치밀도를 수치와 함께 언급)",
+        summary: "측정값에 근거한 말투·문단 형태 요약 2~3문장 (수치와 함께 언급)",
         rules: [
-          "글 생성 프롬프트에 넣을 문체 규칙 6~10개. 각각 측정값에 근거한 명령형 한 문장.",
-          "예: '문장 어미는 ~습니다/~입니다로 통일한다(인용 상위 글의 XX%가 하십시오체).'",
+          "글 생성 프롬프트에 넣을 규칙 8~12개. 각각 측정값에 근거한 명령형 한 문장.",
+          "반드시 포함할 것: ① 어미 ② 문장 길이 ③ **줄바꿈/문단 형태(한 문장마다 엔터)** ④ 수치 밀도",
+          "⑤ AI 티를 없애는 구체적 방법(상투어 금지·문장 길이 변주·기계적 병렬 나열 금지 등)",
+          "예: '한 문단은 한 문장으로 쓰고 엔터를 친다(인용 상위 글의 85%가 한 문장 문단).'",
         ],
       },
     }),
@@ -252,17 +301,26 @@ export async function studyStyle(maxPosts = 12): Promise<StyleProfile | null> {
 
   const profile: StyleProfile = { metrics, rules: result.rules, summary: result.summary, samples: samples.slice(0, 8) };
 
+  // 인용 배지는 네이버에서만 나오므로, 학습된 문체는 NAVER 프로파일이다.
   await prisma.citationInsight.upsert({
-    where: { keywordText: STYLE_KEY },
+    where: { keywordText: styleKey("NAVER") },
     update: { data: profile as unknown as object, postsStudied: bodies.length, updatedAt: new Date() },
-    create: { keywordText: STYLE_KEY, data: profile as unknown as object, postsStudied: bodies.length },
+    create: { keywordText: styleKey("NAVER"), data: profile as unknown as object, postsStudied: bodies.length },
   });
   return profile;
 }
 
-/** 글 생성 시 프롬프트에 넣을 말투 프로파일 (없으면 null) */
-export async function getStyleForPrompt(): Promise<StyleProfile | null> {
-  const row = await prisma.citationInsight.findUnique({ where: { keywordText: STYLE_KEY } });
+/**
+ * 글 생성 시 프롬프트에 넣을 말투 프로파일.
+ * 네이버 외 플랫폼은 학습 데이터가 없으므로 null → generator 가 기본 문체 규칙을 쓴다.
+ */
+export async function getStyleForPrompt(platform: StylePlatform = "NAVER"): Promise<StyleProfile | null> {
+  const row =
+    (await prisma.citationInsight.findUnique({ where: { keywordText: styleKey(platform) } })) ??
+    // 플랫폼 분기 이전에 저장된 행(네이버 학습분) 호환
+    (platform === "NAVER"
+      ? await prisma.citationInsight.findUnique({ where: { keywordText: LEGACY_STYLE_KEY } })
+      : null);
   return (row?.data as StyleProfile | undefined) ?? null;
 }
 
@@ -366,11 +424,12 @@ export async function studyPendingKeywords(limit = 5): Promise<{ studied: number
   });
   const done = await prisma.citationInsight.findMany({ select: { keywordText: true } });
   const doneSet = new Set(done.map((d) => d.keywordText));
-  doneSet.add(STYLE_KEY); // 전역 문체 행은 키워드가 아니다
+
 
   let studied = 0;
   for (const group of groups) {
     if (studied >= limit) break;
+    if (isStyleKey(group.keywordText)) continue; // 예약 키(전역 문체)는 키워드가 아니다
     if (doneSet.has(group.keywordText)) continue;
     try {
       const insight = await studyKeyword(group.keywordText);

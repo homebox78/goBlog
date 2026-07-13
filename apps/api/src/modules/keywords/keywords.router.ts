@@ -233,7 +233,7 @@ keywordsRouter.get(
   asyncHandler(async (_req, res) => {
     // __STYLE__ 은 키워드가 아니라 전역 문체 프로파일 행이므로 목록에서 뺀다.
     const rows = await prisma.citationInsight.findMany({
-      where: { keywordText: { not: "__STYLE__" } },
+      where: { NOT: { keywordText: { startsWith: "__STYLE__" } } },
       orderBy: { updatedAt: "desc" },
       take: 60,
     });

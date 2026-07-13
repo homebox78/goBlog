@@ -239,6 +239,69 @@ articlesRouter.post(
  * 고시 백필/갱신 — ① 배너 있는데 고시 없는 글엔 삽입 ② 이미 고시가 있는 글은 최신 디자인·문구 박스로 교체.
  * (폰트·문구 지침 변경 시 기존 글 일괄 반영)
  */
+/**
+ * 중복 해시태그 줄 정리 — Claude 가 넣은 태그 줄 위에 코드가 또 붙여 두 번 들어간 글을 고친다.
+ * 태그 자체는 살리고(합집합), 본문 끝에 한 줄로만 남긴다.
+ */
+articlesRouter.post(
+  "/backfill-hashtags",
+  asyncHandler(async (_req, res) => {
+    const { stripHashtagLines } = await import("./generator.js");
+    const articles = await prisma.article.findMany({
+      select: { id: true, title: true, contentMarkdown: true },
+      take: 500,
+    });
+    const tagLineRe = /(?:^|\n)[ \t]*((?:#[0-9A-Za-z가-힣_-]{1,30}[ \t]*)+)(?=\n|$)/g;
+    const fixed: Array<{ id: number; title: string; before: number; after: number }> = [];
+
+    for (const a of articles) {
+      const md = a.contentMarkdown ?? "";
+      const lines = [...md.matchAll(tagLineRe)].map((m) => m[1].trim());
+      if (lines.length < 2) continue; // 중복 아님
+
+      // 모든 태그 줄의 합집합을 순서대로 유지
+      const tags: string[] = [];
+      const seen = new Set<string>();
+      for (const line of lines) {
+        for (const t of line.split(/\s+/).filter(Boolean)) {
+          if (!seen.has(t)) {
+            seen.add(t);
+            tags.push(t);
+          }
+        }
+      }
+      // 본문에서 태그 줄을 전부 제거한 뒤 한 줄만 다시 붙인다
+      const body = stripHashtagLines(md.replace(tagLineRe, "\n").replace(/\n{3,}/g, "\n\n"));
+      const next = `${body}\n\n${tags.join(" ")}`;
+      if (next === md) continue;
+
+      const contentHtml = await renderContentHtml(next);
+      const last = await prisma.articleVersion.findFirst({
+        where: { articleId: a.id },
+        orderBy: { version: "desc" },
+      });
+      await prisma.article.update({
+        where: { id: a.id },
+        data: {
+          contentMarkdown: next,
+          contentHtml,
+          versions: {
+            create: {
+              version: (last?.version ?? 0) + 1,
+              title: a.title,
+              contentMarkdown: next,
+              contentHtml,
+              changeNote: "중복 해시태그 줄 정리",
+            },
+          },
+        },
+      });
+      fixed.push({ id: a.id, title: a.title, before: lines.length, after: 1 });
+    }
+    res.json({ fixed: fixed.length, items: fixed });
+  }),
+);
+
 articlesRouter.post(
   "/backfill-disclosures",
   asyncHandler(async (_req, res) => {

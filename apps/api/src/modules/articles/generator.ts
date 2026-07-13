@@ -40,6 +40,8 @@ export interface GenerateOptions {
   product?: ProductInput;
   /** 유사 글 검사 건너뛰기 (의도적 재작성 시) */
   allowSimilar?: boolean;
+  /** 말투를 어느 플랫폼에 맞출지 (기본 NAVER — 인용 학습 데이터가 네이버에서만 나온다) */
+  stylePlatform?: "NAVER" | "BLOGGER" | "WORDPRESS" | "TISTORY";
 }
 
 interface GeneratedContent {
@@ -188,6 +190,31 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/**
+ * 본문 끝의 해시태그 줄을 모두 제거한다.
+ *
+ * Claude 가 contentMarkdown 안에 이미 해시태그 줄을 넣어 보내는데 코드가 조건 없이 또 붙여서
+ * **태그 줄이 두 번 들어가는 버그**가 있었다. 항상 지운 뒤 한 번만 붙인다.
+ * (본문 중간의 색상값 `#e52528` 등은 건드리지 않는다 — 해시태그만으로 이뤄진 '줄'만 제거)
+ */
+export function stripHashtagLines(markdown: string): string {
+  const lines = markdown.split("\n");
+  while (lines.length > 0) {
+    const last = lines[lines.length - 1].trim();
+    if (last === "") {
+      lines.pop();
+      continue;
+    }
+    const tokens = last.split(/\s+/);
+    const allTags =
+      tokens.length > 0 &&
+      tokens.every((t) => /^#[0-9A-Za-z가-힣_-]{1,30}$/.test(t) && !/^#[0-9a-fA-F]{3,8}$/.test(t));
+    if (!allTags) break;
+    lines.pop();
+  }
+  return lines.join("\n").trimEnd();
+}
+
 /** 키워드 또는 상품으로 글을 생성해 Article + 버전 + 스키마 + 이미지 프롬프트를 저장한다. */
 export async function generateArticle(
   options: GenerateOptions,
@@ -232,7 +259,7 @@ export async function generateArticle(
   const { getInsightForPrompt, getStyleForPrompt } = await import("../keywords/citation-study.js");
   const insight = keyword ? await getInsightForPrompt(keyword.text).catch(() => null) : null;
   // 말투 프로파일 — 인용 상위 블로거들의 문체를 **실측**한 결과. 전 키워드 공통.
-  const style = await getStyleForPrompt().catch(() => null);
+  const style = await getStyleForPrompt(options.stylePlatform ?? "NAVER").catch(() => null);
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
   const tone = options.tone;
   const language = LANGUAGE_NAME[options.language] ? options.language : "ko";
@@ -300,6 +327,19 @@ export async function generateArticle(
             `- **평균 문장 길이 ${style.metrics.avgSentenceChars}자** — 짧고 단정적으로 쓴다. 한 문장에 한 가지만 말한다.`,
             `- **수치 밀도**: 본문 1,000자당 수치 표현 ${style.metrics.numbersPer1000Chars}개. AI 는 수치를 근거로 인용하므로 이 밀도 이상으로 구체적 숫자(금액·%·연도·기간·개수)를 넣는다.`,
             `- **1인칭**: 글 1편당 ${style.metrics.firstPersonPerPost}회 — 자기 얘기보다 사실과 근거로 쓴다(없는 경험은 지어내지 않는다).`,
+            "",
+            "[✍️ 줄바꿈·문단 — '사람이 쓴 글'로 보이게 하는 가장 큰 신호. 반드시 지킨다]",
+            `- **한 문장을 쓰면 줄을 바꾼다.** 인용 상위 글은 문단의 ${style.metrics.oneSentenceParagraphRatio}%가 한 문장짜리다. 한 문단에 여러 문장을 몰아넣지 않는다.`,
+            `- 문단 평균 길이는 ${style.metrics.avgParagraphChars}자다. ${style.metrics.shortParagraphRatio}%는 30자 이하로 짧다. 긴 설명 문단을 이어 붙이지 말고 끊어서 내려쓴다.`,
+            `- 글 전체가 ${style.metrics.paragraphsPerPost}개 안팎의 문단으로 나뉜다. 마크다운에서 문단 사이는 빈 줄 하나로 구분한다.`,
+            "- ⚠️ AI가 쓴 글의 특징 = 한 문단에 3~5문장을 논리적으로 쌓아 올리는 것. 그렇게 쓰지 않는다. 사람은 생각나는 대로 한 줄씩 끊어 친다.",
+            "",
+            "[🙅 AI 티 없애기 — 아래를 어기면 기계가 쓴 글로 읽힌다]",
+            "- 상투어 금지: '결론적으로', '~하는 것이 중요합니다', '오늘은 ~에 대해 알아보겠습니다', '지금까지 ~를 살펴봤습니다', '도움이 되셨길 바랍니다'.",
+            "- 문장 길이를 일부러 들쭉날쭉하게 한다. 짧은 문장(10자 이하)과 보통 문장을 섞는다. 모든 문장이 비슷한 길이면 기계 글이다.",
+            "- 소제목마다 똑같은 틀(정의→장점→단점→정리)로 채우지 않는다. 항목마다 말할 거리의 양이 다르다.",
+            "- 모든 목록을 '① ② ③'처럼 기계적으로 병렬 나열하지 않는다. 중요한 것은 길게, 곁가지는 한 줄로.",
+            "- 겪지 않은 경험·후기는 지어내지 않는다. 대신 공식 자료·수치·출처로 신뢰도를 채운다.",
             ...style.rules.map((r) => `- ${r}`),
           ].join("\n")
         : "",
@@ -327,13 +367,9 @@ export async function generateArticle(
       "- 각 소제목·문단을 똑같은 틀(정의→예시→정리)로 찍어내지 말고 흐름을 자연스럽게 변주한다.",
       "- 실제 사람이 조언하듯 구체적이고 솔직하게 쓴다 (단, 없는 개인 경험·후기는 지어내지 않는다).",
       "- 불필요한 요약 반복, 뻔한 마무리 인사('오늘은 ~에 대해 알아봤습니다')를 피한다.",
-      // 이모지 규칙은 **측정값을 따른다**. 인용되는 글들이 이모지를 거의 안 쓰는데 우리만 넣으면
-      // 그만큼 인용에서 멀어진다. 문체 학습 전이면 기존(친근) 규칙을 유지한다.
-      style
-        ? style.metrics.emojiPerPost < 3
-          ? `- 이모지는 쓰지 않거나 글 전체에 1~2개만 쓴다. (AI 브리핑에 인용되는 상위 글들은 글 1편당 이모지가 평균 ${style.metrics.emojiPerPost}개로, 사실상 쓰지 않는다.)`
-          : `- 이모지는 글 전체에 ${Math.round(style.metrics.emojiPerPost)}개 안팎으로만 쓴다(인용 상위 글 실측 평균). 수치·정보 문장에는 넣지 않는다.`
-        : "- 문단 끝이나 소제목 옆에 어울리는 이모지(😊 💡 ✨ 등)를 자연스럽게 군데군데 넣는다. 단 과하지 않게 — 한 문단에 1개 정도, 딱딱한 정보·수치 문장에는 넣지 않는다.",
+      // 이모지는 유지한다(사용자 방침). 인용 상위 글은 이모지가 적지만, 친근함이 우리 블로그의 성격이다.
+      // 다만 수치·정보 문장에는 넣지 않아 팩트 문장이 AI에 인용되는 것을 방해하지 않는다.
+      "- 소제목 옆이나 문단 끝에 어울리는 이모지(😊 💡 ✨ 👍 ☑️ 등)를 군데군데 넣어 친근하게 만든다. 단 과하지 않게 — 소제목 위주로 쓰고, 수치·정보를 담은 문장에는 넣지 않는다(그 문장이 그대로 인용되기 때문).",
       "",
       "[독자를 사로잡는 글쓰기]",
       "- 첫 2~3문장에서 독자의 고민·상황에 공감하며 후킹하고, 이 글을 끝까지 읽으면 무엇을 얻는지 자연스럽게 제시한다.",
@@ -567,6 +603,8 @@ export async function generateArticle(
         .filter((tag) => tag.length > 0 && tag.length <= 30),
     ),
   ].slice(0, 30);
+  // Claude 가 본문 끝에 이미 해시태그 줄을 넣어 보내므로, 지우고 한 번만 붙인다 (중복 방지).
+  contentMarkdown = stripHashtagLines(contentMarkdown);
   if (tags.length > 0) {
     contentMarkdown += `\n\n${tags.map((tag) => `#${tag.replace(/\s+/g, "")}`).join(" ")}`;
   }
@@ -880,6 +918,22 @@ export async function improveArticle(
     } else {
       break;
     }
+  }
+
+  // 보정 과정에서 Claude 가 태그 줄을 또 붙여 중복될 수 있다 → 항상 한 줄로 정규화한다.
+  {
+    const tagsInBody = [
+      ...new Set(
+        (markdown.match(/(?:^|\n)\s*((?:#[0-9A-Za-z가-힣_-]{1,30}\s*)+)$/g)?.[0] ?? "")
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean),
+      ),
+    ];
+    const stripped = stripHashtagLines(markdown);
+    if (tagsInBody.length > 0) markdown = `${stripped}\n\n${tagsInBody.join(" ")}`;
+    else markdown = stripped;
+    quality = runCheck(title, meta, excerpt, markdown);
   }
 
   // 결정적 보정: 해시태그가 여전히 20개 미만이면 AI가 준 tags로 본문 끝에 직접 붙인다 (확실한 +10점)
