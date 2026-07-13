@@ -181,6 +181,61 @@ async function loadArticles() {
   }
 }
 
+/**
+ * 지금 보고 있는 탭이 어느 플랫폼인가 — 글쓰기 폼이 아니어도 host 로 판단한다.
+ * (detectPlatform 은 '작성폼인지'를 보므로, 블로그 홈·관리 화면에선 null 이 된다)
+ */
+async function currentTabPlatform() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const host = tab?.url ? new URL(tab.url).host : "";
+    if (host.endsWith("blog.naver.com")) return "NAVER_BLOG";
+    if (host.endsWith("tistory.com")) return "TISTORY";
+    if (host.includes("instagram.com")) return "INSTAGRAM";
+  } catch {
+    /* about:blank 등 파싱 실패 무시 */
+  }
+  return null;
+}
+
+function writeUrlFor(platform) {
+  if (platform === "NAVER_BLOG") return "https://blog.naver.com/GoBlogWrite.naver";
+  if (platform === "TISTORY") return `https://${config.tistoryBlog || "hom2box"}.tistory.com/manage/newpost`;
+  if (platform === "INSTAGRAM") return "https://www.instagram.com/";
+  return null;
+}
+
+/**
+ * 글을 고르면 지금 보고 있는 플랫폼의 글쓰기 화면으로 바로 들어간다.
+ * 이미 작성폼이면 그대로 두고, 아니면 그 탭을 글쓰기 주소로 이동시킨다.
+ */
+async function gotoWriteForm() {
+  if (currentPlatform) return true; // 이미 작성폼
+  const target = await currentTabPlatform();
+  const url = writeUrlFor(target);
+  if (!url) {
+    showNotes(["네이버·티스토리·인스타그램 탭에서 글을 선택하면 글쓰기 화면으로 바로 들어갑니다.",
+               "위의 ✏️ 버튼으로 글쓰기를 열 수도 있습니다."]);
+    return false;
+  }
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return false;
+  showNotes([`⏳ ${target === "TISTORY" ? "티스토리" : target === "NAVER_BLOG" ? "네이버" : "인스타그램"} 글쓰기 화면으로 이동 중...`]);
+  await chrome.tabs.update(tab.id, { url });
+  // 로드 완료까지 기다렸다가 플랫폼 재감지 (콘텐츠 스크립트 주입 시간 포함)
+  for (let i = 0; i < 24; i++) {
+    await sleep(500);
+    const t = await chrome.tabs.get(tab.id).catch(() => null);
+    if (t?.status === "complete") {
+      await sleep(800);
+      await detectPlatform();
+      if (currentPlatform) return true;
+    }
+  }
+  await detectPlatform();
+  return !!currentPlatform;
+}
+
 async function openArticle(id) {
   const { article } = await api(`/api/extension/articles/${id}`);
   currentArticle = article;
@@ -189,7 +244,9 @@ async function openArticle(id) {
   $("#detail").classList.remove("hidden");
   $("#actionBar").classList.remove("hidden");
   $("#notes").innerHTML = "";
-  detectPlatform(); // 플랫폼 감지 후 인스타 카드 표시 여부까지 renderInstagram이 갱신
+  await detectPlatform(); // 플랫폼 감지 후 인스타 카드 표시 여부까지 renderInstagram이 갱신
+  // 글을 고르면 지금 보고 있는 플랫폼의 글쓰기 화면으로 바로 들어간다 (작성폼이면 그대로).
+  await gotoWriteForm();
 }
 
 // 인스타그램 캐러셀 카드 렌더 — 인스타그램 탭에서만, 캐러셀 데이터가 있을 때 표시
