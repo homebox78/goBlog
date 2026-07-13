@@ -240,6 +240,63 @@ articlesRouter.post(
  * (폰트·문구 지침 변경 시 기존 글 일괄 반영)
  */
 /**
+ * 티스토리 발행 URL 복구 — 발행 기록은 있는데 링크가 비어 있는 글을 RSS 로 채운다.
+ *
+ * 티스토리는 발행 후 게시글이 아니라 관리 목록으로 이동해서, 확장이 탭 URL 폴링만으론
+ * 게시글 주소를 못 잡았다(그래서 목록에 링크가 안 걸렸다). 블로그 RSS 에서 제목을 맞춰 채운다.
+ */
+articlesRouter.post(
+  "/backfill-tistory-urls",
+  asyncHandler(async (req, res) => {
+    const blog = String(req.body?.blog ?? "hom2box").replace(/\.tistory\.com.*$/i, "");
+    const rss = await fetch(`https://${blog}.tistory.com/rss`, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(15000),
+    }).catch(() => null);
+    if (!rss?.ok) throw new HttpError(502, "티스토리 RSS 를 가져오지 못했습니다.");
+    const xml = await rss.text();
+
+    // RSS 는 엔티티가 이중 인코딩돼 있다 (&amp;mdash; → &mdash; → —)
+    const decode = (s: string) =>
+      s
+        .replace(/&amp;/g, "&")
+        .replace(/&mdash;/g, "—")
+        .replace(/&middot;/g, "·")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(Number(c)))
+        .trim();
+    const norm = (s: string) => decode(s).replace(/[\s·—–\-…"'`,.!?]/g, "").toLowerCase();
+
+    const posts = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
+      const t = m[1].match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/)?.[1] ?? "";
+      const l = m[1].match(/<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/)?.[1] ?? "";
+      return { title: decode(t), key: norm(t), url: l.trim() };
+    });
+
+    // URL 이 비어 있는 티스토리 발행 기록
+    const jobs = await prisma.publishJob.findMany({
+      where: { platform: "TISTORY", status: "SUCCEEDED", publishedUrl: null },
+      include: { article: { select: { id: true, title: true } } },
+    });
+
+    const fixed: Array<{ articleId: number; title: string; url: string }> = [];
+    const missed: Array<{ articleId: number; title: string }> = [];
+    for (const job of jobs) {
+      const hit = posts.find((p) => p.key === norm(job.article.title));
+      if (!hit || !/\.tistory\.com\/\d+/.test(hit.url)) {
+        missed.push({ articleId: job.article.id, title: job.article.title });
+        continue;
+      }
+      await prisma.publishJob.update({ where: { id: job.id }, data: { publishedUrl: hit.url } });
+      fixed.push({ articleId: job.article.id, title: job.article.title, url: hit.url });
+    }
+    res.json({ rssPosts: posts.length, fixed: fixed.length, items: fixed, missed });
+  }),
+);
+
+/**
  * 중복 해시태그 줄 정리 — Claude 가 넣은 태그 줄 위에 코드가 또 붙여 두 번 들어간 글을 고친다.
  * 태그 자체는 살리고(합집합), 본문 끝에 한 줄로만 남긴다.
  */
