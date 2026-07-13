@@ -197,6 +197,18 @@ function escapeHtml(value: string): string {
  * **태그 줄이 두 번 들어가는 버그**가 있었다. 항상 지운 뒤 한 번만 붙인다.
  * (본문 중간의 색상값 `#e52528` 등은 건드리지 않는다 — 해시태그만으로 이뤄진 '줄'만 제거)
  */
+/**
+ * 제목에서 이모지를 제거한다.
+ * 본문 소제목의 이모지는 친근함을 위해 유지하지만, 제목엔 넣지 않는다 —
+ * 검색결과 제목이 지저분해지고, 네이버 발행 시 제목이 이모지만 남는 사고도 있었다.
+ */
+export function stripEmoji(text: string): string {
+  return text
+    .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{20E3}\u{1F1E6}-\u{1F1FF}]/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export function stripHashtagLines(markdown: string): string {
   const lines = markdown.split("\n");
   while (lines.length > 0) {
@@ -309,6 +321,7 @@ export async function generateArticle(
       "[검색엔진 최적화(SEO) — 네이버·구글·다음 색인·상위노출 강화. 반드시 준수]",
       `- 핵심 키워드는 '${topic}'다. 이 키워드(또는 자연스러운 변형)를 ① 제목 앞부분, ② 도입부 첫 문장, ③ H2 소제목 최소 1곳, ④ 마무리, ⑤ metaDescription 앞부분에 반드시 배치한다.`,
       "- 제목은 공백 포함 32자 내외로 맞춘다(네이버 검색결과 제목 잘림 방지). 핵심 키워드를 앞에 둔다.",
+      "- 제목(title)·검색제목(metaTitle)에는 이모지를 절대 넣지 않는다. 이모지는 본문 소제목에만 쓴다.",
       "- 본문 전체에서 핵심 키워드를 자연스럽게 3~6회 노출한다. 단 어색한 반복(키워드 스터핑)은 검색 페널티이므로 금지 — 동의어·연관어(LSI)로 분산한다.",
       "- 사람들이 함께 검색하는 '연관 검색어·롱테일 질문'을 H2/H3 소제목과 FAQ로 흡수해 색인 키워드 범위를 넓힌다.",
       "- 도입부 첫 100자 안에서 검색 질문에 대한 핵심 답을 먼저 제시한다(검색 스니펫·체류시간 유리).",
@@ -560,6 +573,10 @@ export async function generateArticle(
   if (!generated.title || !generated.contentMarkdown) {
     throw new HttpError(502, "글 생성 결과가 올바르지 않습니다.");
   }
+
+  // 프롬프트로 금지해도 모델이 이따금 제목 끝에 이모지를 붙인다 — 결정적으로 제거한다.
+  generated.title = stripEmoji(generated.title);
+  if (generated.metaTitle) generated.metaTitle = stripEmoji(generated.metaTitle);
 
   let contentMarkdown = generated.contentMarkdown;
   let bannerImageUrl: string | null = null; // 상품 홍보 글의 대표 이미지로도 사용
