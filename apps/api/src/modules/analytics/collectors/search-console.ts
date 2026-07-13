@@ -63,7 +63,12 @@ async function siteUrls(token: string): Promise<string[]> {
   const res = await fetch("https://searchconsole.googleapis.com/webmasters/v3/sites", {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`GSC 속성 목록 조회 실패 (HTTP ${res.status})`);
+  if (!res.ok) {
+    // 본문을 함께 보여준다 — 403은 'API 미사용 설정' vs '권한 없음'이 완전히 다른 문제인데
+    // 상태코드만 보면 구분이 안 돼 엉뚱한 곳을 뒤지게 된다.
+    const body = await res.text();
+    throw new Error(`GSC 속성 목록 조회 실패 (HTTP ${res.status}): ${body.slice(0, 200)}`);
+  }
   const data = (await res.json()) as {
     siteEntry?: Array<{ siteUrl: string; permissionLevel: string }>;
   };
