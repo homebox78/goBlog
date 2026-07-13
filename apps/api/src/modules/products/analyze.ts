@@ -150,7 +150,12 @@ export async function analyzeProductInput(input: string): Promise<AnalyzedProduc
   const trimmed = input.trim();
 
   // 네이버 링크가 포함된 붙여넣기 — 여러 줄(링크+상품명) 또는 링크 단독
-  if (/naver\.me|smartstore\.naver|shopping\.naver|brandconnect/i.test(trimmed) && !/<a\s/i.test(trimmed)) {
+  // brand.naver = 브랜드스토어. 요즘 스마트스토어만큼 많이 쓴다 — 빠뜨리면 네이버 경로를 안 타고
+  // 일반 URL 처리로 새서 출처가 BRANDCONNECT로 잡히지 않는다.
+  if (
+    /naver\.me|smartstore\.naver|shopping\.naver|brand\.naver|brandconnect/i.test(trimmed) &&
+    !/<a\s/i.test(trimmed)
+  ) {
     const naver = await analyzeNaverPaste(trimmed);
     if (naver) return naver;
   }
