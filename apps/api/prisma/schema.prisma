@@ -111,6 +111,7 @@ model Keyword {
   articles        Article[]
   products        Product[]
   trends          KeywordTrend[]
+  citations       BlogCitation[]
 
   @@unique([text])
   @@map("keywords")
@@ -150,6 +151,41 @@ model KeywordTrend {
   @@index([year, month])
   @@index([keywordText])
   @@map("keyword_trends")
+}
+
+/**
+ * 네이버 블로그 검색 상위 글의 AI 브리핑 인용수 스냅샷 (append-only).
+ *
+ * 네이버는 블로그 검색 결과에 블로거의 누적 AI 브리핑 인용수 배지("403만 인용")를 노출한다.
+ * 우리 키워드로 블로그 탭을 매일 1회 긁어 (키워드 × 상위 글) 인용수를 쌓으면
+ * ① 어떤 글·블로거가 AI에 잘 인용되는지 벤치마크할 수 있고
+ * ② 같은 글의 인용수 증가 추이를 시계열로 볼 수 있다.
+ *
+ * 인용수는 글이 아니라 '블로거(채널)' 누적치라, citedCount는 blogId 기준으로 해석해야 한다.
+ * (키워드, 날짜, 글URL) 유니크 — 하루 여러 번 돌려도 같은 날은 덮어쓴다.
+ */
+model BlogCitation {
+  id          Int      @id @default(autoincrement())
+  keywordId   Int?
+  keywordText String // 비정규화 — 키워드 삭제돼도 기록 보존
+  date        DateTime @db.Date // 수집 일자 (KST)
+  collectedAt DateTime @default(now())
+  rank        Int // 블로그 탭 노출 순위 (1부터)
+  title       String   @db.Text
+  // MySQL 은 TEXT 를 유니크 인덱스에 못 쓴다 → 네이버 글 URL 은 짧으므로 VARCHAR 로 둔다.
+  url         String   @db.VarChar(255)
+  blogId      String // blog.naver.com/<blogId>
+  blogName    String? // 표시 이름
+  citedCount  BigInt? // 블로거 누적 AI 브리핑 인용수 (배지 없으면 null)
+  citedLabel  String? // 원문 배지 텍스트 ("403만 인용")
+  postedAt    String? // "2주 전" 등 상대 표기 (네이버가 상대값만 준다)
+  keyword     Keyword? @relation(fields: [keywordId], references: [id], onDelete: SetNull)
+
+  @@unique([keywordText, date, url])
+  @@index([date])
+  @@index([blogId])
+  @@index([citedCount])
+  @@map("blog_citations")
 }
 
 /**

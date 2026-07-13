@@ -6,6 +6,7 @@ import { searchCoupangProducts } from "../products/coupang.js";
 import { overlapScore, isNonCommercialKeyword } from "../products/product-match.js";
 
 let keywordJob: Cron | null = null;
+let citationJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -219,6 +220,24 @@ export async function scheduleFromSettings(): Promise<void> {
       },
     );
     console.log("[scheduler] 키워드 수집 4회/일 (06·12·18·00 KST) + 회차별 자동 글 2건 (검토 대기)");
+
+    // AI 브리핑 인용 게시물 수집 — 하루 1회면 충분하다(누적 인용수라 하루 새 크게 안 변한다).
+    // 07:30 = 06시 키워드 수집이 끝난 뒤라 그날 키워드 기준으로 긁는다.
+    citationJob?.stop();
+    citationJob = new Cron(
+      "30 7 * * *",
+      { timezone: "Asia/Seoul", protect: true },
+      async () => {
+        try {
+          const { collectBlogCitations } = await import("../keywords/citation.js");
+          const result = await collectBlogCitations();
+          console.log(`[scheduler] 인용 수집: 키워드 ${result.keywords}개 → 게시물 ${result.posts}건`);
+        } catch (error) {
+          console.error("[scheduler] 인용 수집 실패:", (error as Error).message);
+        }
+      },
+    );
+    console.log("[scheduler] AI 브리핑 인용 수집 1회/일 (07:30 KST)");
   } catch (error) {
     console.warn("[scheduler] 예약 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }

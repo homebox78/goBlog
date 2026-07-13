@@ -166,6 +166,67 @@ keywordsRouter.post(
   }),
 );
 
+/**
+ * AI 브리핑 인용 게시물 — 내 키워드로 네이버 블로그 탭을 긁어 모은 상위 글.
+ * 어떤 글·블로거가 AI에 잘 인용되는지 보는 벤치마크 화면용.
+ */
+keywordsRouter.get(
+  "/citations",
+  asyncHandler(async (req, res) => {
+    const date = typeof req.query.date === "string" ? req.query.date : undefined;
+    const where = date ? { date: new Date(date) } : {};
+
+    const rows = await prisma.blogCitation.findMany({
+      where,
+      orderBy: [{ citedCount: "desc" }, { date: "desc" }],
+      take: 300,
+    });
+
+    // 블로거별 집계 — 자주·많이 인용되는 채널 랭킹
+    const byBlog = new Map<string, { blogId: string; blogName: string | null; citedCount: number; posts: number }>();
+    for (const row of rows) {
+      const entry = byBlog.get(row.blogId) ?? {
+        blogId: row.blogId,
+        blogName: row.blogName,
+        citedCount: Number(row.citedCount ?? 0),
+        posts: 0,
+      };
+      entry.posts += 1;
+      entry.citedCount = Math.max(entry.citedCount, Number(row.citedCount ?? 0));
+      byBlog.set(row.blogId, entry);
+    }
+
+    res.json({
+      total: rows.length,
+      collectedDates: [...new Set(rows.map((r) => r.date.toISOString().slice(0, 10)))],
+      // BigInt 는 JSON 직렬화가 안 되므로 number 로 내린다.
+      items: rows.map((row) => ({
+        id: row.id,
+        keyword: row.keywordText,
+        date: row.date.toISOString().slice(0, 10),
+        rank: row.rank,
+        title: row.title,
+        url: row.url,
+        blogId: row.blogId,
+        blogName: row.blogName,
+        citedCount: row.citedCount === null ? null : Number(row.citedCount),
+        citedLabel: row.citedLabel,
+        postedAt: row.postedAt,
+      })),
+      topBlogs: [...byBlog.values()].sort((a, b) => b.citedCount - a.citedCount).slice(0, 20),
+    });
+  }),
+);
+
+/** 인용 게시물 수동 수집 (스케줄러는 하루 1회 자동 실행) */
+keywordsRouter.post(
+  "/citations/collect",
+  asyncHandler(async (_req, res) => {
+    const { collectBlogCitations } = await import("./citation.js");
+    res.json(await collectBlogCitations());
+  }),
+);
+
 const manualSchema = z.object({
   text: z.string().min(2).max(80),
   category: z.string().max(40).optional(),
