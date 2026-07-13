@@ -13,8 +13,25 @@ export function mediaDir(): string {
   return process.env.MEDIA_DIR || path.resolve(here, "../../../storage/media");
 }
 
+/**
+ * 이미지 공개 URL의 베이스.
+ *
+ * ⚠️ 예전엔 미설정 시 조용히 localhost로 폴백했는데, DB는 운영 DB 하나를 공유하므로
+ * 로컬에서 이미지를 만들면 **운영 DB에 죽은 링크(http://localhost:8787/...)가 박힌다**.
+ * 실제로 글 46·48이 이렇게 이미지를 통째로 잃었다(파일은 그 PC에만 남고 사라짐).
+ * 그래서 이제 미설정이면 조용히 넘어가지 않고 즉시 실패시킨다 — 로컬에서도 명시적으로 넣어야 한다.
+ */
 export function mediaPublicUrl(): string {
-  return (process.env.MEDIA_PUBLIC_URL || "http://localhost:8787/media").replace(/\/+$/, "");
+  const value = process.env.MEDIA_PUBLIC_URL?.trim();
+  if (!value) {
+    throw new HttpError(
+      500,
+      "MEDIA_PUBLIC_URL이 설정되지 않았습니다. 이미지 URL이 localhost로 저장되면 운영 DB에 죽은 링크가 남습니다.\n" +
+        "· 운영: 배포 스크립트가 자동 설정합니다 (https://hom2box.com/goBlog/media)\n" +
+        "· 로컬: apps/api/.env 에 MEDIA_PUBLIC_URL=http://localhost:8787/media 를 명시하세요.",
+    );
+  }
+  return value.replace(/\/+$/, "");
 }
 
 /** 등장 캐릭터 키에 해당하는 레퍼런스 이미지를 base64로 읽어온다. */
