@@ -119,6 +119,9 @@ async function applyNaver({ html, plainText }) {
   };
 }
 
+// background 가 모든 프레임에서 호출해 결과를 취합한다 (프레임 경합 없는 감지).
+window.__goblogDetect = () => ({ platform: detectPlatform(), restricted: restrictedChannel() });
+
 // background가 재시도용으로 executeScript로 다시 주입할 수 있어, 리스너 중복 등록을 막는다
 // (중복이면 sendResponse가 두 번 호출돼 응답이 꼬인다).
 if (!window.__goblogAdapterListener) {
@@ -127,6 +130,8 @@ if (!window.__goblogAdapterListener) {
   (async () => {
     try {
       if (message?.type === "DETECT") {
+        // DETECT 는 background 가 executeScript 로 모든 프레임 결과를 모아 판단한다(아래 window 노출).
+        // 이 경로는 폴백일 뿐 — 경합이 나도 손해가 없도록 결과만 그대로 준다.
         sendResponse({ ok: true, platform: detectPlatform(), restricted: restrictedChannel() });
         return;
       }

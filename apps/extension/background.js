@@ -367,6 +367,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
     try {
+      // DETECT 는 프레임 경합이 나면 안 된다 — 에디터 없는 보조 iframe 이 null 로 먼저 응답하면
+      // 정상 작성폼인데도 "작성폼 아님"이 된다. 전 프레임 결과를 모아 하나라도 감지되면 그걸 쓴다.
+      if (message.payload?.type === "DETECT") {
+        sendResponse(await detectAcrossFrames(tab.id));
+        return;
+      }
       sendResponse(await sendToTab(tab.id, message.payload));
     } catch (error) {
       sendResponse({
@@ -384,6 +390,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * sendMessage가 "Receiving end does not exist"로 실패하므로, 그때 adapter를 모든 프레임에
  * 즉시 주입한 뒤 한 번 더 시도한다(이미 열려 있던 탭도 새로고침 없이 동작).
  */
+/**
+ * 탭의 모든 프레임에서 감지를 실행해 결과를 취합한다.
+ * chrome.tabs.sendMessage 는 '먼저 응답한' 프레임 하나만 쓰므로, 에디터가 없는 보조 iframe 이
+ * null 로 이겨 "작성폼 아님"이 되는 경합이 있었다. executeScript 는 프레임별 결과를 전부 돌려준다.
+ */
+async function detectAcrossFrames(tabId) {
+  let results;
+  try {
+    results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => (window.__goblogDetect ? window.__goblogDetect() : null),
+    });
+  } catch (_) {
+    return { ok: false, platform: null, restricted: null };
+  }
+  // 콘텐츠 스크립트가 아직 없는 프레임이 있으면(확장 재로드 등) 주입 후 한 번 더
+  if (!results.some((r) => r?.result)) {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, files: ["content/adapter.js"] });
+      results = await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        func: () => (window.__goblogDetect ? window.__goblogDetect() : null),
+      });
+    } catch (_) {
+      /* 주입 불가 도메인 — 감지 실패로 둔다 */
+    }
+  }
+  const hits = results.map((r) => r?.result).filter(Boolean);
+  const platform = hits.find((h) => h.platform)?.platform ?? null;
+  const restricted = hits.find((h) => h.restricted)?.restricted ?? null;
+  return { ok: true, platform, restricted };
+}
+
 async function sendToTab(tabId, payload) {
   try {
     const res = await chrome.tabs.sendMessage(tabId, payload);
