@@ -107,7 +107,12 @@ mv /tmp/htaccess /var/www/html/goBlog/.htaccess
 sudo a2enmod proxy proxy_http > /dev/null
 printf 'ProxyTimeout 900\nProxyPass "/goBlog/api" "http://127.0.0.1:8788/api" timeout=900\nProxyPassReverse "/goBlog/api" "http://127.0.0.1:8788/api"\n' | sudo tee /etc/apache2/conf-available/goblog.conf > /dev/null
 sudo a2enconf goblog > /dev/null
-sudo apachectl configtest
+# configtest는 성공해도 "Syntax OK"를 stderr로 뱉는다. 그대로 두면 PowerShell이 NativeCommandError로 보고
+# ssh를 끊어 이후 API 배포 단계가 통째로 건너뛰어진다. 출력을 삼키고 실패만 명시적으로 잡는다.
+if ! sudo apachectl configtest > /dev/null 2>&1; then
+  echo APACHE_CONFIG_ERROR
+  exit 1
+fi
 sudo systemctl reload apache2
 echo APACHE_CONFIGURED
 
