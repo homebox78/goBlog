@@ -1,6 +1,6 @@
 import { Cron } from "croner";
 import { prisma } from "../../common/prisma.js";
-import { runDailyDiscovery, kstToday } from "../keywords/engine.js";
+import { runDailyDiscovery, kstToday, isExcludedTopic } from "../keywords/engine.js";
 import { finishArticlePipeline, generateArticle, type ProductInput } from "../articles/generator.js";
 import { searchCoupangProducts } from "../products/coupang.js";
 import { overlapScore, isNonCommercialKeyword } from "../products/product-match.js";
@@ -120,6 +120,11 @@ async function autoGenerateTopArticles(count: number): Promise<number> {
   let made = 0;
   for (const rec of recommendations) {
     if (made >= count) break;
+    // 스포츠·연예·정치·사건사고는 글로 쓰지 않는다 (수집 필터를 통과해 들어온 옛 키워드 방어).
+    if (isExcludedTopic(rec.keyword.text)) {
+      await prisma.keyword.update({ where: { id: rec.keywordId }, data: { status: "EXCLUDED" } }).catch(() => undefined);
+      continue;
+    }
     try {
       // 제휴 수익화: 키워드에 어울리는 상품(등록 상품 우선)을 붙이면 배너·딥링크·대가성 문구가 자동 삽입된다.
       const product = await findProductForKeyword(rec.keywordId, rec.keyword.text);

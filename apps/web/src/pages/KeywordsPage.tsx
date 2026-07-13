@@ -161,7 +161,7 @@ function suggestArticleType(item: KeywordItem): string {
   }
 }
 
-type KeywordView = "today" | "saved" | "trends";
+type KeywordView = "today" | "saved" | "trends" | "citations";
 
 export default function KeywordsPage() {
   const queryClient = useQueryClient();
@@ -175,7 +175,7 @@ export default function KeywordsPage() {
   } | null>(null);
 
   const query = useQuery({
-    enabled: view !== "trends",
+    enabled: view !== "trends" && view !== "citations",
     queryKey: ["keywords", view],
     queryFn: () =>
       view === "today"
@@ -294,9 +294,16 @@ export default function KeywordsPage() {
             >
               📈 트렌드 (시계열)
             </Button>
+            <Button
+              variant={view === "citations" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("citations")}
+            >
+              🏆 AI 인용
+            </Button>
           </div>
         </div>
-        {view !== "trends" && (
+        {view !== "trends" && view !== "citations" && (
           <Button
             onClick={() => discoverMutation.mutate()}
             disabled={discoverMutation.isPending || query.data?.running}
@@ -312,14 +319,15 @@ export default function KeywordsPage() {
       </div>
 
       {view === "trends" && <TrendsView />}
+      {view === "citations" && <CitationsView />}
 
-      {view !== "trends" && discoverMutation.isPending && (
+      {view !== "trends" && view !== "citations" && discoverMutation.isPending && (
         <p className="text-sm text-muted-foreground">
           이슈 수집 → AI 키워드 발굴 → 검색량 조회 중입니다. 1~2분 정도 걸립니다.
         </p>
       )}
 
-      {view === "trends" ? null : query.isPending ? (
+      {view === "trends" || view === "citations" ? null : query.isPending ? (
         <Skeleton className="h-96" />
       ) : query.isError ? (
         <p className="text-sm text-destructive">키워드를 불러오지 못했습니다.</p>
@@ -494,6 +502,188 @@ export default function KeywordsPage() {
         open={generateTarget !== null}
         onOpenChange={(open) => !open && setGenerateTarget(null)}
       />
+    </div>
+  );
+}
+
+interface CitationItem {
+  id: number;
+  keyword: string;
+  date: string;
+  rank: number;
+  title: string;
+  url: string;
+  blogId: string;
+  blogName: string | null;
+  citedCount: number | null;
+  citedLabel: string | null;
+  postedAt: string | null;
+}
+
+interface CitationsResponse {
+  total: number;
+  collectedDates: string[];
+  items: CitationItem[];
+  topBlogs: { blogId: string; blogName: string | null; citedCount: number; posts: number }[];
+}
+
+/** 인용수를 "403만"처럼 한국식으로 — 원문 배지와 같은 눈금으로 읽히게 */
+function citedText(count: number | null, label: string | null) {
+  if (label) return label.replace(/\s*인용$/, "");
+  if (count === null) return "—";
+  if (count >= 100_000_000) return `${(count / 100_000_000).toFixed(1)}억`;
+  if (count >= 10_000) return `${Math.round(count / 10_000)}만`;
+  return numberFormat(count);
+}
+
+/**
+ * AI 인용 탭 — 내 키워드로 네이버 블로그 탭을 긁어 모은 상위 글과 그 블로거의 누적 인용수.
+ * ⚠️ 인용수는 '글'이 아니라 '블로거(채널)' 누적치다. 같은 블로거의 다른 글은 같은 수치가 찍힌다.
+ */
+function CitationsView() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["keyword-citations"],
+    queryFn: () => api.get<CitationsResponse>("/api/keywords/citations"),
+  });
+
+  const collect = useMutation({
+    mutationFn: () => api.post<{ keywords: number; posts: number }>("/api/keywords/citations/collect", {}),
+    onSuccess: (r) => {
+      toast.success(`키워드 ${r.keywords}개에서 인용 게시물 ${r.posts}건을 수집했습니다.`);
+      queryClient.invalidateQueries({ queryKey: ["keyword-citations"] });
+    },
+    onError: () => toast.error("인용 수집에 실패했습니다."),
+  });
+
+  // 키워드별로 묶어 보여준다 — "이 키워드에선 누가 AI에 인용되고 있나"가 한눈에 들어오게
+  const byKeyword = useMemo(() => {
+    const map = new Map<string, CitationItem[]>();
+    for (const item of query.data?.items ?? []) {
+      const list = map.get(item.keyword) ?? [];
+      list.push(item);
+      map.set(item.keyword, list);
+    }
+    // 키워드 안에서는 노출 순위대로
+    for (const list of map.values()) list.sort((a, b) => a.rank - b.rank);
+    // 강자(최고 인용수)가 높은 키워드부터 = 경쟁이 센 순
+    return [...map.entries()].sort(
+      (a, b) =>
+        Math.max(...b[1].map((i) => i.citedCount ?? 0)) - Math.max(...a[1].map((i) => i.citedCount ?? 0)),
+    );
+  }, [query.data]);
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="flex items-center justify-between py-4">
+          <div className="text-sm">
+            <p className="font-medium">네이버 AI 브리핑 인용 벤치마크</p>
+            <p className="text-muted-foreground">
+              내 키워드로 블로그 탭 상위 글을 매일 07:30에 수집합니다. 인용수는 <b>글이 아니라 블로거(채널) 누적치</b>입니다.
+              {query.data?.total ? ` · 현재 ${query.data.total}건` : ""}
+            </p>
+          </div>
+          <Button onClick={() => collect.mutate()} disabled={collect.isPending}>
+            {collect.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            지금 수집
+          </Button>
+        </CardContent>
+      </Card>
+
+      {query.isPending ? (
+        <Skeleton className="h-96" />
+      ) : query.isError ? (
+        <p className="text-sm text-destructive">인용 데이터를 불러오지 못했습니다.</p>
+      ) : (query.data?.items.length ?? 0) === 0 ? (
+        <Card>
+          <CardContent className="py-16 text-center text-sm text-muted-foreground">
+            아직 수집된 인용 데이터가 없습니다. "지금 수집"을 눌러 시작해보세요.
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {(query.data?.topBlogs.length ?? 0) > 0 && (
+            <Card>
+              <CardContent className="py-4">
+                <p className="mb-3 text-sm font-medium">🏆 자주 인용되는 블로거 (내 키워드 기준)</p>
+                <div className="flex flex-wrap gap-2">
+                  {query.data!.topBlogs.map((b) => (
+                    <a
+                      key={b.blogId}
+                      href={`https://blog.naver.com/${b.blogId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-md border px-2 py-1 text-xs hover:bg-accent"
+                    >
+                      <span className="font-medium">{b.blogName ?? b.blogId}</span>
+                      <span className="ml-1 font-mono text-emerald-600">{citedText(b.citedCount, null)}</span>
+                      <span className="ml-1 text-muted-foreground">· {b.posts}건</span>
+                    </a>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {byKeyword.map(([keyword, items]) => {
+            const top = Math.max(...items.map((i) => i.citedCount ?? 0));
+            return (
+              <Card key={keyword}>
+                <CardContent className="py-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-sm font-bold">{keyword}</span>
+                    {top === 0 ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        인용 강자 없음 — 노려볼 만함
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">최고 {citedText(top, null)} 인용</Badge>
+                    )}
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 text-center">#</TableHead>
+                        <TableHead>제목</TableHead>
+                        <TableHead className="w-36">블로거</TableHead>
+                        <TableHead className="w-24 text-right">인용수</TableHead>
+                        <TableHead className="w-20 text-center">작성</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="text-center text-muted-foreground">{item.rank}</TableCell>
+                          <TableCell>
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                            >
+                              {item.title}
+                            </a>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {item.blogName ?? item.blogId}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm text-emerald-600">
+                            {citedText(item.citedCount, item.citedLabel)}
+                          </TableCell>
+                          <TableCell className="text-center text-xs text-muted-foreground">
+                            {item.postedAt ?? "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }
