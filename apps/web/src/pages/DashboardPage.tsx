@@ -1,10 +1,43 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ExternalLink } from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+
+interface TrendPoint {
+  date: string;
+  label: string;
+  articles: number;
+  published: number;
+  failed: number;
+  quality: number | null; // 글이 없는 날은 null — 0으로 그리면 그래프가 바닥으로 떨어진다
+  costKrw: number;
+}
+
+const PRODUCTION_CHART: ChartConfig = {
+  articles: { label: "생성", color: "var(--chart-1)" },
+  published: { label: "발행", color: "var(--chart-2)" },
+  failed: { label: "발행 실패", color: "var(--destructive)" },
+};
+
+const QUALITY_CHART: ChartConfig = {
+  quality: { label: "평균 품질", color: "var(--chart-3)" },
+};
+
+const COST_CHART: ChartConfig = {
+  costKrw: { label: "AI 비용", color: "var(--chart-4)" },
+};
 
 interface DashboardData {
   db: boolean;
@@ -60,6 +93,11 @@ export default function DashboardPage() {
   const query = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.get<DashboardData>("/api/analytics/dashboard"),
+  });
+
+  const trends = useQuery({
+    queryKey: ["dashboard-trends"],
+    queryFn: () => api.get<{ days: number; series: TrendPoint[] }>("/api/analytics/trends?days=14"),
   });
 
   if (query.isPending) {
@@ -121,6 +159,92 @@ export default function DashboardPage() {
         <StatCard label="발행 실패" value={failedCount} accent={failedCount > 0} />
       </div>
 
+      {trends.data && trends.data.series.some((point) => point.articles + point.published > 0) && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card className="min-w-0 lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">최근 14일 — 글 생성과 발행</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={PRODUCTION_CHART} className="h-56 w-full">
+                <AreaChart data={trends.data.series} margin={{ left: 4, right: 8, top: 4 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis width={28} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Area
+                    dataKey="published"
+                    type="monotone"
+                    stackId="a"
+                    stroke="var(--color-published)"
+                    fill="var(--color-published)"
+                    fillOpacity={0.25}
+                  />
+                  <Area
+                    dataKey="articles"
+                    type="monotone"
+                    stackId="b"
+                    stroke="var(--color-articles)"
+                    fill="var(--color-articles)"
+                    fillOpacity={0.25}
+                  />
+                  <Area
+                    dataKey="failed"
+                    type="monotone"
+                    stackId="c"
+                    stroke="var(--color-failed)"
+                    fill="var(--color-failed)"
+                    fillOpacity={0.2}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="min-w-0">
+            <CardHeader>
+              <CardTitle className="text-base">품질 점수 추이 (자동발행 기준 85점)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={QUALITY_CHART} className="h-48 w-full">
+                <LineChart data={trends.data.series} margin={{ left: 4, right: 8, top: 4 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis width={32} domain={[70, 100]} tickLine={false} axisLine={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line
+                    dataKey="quality"
+                    type="monotone"
+                    stroke="var(--color-quality)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                </LineChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="min-w-0">
+            <CardHeader>
+              <CardTitle className="text-base">일별 AI 비용 (원)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={COST_CHART} className="h-48 w-full">
+                <BarChart data={trends.data.series} margin={{ left: 4, right: 8, top: 4 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis width={44} tickLine={false} axisLine={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="costKrw" fill="var(--color-costKrw)" radius={4} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {data.usage && (
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
@@ -148,7 +272,7 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">최근 작성 글</CardTitle>
