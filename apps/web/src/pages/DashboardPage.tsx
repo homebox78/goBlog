@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AlertTriangle, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +91,68 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELED: "취소",
 };
 
+interface BrokenImage {
+  articleId: number;
+  articleTitle: string;
+  reason: string;
+  repairable: boolean;
+}
+
+/**
+ * 깨진 이미지 감시 — 예전엔 발행 직전에 엑박을 보고서야 알았다.
+ * 이상이 없으면 아무것도 그리지 않는다 (평소 대시보드를 어지럽히지 않게).
+ */
+function MediaHealthCard() {
+  const queryClient = useQueryClient();
+  const health = useQuery({
+    queryKey: ["media-health"],
+    queryFn: () => api.get<{ broken: BrokenImage[]; count: number }>("/api/articles/media-health"),
+  });
+
+  const repair = useMutation({
+    mutationFn: () =>
+      api.post<{ bodiesFixed: number; imagesRegenerated: number; failed: unknown[] }>(
+        "/api/articles/media-health/repair",
+      ),
+    onSuccess: (r) => {
+      toast.success(`복구 완료 — 본문 ${r.bodiesFixed}건, 이미지 재생성 ${r.imagesRegenerated}장`);
+      queryClient.invalidateQueries({ queryKey: ["media-health"] });
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "복구 실패"),
+  });
+
+  if (!health.data || health.data.count === 0) return null;
+
+  const articles = [...new Set(health.data.broken.map((b) => b.articleTitle))];
+  return (
+    <Card className="border-destructive/50 bg-destructive/5">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <AlertTriangle className="size-4 text-destructive" />
+          깨진 이미지 {health.data.count}건
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {articles.slice(0, 4).map((title) => (
+            <p key={title} className="truncate">
+              · {title}
+            </p>
+          ))}
+          {articles.length > 4 && <p>· 외 {articles.length - 4}개 글</p>}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          본문이 가리키는 옛 주소를 되돌리고, 파일이 사라진 이미지는 저장된 프롬프트로 다시 만듭니다.
+        </p>
+        <Button size="sm" onClick={() => repair.mutate()} disabled={repair.isPending}>
+          {repair.isPending ? "복구 중..." : "자동 복구"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
   const query = useQuery({
     queryKey: ["dashboard"],
@@ -151,6 +215,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      <MediaHealthCard />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="오늘의 추천 키워드" value={data.keywordsToday} />

@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, CheckCircle2, History, ImagePlus, Loader2, RefreshCw, Save, Send, Sparkles, Trash2, Upload, XCircle } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 interface ArticleDetail {
   id: number;
   title: string;
+  updatedAt: string; // 저장 시 되돌려 보내 '오래된 화면의 덮어쓰기'를 서버가 걸러낸다
   language: string;
   articleType: string;
   status: string;
@@ -80,10 +81,25 @@ export default function ArticleDetailPage() {
     }
   }, [query.data]);
 
+  /**
+   * 저장 페이로드 — 이 화면이 글을 불러온 시각(baseUpdatedAt)을 항상 함께 보낸다.
+   * 이게 없으면 오래된 화면의 본문이 최신 본문을 조용히 덮어쓴다
+   * (이미지 재생성 → 재생성 전에 열어둔 화면에서 배너 삽입 → 이미지가 다시 깨졌던 사고).
+   */
+  const savePayload = () => ({ ...form, baseUpdatedAt: query.data?.article.updatedAt });
+
+  // 서버가 409를 주면 이 화면이 낡은 것이다 — 최신 본문을 다시 불러와 바로 재시도할 수 있게 한다.
+  const handleSaveError = (error: unknown) => {
+    toast.error(error instanceof Error ? error.message : "저장 실패");
+    if (error instanceof ApiError && error.status === 409) {
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+    }
+  };
+
   const saveMutation = useMutation({
     mutationFn: () =>
       api.put<{ id: number; qualityScore: number }>(`/api/articles/${id}`, {
-        ...form,
+        ...savePayload(),
         changeNote: "수동 편집",
       }),
     onSuccess: (result) => {
@@ -91,14 +107,14 @@ export default function ArticleDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["article", id] });
       queryClient.invalidateQueries({ queryKey: ["articles"] });
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "저장 실패"),
+    onError: handleSaveError,
   });
 
   // 검수 완료 → status APPROVED. Blogger 설정돼 있으면 서버가 자동 발행 큐잉(bloggerQueued).
   const approveMutation = useMutation({
     mutationFn: () =>
       api.put<{ id: number; status: string; autoPublished: string[] }>(`/api/articles/${id}`, {
-        ...form,
+        ...savePayload(),
         status: "APPROVED",
         changeNote: "검수 완료",
       }),
@@ -157,7 +173,7 @@ export default function ArticleDetailPage() {
       const pos = ta ? ta.selectionStart : md.length;
       const next = `${md.slice(0, pos)}\n\n${r.figure}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
       setForm((prev) => ({ ...prev, contentMarkdown: next }));
-      await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "이미지 삽입" });
+      await api.put(`/api/articles/${id}`, { ...savePayload(), contentMarkdown: next, changeNote: "이미지 삽입" });
       queryClient.invalidateQueries({ queryKey: ["article", id] });
       queryClient.invalidateQueries({ queryKey: ["articles"] });
       toast.success("커서 위치에 이미지를 삽입했습니다.");
@@ -177,7 +193,7 @@ export default function ArticleDetailPage() {
       const pos = ta ? ta.selectionStart : md.length;
       const next = `${md.slice(0, pos)}\n\n${r.figure}\n\n${md.slice(pos)}`.replace(/\n{3,}/g, "\n\n");
       setForm((prev) => ({ ...prev, contentMarkdown: next }));
-      await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "출처 이미지 삽입" });
+      await api.put(`/api/articles/${id}`, { ...savePayload(), contentMarkdown: next, changeNote: "출처 이미지 삽입" });
       setSrcImgUrl("");
       queryClient.invalidateQueries({ queryKey: ["article", id] });
       queryClient.invalidateQueries({ queryKey: ["articles"] });
@@ -211,7 +227,7 @@ export default function ArticleDetailPage() {
           .replace(new RegExp(`<figure[^>]*>(?:(?!</figure>)[\\s\\S])*?${esc}(?:(?!</figure>)[\\s\\S])*?</figure>`, "g"), "")
           .replace(/\n{3,}/g, "\n\n");
         setForm((prev) => ({ ...prev, contentMarkdown: cleaned }));
-        await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: cleaned, changeNote: "이미지 삭제" });
+        await api.put(`/api/articles/${id}`, { ...savePayload(), contentMarkdown: cleaned, changeNote: "이미지 삭제" });
       }
       queryClient.invalidateQueries({ queryKey: ["article", id] });
       toast.success("이미지를 삭제했습니다.");
@@ -280,7 +296,7 @@ export default function ArticleDetailPage() {
         next = `${r.disclosure}\n\n${next}`;
       }
       setForm((prev) => ({ ...prev, contentMarkdown: next }));
-      await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: "배너 자동 삽입(상·중·하)" });
+      await api.put(`/api/articles/${id}`, { ...savePayload(), contentMarkdown: next, changeNote: "배너 자동 삽입(상·중·하)" });
       setBannerInput("");
       queryClient.invalidateQueries({ queryKey: ["article", id] });
       queryClient.invalidateQueries({ queryKey: ["articles"] });
@@ -371,7 +387,7 @@ export default function ArticleDetailPage() {
 
   const saveMarkdown = async (next: string, note: string) => {
     setForm((prev) => ({ ...prev, contentMarkdown: next }));
-    await api.put(`/api/articles/${id}`, { ...form, contentMarkdown: next, changeNote: note });
+    await api.put(`/api/articles/${id}`, { ...savePayload(), contentMarkdown: next, changeNote: note });
     queryClient.invalidateQueries({ queryKey: ["article", id] });
     queryClient.invalidateQueries({ queryKey: ["articles"] });
   };

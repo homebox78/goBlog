@@ -137,6 +137,28 @@ articlesRouter.post(
 );
 
 /**
+ * 이미지 무결성 점검 — DB의 이미지 주소가 실제로 살아 있는지 확인한다.
+ * ⚠️ "/:id" 보다 먼저 등록해야 한다 (안 그러면 media-health가 글 id로 먹힌다).
+ */
+articlesRouter.get(
+  "/media-health",
+  asyncHandler(async (_req, res) => {
+    const { scanBrokenImages } = await import("../images/media-health.js");
+    const broken = await scanBrokenImages();
+    res.json({ broken, count: broken.length });
+  }),
+);
+
+/** 깨진 이미지 자동 복구 — 본문의 옛 주소 되돌리기 + 파일이 사라진 이미지는 프롬프트로 재생성 */
+articlesRouter.post(
+  "/media-health/repair",
+  asyncHandler(async (_req, res) => {
+    const { repairBrokenImages } = await import("../images/media-health.js");
+    res.json(await repairBrokenImages());
+  }),
+);
+
+/**
  * 이 글과 매칭되는 누적 대량매칭 상품 — 우측 '상품 배너 삽입'에 추천으로 띄운다.
  * 클릭하면 파트너스 링크 발급 페이지가 새창으로 열리고, 발급한 링크를 붙여넣으면 된다.
  */
@@ -648,6 +670,8 @@ const updateSchema = z.object({
   contentMarkdown: z.string().min(1).optional(),
   status: z.enum(["DRAFT", "REVIEW", "APPROVED"]).optional(),
   changeNote: z.string().optional(),
+  // 화면이 이 글을 불러온 시점. 그 사이 서버에서 글이 바뀌었으면 저장을 거부한다(아래 참고).
+  baseUpdatedAt: z.string().optional(),
 });
 
 /** 글 수정 — 본문·제목 변경 시 새 버전 생성 + 품질 재검사 */
@@ -662,6 +686,19 @@ articlesRouter.put(
       include: { keyword: true, schemas: true, media: true, versions: { orderBy: { version: "desc" }, take: 1 } },
     });
     if (!article) throw new HttpError(404, "글을 찾을 수 없습니다.");
+
+    // 오래된 화면이 최신 본문을 덮어쓰는 것을 막는다.
+    // 이미지를 재생성한 뒤, 재생성 전에 열어둔 화면에서 배너를 삽입해 저장했더니
+    // 본문 전체가 옛 버전으로 되돌아가 이미지 3장이 다시 깨졌다(글 48). 그때는 조용히 덮였다.
+    if (body.baseUpdatedAt) {
+      const base = new Date(body.baseUpdatedAt).getTime();
+      if (Number.isFinite(base) && base < article.updatedAt.getTime()) {
+        throw new HttpError(
+          409,
+          "이 글이 다른 곳에서 먼저 변경되었습니다(이미지 재생성 등). 화면을 새로고침한 뒤 다시 저장해주세요.",
+        );
+      }
+    }
 
     const title = body.title ?? article.title;
     const contentMarkdown = body.contentMarkdown ?? article.contentMarkdown ?? "";
