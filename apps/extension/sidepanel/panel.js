@@ -534,8 +534,10 @@ async function findTistoryUrlByTitle(title) {
           title: it.querySelector("title")?.textContent ?? "",
           link: it.querySelector("link")?.textContent ?? "",
         }));
+        // ⚠️ 제목이 안 맞으면 '최신 글'로 폴백하면 안 된다 — 엉뚱한 글의 주소가 조용히 박힌다.
+        //    (실제로 모나미 글에 다른 글의 URL이 기록됐다.) 못 찾으면 URL 없이 기록하는 편이 낫다.
         const hit = want ? items.find((it) => norm(it.title) === want) : null;
-        const link = (hit ?? items[0])?.link;
+        const link = hit?.link;
         if (link && /\.tistory\.com\/\d+/.test(link)) return link;
       }
     } catch {

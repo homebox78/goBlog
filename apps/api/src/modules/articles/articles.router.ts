@@ -275,22 +275,24 @@ articlesRouter.post(
       return { title: decode(t), key: norm(t), url: l.trim() };
     });
 
-    // URL 이 비어 있는 티스토리 발행 기록
+    // 티스토리 발행 기록 전부 — URL 이 비었으면 채우고, **엉뚱한 URL 이 박혀 있으면 고친다.**
+    // (확장이 제목을 못 찾으면 '최신 글' 주소로 폴백하던 버그가 있어 오연결이 생겼다.)
     const jobs = await prisma.publishJob.findMany({
-      where: { platform: "TISTORY", status: "SUCCEEDED", publishedUrl: null },
+      where: { platform: "TISTORY", status: "SUCCEEDED" },
       include: { article: { select: { id: true, title: true } } },
     });
 
-    const fixed: Array<{ articleId: number; title: string; url: string }> = [];
+    const fixed: Array<{ articleId: number; title: string; url: string; was: string | null }> = [];
     const missed: Array<{ articleId: number; title: string }> = [];
     for (const job of jobs) {
       const hit = posts.find((p) => p.key === norm(job.article.title));
       if (!hit || !/\.tistory\.com\/\d+/.test(hit.url)) {
-        missed.push({ articleId: job.article.id, title: job.article.title });
+        if (!job.publishedUrl) missed.push({ articleId: job.article.id, title: job.article.title });
         continue;
       }
+      if (job.publishedUrl === hit.url) continue; // 이미 올바름
       await prisma.publishJob.update({ where: { id: job.id }, data: { publishedUrl: hit.url } });
-      fixed.push({ articleId: job.article.id, title: job.article.title, url: hit.url });
+      fixed.push({ articleId: job.article.id, title: job.article.title, url: hit.url, was: job.publishedUrl });
     }
     res.json({ rssPosts: posts.length, fixed: fixed.length, items: fixed, missed });
   }),
