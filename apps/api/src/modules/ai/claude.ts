@@ -28,8 +28,9 @@ export async function callClaudeJson<T>(options: {
     throw new HttpError(400, "Anthropic API Key가 설정되지 않았습니다. 설정 → Claude에서 입력해주세요.");
   }
 
+  // 긴 글(3,000자)은 본문 생성 한 번에 4~6분이 걸린다. 3분에 끊으면 '길게'가 항상 실패한다.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 180_000);
+  const timer = setTimeout(() => controller.abort(), 600_000);
 
   let res: Response;
   try {
@@ -49,6 +50,12 @@ export async function callClaudeJson<T>(options: {
       }),
       signal: controller.signal,
     });
+  } catch (error) {
+    // 중단 원인을 삼키지 않는다 — 타임아웃인지 네트워크 오류인지 화면에서 바로 보이게 한다.
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new HttpError(504, "Claude 응답이 10분 안에 오지 않아 중단했습니다. 글 길이를 줄이거나 잠시 후 다시 시도해주세요.");
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }

@@ -102,14 +102,14 @@ rm -rf /var/www/html/goBlog/assets
 tar xzf /tmp/web.tar.gz -C /var/www/html/goBlog
 mv /tmp/htaccess /var/www/html/goBlog/.htaccess
 
-if [ ! -f /etc/apache2/conf-enabled/goblog.conf ]; then
-  sudo a2enmod proxy proxy_http > /dev/null
-  printf 'ProxyPass "/goBlog/api" "http://127.0.0.1:8788/api"\nProxyPassReverse "/goBlog/api" "http://127.0.0.1:8788/api"\n' | sudo tee /etc/apache2/conf-available/goblog.conf > /dev/null
-  sudo a2enconf goblog > /dev/null
-  sudo apachectl configtest
-  sudo systemctl reload apache2
-  echo APACHE_CONFIGURED
-fi
+# 글 생성(Claude)은 '길게'에서 5분을 넘긴다. Apache 기본 300초면 프록시가 먼저 끊으므로 timeout을 명시한다.
+# 이미 설정 파일이 있어도 매번 다시 쓴다 — 예전 배포가 만든 timeout 없는 버전을 교정하기 위해서다.
+sudo a2enmod proxy proxy_http > /dev/null
+printf 'ProxyTimeout 900\nProxyPass "/goBlog/api" "http://127.0.0.1:8788/api" timeout=900\nProxyPassReverse "/goBlog/api" "http://127.0.0.1:8788/api"\n' | sudo tee /etc/apache2/conf-available/goblog.conf > /dev/null
+sudo a2enconf goblog > /dev/null
+sudo apachectl configtest
+sudo systemctl reload apache2
+echo APACHE_CONFIGURED
 
 if [ ! -f /etc/systemd/system/goblog-api.service ]; then
   printf '[Unit]\nDescription=goBlog API\nAfter=network.target mariadb.service\n\n[Service]\nUser=hbox78\nWorkingDirectory=/home/hbox78/goblog-api\nExecStart=/usr/bin/node node_modules/tsx/dist/cli.mjs src/server.ts\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target\n' | sudo tee /etc/systemd/system/goblog-api.service > /dev/null
