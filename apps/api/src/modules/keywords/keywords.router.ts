@@ -166,6 +166,29 @@ keywordsRouter.post(
   }),
 );
 
+const manualSchema = z.object({
+  text: z.string().min(2).max(80),
+  category: z.string().max(40).optional(),
+  searchIntent: z.string().max(40).optional(),
+});
+
+/**
+ * 수동 키워드 추가 — 자동 발굴과 별개로 직접 정한 주제로 글을 쓸 때 사용한다.
+ * 이미 있는 키워드면 SAVED로 되살려 재사용한다(중복 생성 방지).
+ */
+keywordsRouter.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { text, category, searchIntent } = parseBody(manualSchema, req.body);
+    const keyword = await prisma.keyword.upsert({
+      where: { text },
+      update: { status: "SAVED", category, searchIntent },
+      create: { text, category, searchIntent, sourceType: "MANUAL", status: "SAVED" },
+    });
+    res.json({ id: keyword.id, text: keyword.text, status: keyword.status });
+  }),
+);
+
 const statusSchema = z.object({
   status: z.enum(["RECOMMENDED", "SAVED", "EXCLUDED"]),
 });
