@@ -72,3 +72,15 @@ publishRouter.post(
     res.json({ jobId: job.id, status: job.status });
   }),
 );
+
+/**
+ * 발행 URL 생존 검증 — 플랫폼에서 삭제된 글의 '발행 성공' 기록을 정리한다.
+ * 죽은 URL이 남아 있으면 내부 링크가 깨진 주소로 연결된다.
+ */
+publishRouter.post(
+  "/verify-urls",
+  asyncHandler(async (_req, res) => {
+    const { verifyPublishedUrls } = await import("./verify-urls.js");
+    res.json(await verifyPublishedUrls());
+  }),
+);

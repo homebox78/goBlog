@@ -40,6 +40,7 @@ interface ArticleListItem {
   adProduct: string | null;
   extensionDoneAt: string | null;
   createdAt: string;
+  publishedAt: string | null; // 실제 발행 시각 (성공한 발행 중 가장 이른 것)
   keyword: { id: number; text: string } | null;
   thumbnailUrl: string | null;
   pendingImages: number;
@@ -74,6 +75,20 @@ function matchFilter(article: ArticleListItem, filter: ListFilter): boolean {
     default:
       return true;
   }
+}
+
+/** 발행 일시 — 년월일 + 시:분:초 (언제 나갔는지 초까지 남긴다) */
+function formatStamp(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  return {
+    date: d.toLocaleDateString("ko-KR"),
+    time: d.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }),
+  };
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
@@ -378,7 +393,9 @@ export default function ArticlesPage() {
                       </Link>
                       <p className="mt-1 truncate text-xs text-muted-foreground">
                         {article.keyword?.text ?? "키워드 없음"} ·{" "}
-                        {new Date(article.createdAt).toLocaleDateString("ko-KR")}
+                        {article.publishedAt
+                          ? `발행 ${formatStamp(article.publishedAt).date} ${formatStamp(article.publishedAt).time}`
+                          : `생성 ${new Date(article.createdAt).toLocaleDateString("ko-KR")}`}
                       </p>
                     </div>
                   </div>
@@ -524,6 +541,7 @@ export default function ArticlesPage() {
                   <SortHead k="publish" sort={sort} onSort={toggleSort} className="text-center">발행처</SortHead>
                   <SortHead k="quality" sort={sort} onSort={toggleSort} className="text-right">품질</SortHead>
                   <SortHead k="date" sort={sort} onSort={toggleSort} className="text-center">생성일</SortHead>
+                  <TableHead className="text-center">발행일시</TableHead>
                   <TableHead className="text-center">관리</TableHead>
                 </TableRow>
               </TableHeader>
@@ -650,6 +668,18 @@ export default function ArticlesPage() {
                             hour12: false,
                           })}
                         </span>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-center text-sm text-muted-foreground">
+                        {article.publishedAt ? (
+                          <>
+                            {formatStamp(article.publishedAt).date}
+                            <span className="block font-mono text-xs">
+                              {formatStamp(article.publishedAt).time}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs">미발행</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-0.5">

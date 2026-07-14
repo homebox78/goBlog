@@ -1,5 +1,6 @@
 import { Cron } from "croner";
 import { prisma } from "../../common/prisma.js";
+import { minQualityScore } from "../articles/quality-gate.js";
 import { publishToBlogger, publishToInstagram, publishToWordpress } from "./connectors.js";
 
 const MAX_RETRY = 3;
@@ -43,9 +44,12 @@ export async function processQueue(): Promise<void> {
       await log(job.id, "INFO", `${job.platform} 발행 시작`);
 
       try {
-        // 자동발행 품질 게이트
-        if ((job.article.qualityScore ?? 0) < 85) {
-          throw new Error(`품질 점수 ${job.article.qualityScore ?? 0}점 — 85점 미만은 자동발행이 차단됩니다.`);
+        // 자동발행 품질 게이트 — 기준은 설정값 (하드코딩 85가 설정을 무시하던 버그)
+        const minScore = await minQualityScore();
+        if ((job.article.qualityScore ?? 0) < minScore) {
+          throw new Error(
+            `품질 점수 ${job.article.qualityScore ?? 0}점 — ${minScore}점 미만은 자동발행이 차단됩니다.`,
+          );
         }
 
         // 본문에 접근 불가한 로컬 이미지 주소가 남아 있으면 발행 차단 (엑박 방지)

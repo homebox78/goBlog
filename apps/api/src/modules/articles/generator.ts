@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { prisma } from "../../common/prisma.js";
+import { minQualityScore } from "./quality-gate.js";
 import { HttpError } from "../../common/http.js";
 import { getSettingValues } from "../settings/settings.service.js";
 import { callClaudeJson } from "../ai/claude.js";
@@ -265,6 +266,8 @@ export async function generateArticle(
   // 실시간 그라운딩 — 생성 시점의 최신 뉴스를 주입해 학습 데이터의 옛 사실(상장·출시·발표 등) 오류를 막는다.
   const { fetchRecentNews } = await import("./grounding.js");
   const recentNews = await fetchRecentNews(topic).catch(() => []);
+  // 품질 기준은 설정에서 읽는다 (하드코딩 85 → 설정값). userPayload·재시도 루프가 모두 이 값을 쓴다.
+  const minScore = await minQualityScore();
   // 내부 링크 후보 — 이미 발행된 내 글 중 주제가 가까운 것. 없으면 빈 배열(링크 규칙도 안 넣는다).
   const { internalLinkCandidates } = await import("../publishing/internal-links.js");
   const internalLinks = await internalLinkCandidates(topic).catch(() => []);
@@ -532,8 +535,7 @@ export async function generateArticle(
               contentMarkdown: revision.prev.contentMarkdown,
             },
             qualityIssues: revision.issues,
-            revisionInstruction:
-              "이 previousDraft가 품질 기준(85점)에 미달했습니다. qualityIssues의 각 항목을 반드시 해결해 더 완성도 높은 새 버전을 작성하세요. 본문 분량·H2/H3 구조·표/목록·FAQ·제목/메타 길이를 보완하되, 자연스러운 문체·이모지·사람이 쓴 느낌은 유지하세요.",
+            revisionInstruction: `이 previousDraft가 품질 기준(${minScore}점)에 미달했습니다. qualityIssues의 각 항목을 반드시 해결해 더 완성도 높은 새 버전을 작성하세요. 본문 분량·H2/H3 구조·표/목록·FAQ·제목/메타 길이를 보완하되, 자연스러운 문체·이모지·사람이 쓴 느낌은 유지하세요.`,
           }
         : {}),
     });
@@ -559,9 +561,9 @@ export async function generateArticle(
       claimsToVerify: g.claimsToVerify ?? [],
     });
 
-  // 품질 85점 미만이면 미달 항목을 알려주고 자동 개선한다 (최대 2회 재시도)
+  // 품질 기준(설정값) 미만이면 미달 항목을 알려주고 자동 개선한다 (최대 2회 재시도)
   let draftQuality = checkDraft(generated);
-  for (let attempt = 1; attempt <= 2 && draftQuality.score < 85; attempt += 1) {
+  for (let attempt = 1; attempt <= 2 && draftQuality.score < minScore; attempt += 1) {
     const issues = draftQuality.items
       .filter((item) => !item.ok)
       .map((item) => item.label + (item.note ? ` — ${item.note}` : ""));
@@ -851,7 +853,7 @@ export async function buildManualBanner(input: string): Promise<{ banner: string
 }
 
 /**
- * 기존 글을 품질 기준(85점)에 맞게 보강한다 (수동 '보정' 버튼).
+ * 기존 글을 품질 기준(설정값)에 맞게 보강한다 (수동 '보정' 버튼).
  * 본문의 삽입 블록(상품 배너·대가성 문구·이미지·해시태그)은 보존하고, 품질검사 미달 항목만 보완한다.
  */
 export async function improveArticle(
@@ -906,8 +908,10 @@ export async function improveArticle(
   const curMonth = kstNow.getUTCMonth() + 1;
   const curDay = kstNow.getUTCDate();
 
+  const minScore = await minQualityScore();
+
   const system = [
-    "당신은 한국어 SEO 블로그 에디터입니다. 기존 글의 품질 부족 항목만 보강해 완성도를 85점 이상으로 올립니다.",
+    `당신은 한국어 SEO 블로그 에디터입니다. 기존 글의 품질 부족 항목만 보강해 완성도를 ${minScore}점 이상으로 올립니다.`,
     "규칙 ① 본문의 기존 HTML 블록(<a> 상품 배너, <p> 대가성 안내 문구, <figure> 이미지, 맨 끝 #해시태그 줄, 인용문)과 [IMAGE:n]·[PRODUCT_BANNER] 마커는 절대 삭제·변형하지 말고 그대로 보존한다.",
     "규칙 ② qualityIssues의 각 항목을 해결한다 — 특히 본문 끝 #해시태그가 20개 미만이면 관련 SEO 태그를 20~30개로 늘리고, 소제목(H2)에 핵심 키워드를 자연스럽게 넣고, 키워드를 본문 전반에 고르게 분포시키며, 부족한 분량은 유용한 정보로 보강한다.",
     "규칙 ③ 과장·보장성·광고클릭 유도 문구 금지. 사람이 쓴 자연스러운 문체·이모지를 유지한다.",
@@ -919,7 +923,7 @@ export async function improveArticle(
 
   let lastTags: string[] = [];
   let claudeError: string | null = null;
-  for (let attempt = 0; attempt < 2 && quality.score < 85; attempt += 1) {
+  for (let attempt = 0; attempt < 2 && quality.score < minScore; attempt += 1) {
     const issues = quality.items
       .filter((item) => !item.ok)
       .map((item) => item.label + (item.note ? ` — ${item.note}` : ""));
@@ -1017,16 +1021,16 @@ export async function improveArticle(
     },
   });
 
-  return { before, after: quality.score, passed: quality.score >= 85 };
+  return { before, after: quality.score, passed: quality.score >= minScore };
 }
 
 /**
- * 생성 후 마무리 파이프라인 (원스톱 자동화) — ① 85점 미만이면 자동 보정 1회 ② 이미지 3장 자동 생성.
+ * 생성 후 마무리 파이프라인 (원스톱 자동화) — ① 품질 기준 미만이면 자동 보정 1회 ② 이미지 3장 자동 생성.
  * 스케줄러(자동 글)는 await, 수동 생성 라우트는 응답 후 백그라운드로 호출한다.
  * 실패해도 글은 남으므로 예외는 로그만 남기고 삼킨다.
  */
 export async function finishArticlePipeline(articleId: number, qualityScore: number): Promise<void> {
-  if (qualityScore < 85) {
+  if (qualityScore < (await minQualityScore())) {
     try {
       const r = await improveArticle(articleId);
       console.log(`[pipeline] 자동 보정 ${r.before}→${r.after}점 (글 ${articleId})`);

@@ -11,6 +11,9 @@ export interface SettingDef {
  * 명세서 18장 "설정 페이지" 기준의 설정 키 정의.
  * secret=true 값은 AES-256-GCM으로 암호화되어 저장되고 GET 응답에서는 값 대신 hasValue만 내려간다.
  */
+// ⚠️ 여기에 키를 정의하면 반드시 읽는 코드가 있어야 한다.
+// 동작이 코드에 고정돼 있는데 설정만 보이면, 사용자는 값을 바꾸고 "적용됐다"고 믿는다
+// (자동발행 최소 품질 점수가 실제로 그랬다 — 90으로 바꿔도 85가 하드코딩돼 무시됐다).
 export const SETTING_DEFS: SettingDef[] = [
   // Claude
   { key: "anthropic.apiKey", group: "claude", label: "Anthropic API Key", secret: true },
@@ -23,8 +26,6 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "gemini.imageModel", group: "gemini", label: "Gemini 이미지 모델", secret: false, defaultValue: "gemini-2.5-flash-image" },
   { key: "gemini.featuredImageCount", group: "gemini", label: "대표 이미지 수", secret: false, defaultValue: "1" },
   { key: "gemini.contentImageCount", group: "gemini", label: "본문 이미지 수", secret: false, defaultValue: "3" },
-  { key: "gemini.convertWebp", group: "gemini", label: "WebP 자동 변환", secret: false, defaultValue: "true" },
-  { key: "gemini.thumbnailTextOverlay", group: "gemini", label: "썸네일 문자 합성", secret: false, defaultValue: "true" },
 
   // 키워드 — 주제는 사용자가 입력하지 않는다. 매일 수집한 이슈·트렌드 데이터에서 자동 발굴한다.
   { key: "keywords.dailyCount", group: "keywords", label: "일일 추천 수", secret: false, defaultValue: "20" },
@@ -68,8 +69,6 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "google.analyticsRefreshToken", group: "platforms", label: "구글 성과수집 Refresh Token", secret: true },
   { key: "gsc.siteUrls", group: "platforms", label: "Search Console 속성 URL (줄바꿈 구분)", secret: false },
   { key: "naverBlog.writeUrl", group: "platforms", label: "네이버 블로그 작성 URL", secret: false },
-  // 브랜드커넥트는 공개 API가 없어 Chrome 확장(6단계)에서 브라우저 세션으로 연동한다.
-  { key: "naverBrandConnect.url", group: "platforms", label: "네이버 브랜드커넥트 크리에이터 URL", secret: false },
   { key: "tistory.writeUrl", group: "platforms", label: "티스토리 작성 URL", secret: false },
   // Instagram Graph API — 비즈니스/크리에이터 계정 + Facebook 앱 필요. 이미지·캡션 자동 발행 가능.
   { key: "instagram.businessAccountId", group: "platforms", label: "Instagram 비즈니스 계정 ID", secret: false },

@@ -40,7 +40,7 @@ articlesRouter.get(
         publishJobs: {
           where: { platform: { in: ["WORDPRESS", "BLOGGER", "NAVER_BLOG", "TISTORY"] } },
           orderBy: { id: "desc" },
-          select: { platform: true, status: true, publishedUrl: true },
+          select: { platform: true, status: true, publishedUrl: true, finishedAt: true, updatedAt: true },
         },
       },
     });
@@ -68,6 +68,13 @@ articlesRouter.get(
           // 대표 썸네일 = 첫 번째 생성된 이미지, 미생성 이미지 수(원스톱 액션 버튼용)
           thumbnailUrl: media.find((m) => m.webpUrl)?.webpUrl ?? null,
           pendingImages: media.filter((m) => m.prompt && !m.webpUrl).length,
+          // 실제 발행 일시 — 성공한 발행 중 가장 이른 시각(= 이 글이 세상에 나온 시점).
+          // finishedAt이 없는 옛 기록은 updatedAt으로 대신한다.
+          publishedAt:
+            publishJobs
+              .filter((j) => j.status === "SUCCEEDED")
+              .map((j) => j.finishedAt ?? j.updatedAt)
+              .sort((a, b) => a.getTime() - b.getTime())[0] ?? null,
           // 발행 상태: status(SUCCEEDED/QUEUED/RUNNING/FAILED) + url. 없으면 null(미발행)
           wordpress: wp ? { status: wp.status, url: wp.publishedUrl } : null,
           blogger: blog ? { status: blog.status, url: blog.publishedUrl } : null,
