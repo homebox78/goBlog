@@ -897,9 +897,12 @@ async function scrapeCoupang(tabId) {
               body: JSON.stringify(payload),
             });
             if (!r.ok) continue;
-            const json = await r.json();
-            const rows = findRows(json);
-            if (!rows) continue;
+            const rows = findRows(await r.json());
+            // ⚠️ 범위로 물으면 쿠팡은 **기간 합계**를 종료일 하루치인 척 돌려준다.
+            //    (실측: 06-14~07-13 조회 → {"key":"2026-07-13","clickCount":37} — 37은 30일 합계지 그날 값이 아니다.
+            //     그날 실제 값은 3이다.) 합계를 일별로 저장하면 그래프가 거짓말을 한다.
+            //    **여러 날이 온 경우에만** 일별로 인정한다. 한 줄만 오면 버리고 하루씩 다시 묻는다.
+            if (!rows || rows.length < 2) continue;
             for (const row of rows) collected.set(row.date, { ...row, raw: { from: path } });
           } catch (_) {
             // 이 모양은 아니었다 — 다음 후보
