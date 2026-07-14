@@ -10,7 +10,7 @@
   if (window.__goblogTap) return;
   window.__goblogTap = [];
 
-  const record = (rawUrl, method, body, reqBody) => {
+  const record = (rawUrl, method, body, reqBody, reqHeaders) => {
     try {
       // ⚠️ SPA는 **상대 주소**로 부른다 ("/api/v1/report/..."). 문자열만 보고 거르면
       //    진짜 요청을 전부 버린다 (실제로 그랬다 — 구글 애널리틱스만 잡혔다).
@@ -24,6 +24,9 @@
         url,
         method,
         req: String(reqBody ?? "").slice(0, 300), // 요청 본문 — 날짜 범위를 어떻게 넘기는지 봐야 한다
+        // ⚠️ 요청 **헤더**까지 기록한다. 쿠팡은 Akamai 뒤에 있어서, 헤더가 화면의 실제 요청과
+        //    조금만 달라도 403(Access Denied)을 준다. 날짜만 바꿔 재전송하려면 헤더가 같아야 한다.
+        headers: reqHeaders || {},
         body: String(body ?? "").slice(0, 1500),
       });
       if (window.__goblogTap.length > 60) window.__goblogTap.shift();
@@ -41,7 +44,17 @@
       res
         .clone()
         .text()
-        .then((text) => record(url, method, text, typeof args[1]?.body === "string" ? args[1].body : ""))
+        .then((text) => {
+          let headers = {};
+          try {
+            const h = args[1]?.headers;
+            if (h instanceof Headers) h.forEach((v, k) => (headers[k] = v));
+            else if (h && typeof h === "object") headers = { ...h };
+          } catch (_) {
+            /* 헤더를 못 읽어도 기록은 남긴다 */
+          }
+          record(url, method, text, typeof args[1]?.body === "string" ? args[1].body : "", headers);
+        })
         .catch(() => {});
     } catch (_) {
       /* 무시 */
@@ -54,12 +67,23 @@
   XMLHttpRequest.prototype.open = function (method, url, ...rest) {
     this.__goblogUrl = url;
     this.__goblogMethod = method;
+    this.__goblogHeaders = {};
     return open.call(this, method, url, ...rest);
+  };
+
+  const setHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function (key, value) {
+    try {
+      this.__goblogHeaders[key] = value;
+    } catch (_) {
+      /* 무시 */
+    }
+    return setHeader.call(this, key, value);
   };
   XMLHttpRequest.prototype.send = function (...args) {
     const reqBody = typeof args[0] === "string" ? args[0] : "";
     this.addEventListener("load", () => {
-      record(this.__goblogUrl, this.__goblogMethod, this.responseText, reqBody);
+      record(this.__goblogUrl, this.__goblogMethod, this.responseText, reqBody, this.__goblogHeaders);
     });
     return send.apply(this, args);
   };

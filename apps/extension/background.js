@@ -876,11 +876,15 @@ async function scrapeCoupang(tabId) {
         ],
       });
 
-      const paths = ["/api/v1/report/daily", "/api/v1/report/trend/daily"];
-      const bodies = [
-        filterBody(ymd(startDay, "-"), ymd(endDay, "-")),
-        // 혹시 범위를 안 받으면, 하루씩이라도 받아 채운다 (아래 dayByDay 에서 처리)
-      ];
+      // ⚠️ 쿠팡은 Akamai 뒤에 있다. **헤더가 화면의 실제 요청과 다르면 403(Access Denied)** 이다.
+      //    (실측: 같은 페이지 안에서 불러도 맨몸 fetch 는 403.)
+      //    그래서 tap 이 잡아둔 **그 요청의 헤더를 그대로 복제**하고 날짜만 바꾼다.
+      const template = calls.find((c) => /\/api\/v1\/report\/daily/.test(c.url) && c.method === "POST");
+      const cloneHeaders = { "Content-Type": "application/json", accept: "application/json" };
+      if (template?.headers) Object.assign(cloneHeaders, template.headers);
+
+      const paths = ["/api/v1/report/daily"];
+      const bodies = [filterBody(ymd(startDay, "-"), ymd(endDay, "-"))];
 
       const collected = new Map();
       for (const path of paths) {
@@ -889,7 +893,7 @@ async function scrapeCoupang(tabId) {
             const r = await fetch(path, {
               method: "POST",
               credentials: "include",
-              headers: { "Content-Type": "application/json", accept: "application/json" },
+              headers: cloneHeaders,
               body: JSON.stringify(payload),
             });
             if (!r.ok) continue;
@@ -914,7 +918,7 @@ async function scrapeCoupang(tabId) {
             const r = await fetch("/api/v1/report/daily", {
               method: "POST",
               credentials: "include",
-              headers: { "Content-Type": "application/json", accept: "application/json" },
+              headers: cloneHeaders,
               body: JSON.stringify(filterBody(day, day)),
             });
             if (!r.ok) continue;
