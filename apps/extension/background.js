@@ -809,24 +809,36 @@ async function scrapeCoupang(tabId) {
         return dashed ? dashed[0] : null;
       };
 
-      // 기록된 응답 중 **일별 실적 배열**을 찾는다 (날짜 + 클릭이 함께 있는 행)
+      // 쿠팡 필드명 — clickCount / orderCount / gmv / commission
+      const toRow = (item, date) => ({
+        date,
+        clicks: Number(item.clickCount ?? item.click ?? item.clicks ?? 0) || 0,
+        orders: Number(item.orderCount ?? item.order ?? item.orders ?? 0) || 0,
+        salesAmount: Number(item.gmv ?? item.salesAmount ?? item.amount ?? 0) || 0,
+        commission: Number(item.commission ?? item.revenue ?? item.earning ?? 0) || 0,
+      });
+
+      // 기록된 응답 중 **일별 실적**을 찾는다. 배열일 수도, **하루치 객체**일 수도 있다.
+      // (실측: POST /api/v1/report/daily → {"data":{"key":"2026-07-13","clickCount":3,...}} — 배열이 아니다)
       const findRows = (value) => {
         if (!value || typeof value !== "object") return null;
+
+        // 하루치 객체: key 가 날짜이고 clickCount 가 있다
+        if (!Array.isArray(value) && "clickCount" in value) {
+          const date = pickDate(value) ?? (String(value.key ?? "").match(/^\d{4}-\d{2}-\d{2}$/) ? String(value.key) : null);
+          if (date) return [toRow(value, date)];
+        }
+
         if (Array.isArray(value)) {
           const rows = [];
           for (const item of value) {
             if (!item || typeof item !== "object") continue;
-            const date = pickDate(item);
+            const date =
+              pickDate(item) ?? (String(item.key ?? "").match(/^\d{4}-\d{2}-\d{2}$/) ? String(item.key) : null);
             const hasMetric =
               "click" in item || "clicks" in item || "clickCount" in item || "commission" in item || "revenue" in item;
             if (!date || !hasMetric) continue;
-            rows.push({
-              date,
-              clicks: Number(item.click ?? item.clicks ?? item.clickCount ?? 0) || 0,
-              orders: Number(item.order ?? item.orders ?? item.orderCount ?? item.purchaseCount ?? 0) || 0,
-              salesAmount: Number(item.gmv ?? item.salesAmount ?? item.amount ?? item.totalAmount ?? 0) || 0,
-              commission: Number(item.commission ?? item.revenue ?? item.earning ?? item.profit ?? 0) || 0,
-            });
+            rows.push(toRow(item, date));
           }
           return rows.length > 0 ? rows : null;
         }
@@ -855,7 +867,9 @@ async function scrapeCoupang(tabId) {
           calls.length === 0
             ? "쿠팡 페이지 요청을 잡지 못했습니다. 확장을 새로고침한 뒤 다시 시도하세요."
             : "쿠팡 응답에서 일별 실적을 못 찾았습니다. 기록을 서버에 보고했습니다.",
-        endpoints: calls.map((c) => c.method + " " + c.url + "  =>  " + c.body.slice(0, 300)),
+        endpoints: calls.map(
+          (c) => c.method + " " + c.url + (c.req ? "  [요청] " + c.req : "") + "  =>  " + c.body.slice(0, 700),
+        ),
       };
     },
   });

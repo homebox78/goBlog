@@ -10,7 +10,7 @@
   if (window.__goblogTap) return;
   window.__goblogTap = [];
 
-  const record = (rawUrl, method, body) => {
+  const record = (rawUrl, method, body, reqBody) => {
     try {
       // ⚠️ SPA는 **상대 주소**로 부른다 ("/api/v1/report/..."). 문자열만 보고 거르면
       //    진짜 요청을 전부 버린다 (실제로 그랬다 — 구글 애널리틱스만 잡혔다).
@@ -20,7 +20,12 @@
       if (!/(^|\.)coupang\.com$/i.test(host)) return; // 남의 집(GA 등)은 안 본다
       if (/\.(js|css|png|jpg|jpeg|gif|svg|woff2?|ico)(\?|$)/i.test(url)) return;
       // 응답이 커도 앞부분만 — 모양만 알면 된다
-      window.__goblogTap.push({ url, method, body: String(body ?? "").slice(0, 1200) });
+      window.__goblogTap.push({
+        url,
+        method,
+        req: String(reqBody ?? "").slice(0, 300), // 요청 본문 — 날짜 범위를 어떻게 넘기는지 봐야 한다
+        body: String(body ?? "").slice(0, 1500),
+      });
       if (window.__goblogTap.length > 60) window.__goblogTap.shift();
     } catch (_) {
       /* 기록 실패가 페이지를 깨선 안 된다 */
@@ -36,7 +41,7 @@
       res
         .clone()
         .text()
-        .then((text) => record(url, method, text))
+        .then((text) => record(url, method, text, typeof args[1]?.body === "string" ? args[1].body : ""))
         .catch(() => {});
     } catch (_) {
       /* 무시 */
@@ -52,8 +57,9 @@
     return open.call(this, method, url, ...rest);
   };
   XMLHttpRequest.prototype.send = function (...args) {
+    const reqBody = typeof args[0] === "string" ? args[0] : "";
     this.addEventListener("load", () => {
-      record(this.__goblogUrl, this.__goblogMethod, this.responseText);
+      record(this.__goblogUrl, this.__goblogMethod, this.responseText, reqBody);
     });
     return send.apply(this, args);
   };
