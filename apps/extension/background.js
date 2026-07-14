@@ -799,7 +799,8 @@ async function scrapeCoupang(tabId) {
   const [res] = await chrome.scripting.executeScript({
     target: { tabId },
     world: "MAIN",
-    func: () => {
+    // async — 아래에서 날짜 범위로 직접 조회한다(await 필요)
+    func: async () => {
       const calls = window.__goblogTap || [];
       const pickDate = (row) => {
         const raw = String(row.date ?? row.reportDate ?? row.statDate ?? row.day ?? row.dt ?? row.baseDate ?? "");
@@ -867,6 +868,56 @@ async function scrapeCoupang(tabId) {
             calls: calls.map((c) => c.method + " " + c.url + (c.req ? "  [요청] " + c.req : "")),
           };
         }
+      }
+
+      // ── 30일치 직접 조회 ────────────────────────────────────────────
+      // tap 으로 잡힌 report/daily 는 화면의 "어제 요약" 카드다(하루치 객체).
+      // 차트는 **날짜 범위**로 조회한다(화면 표기: 2026.07.01-2026.07.13).
+      // 그래서 범위를 넣어 직접 물어본다.
+      //
+      // ⚠️ 요청 모양을 **추측**하지만, 응답이 날짜+클릭을 가진 일별 데이터일 때만 저장한다.
+      //    모양이 안 맞으면 버린다 — 틀린 숫자를 실적으로 넣느니 빈칸이 낫다.
+      const pad = (n) => String(n).padStart(2, "0");
+      const ymd = (d, sep) => d.getFullYear() + sep + pad(d.getMonth() + 1) + sep + pad(d.getDate());
+      const endDay = new Date(Date.now() - 86400000); // 전일자 데이터가 오후 4시 전후 반영 → 어제까지
+      const startDay = new Date(endDay.getTime() - 29 * 86400000);
+
+      const paths = ["/api/v1/report/daily", "/api/v1/report/trend/daily", "/api/v1/report/trend"];
+      const bodies = [
+        { startDate: ymd(startDay, "-"), endDate: ymd(endDay, "-") },
+        { startDate: ymd(startDay, ""), endDate: ymd(endDay, "") },
+        { startDate: ymd(startDay, "-"), endDate: ymd(endDay, "-"), subIds: [] },
+      ];
+
+      const collected = new Map();
+      for (const path of paths) {
+        for (const payload of bodies) {
+          try {
+            const r = await fetch(path, {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json", accept: "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!r.ok) continue;
+            const json = await r.json();
+            const rows = findRows(json);
+            if (!rows) continue;
+            for (const row of rows) collected.set(row.date, { ...row, raw: { from: path } });
+          } catch (_) {
+            // 이 모양은 아니었다 — 다음 후보
+          }
+        }
+        if (collected.size > 1) break; // 여러 날이 왔다 = 범위 조회가 먹혔다
+      }
+
+      if (collected.size > 0) {
+        return {
+          ok: true,
+          rows: [...collected.values()],
+          endpoint: "range-probe",
+          calls: calls.map((c) => c.method + " " + c.url + (c.req ? "  [요청] " + c.req : "")),
+        };
       }
 
       // 못 찾았다 — 기록된 것들을 그대로 보고한다 (추측으로 파싱하지 않는다)
