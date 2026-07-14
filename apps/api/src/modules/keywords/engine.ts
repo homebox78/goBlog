@@ -10,6 +10,7 @@ import {
   type KeywordMetricData,
 } from "./metrics.js";
 import { fetchNaverBlogCompetition, lowCompetitionScore } from "./competition.js";
+import { trendSignals } from "./trend-signal.js";
 import { findNearDuplicate } from "./near-duplicate.js";
 import { bestKeywordForProduct } from "../products/product-match.js";
 
@@ -240,10 +241,12 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
 
     // 4) 실측 지표 (설정된 소스만 — 없으면 null 유지)
     const texts = cleanCandidates.map((candidate) => candidate.keyword);
-    const [googleMetrics, naverMetrics, competition] = await Promise.all([
+    const [googleMetrics, naverMetrics, competition, trendMomentum] = await Promise.all([
       fetchGoogleAdsMetrics(texts),
       fetchNaverSearchAdMetrics(texts),
       fetchNaverBlogCompetition(texts),
+      // 시계열 모멘텀 — 순위가 오르고 며칠째 지속되는 키워드를 우선한다 (기록만 되던 데이터를 실제로 쓴다)
+      trendSignals(7).catch(() => new Map()),
     ]);
 
     // 5) 점수 계산
@@ -260,6 +263,7 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
 
     const scored = cleanCandidates.map((candidate) => {
       const key = normalizeKeyword(candidate.keyword);
+      const trend = trendMomentum.get(key) ?? null;
       const google = googleMetrics.get(key) ?? null;
       const naver = naverMetrics.get(key) ?? null;
       const volume = google?.avgMonthlySearches ?? naver?.avgMonthlySearches ?? null;
@@ -301,10 +305,17 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
       // 신생 블로그 목표(조회수) → 상위노출 기회 45%, 수익 30%, 가치 25%.
       // 단 경쟁문서를 아직 못 구한 키워드는 기회 점수 신뢰도가 낮아 소폭 감점.
       const noCompetitionData = totalDocs === null;
+      // 트렌드 모멘텀(-20~+20) — 순위가 오르고 며칠째 지속되는 키워드를 위로 올린다.
+      // 그동안 시계열은 기록만 되고 선정에 전혀 안 쓰였다.
+      const momentum = trend?.momentum ?? 0;
       const finalScore = Math.max(
         0,
         Math.round(
-          opportunityScore * 0.45 + revenueScore * 0.3 + valueScore * 0.25 - (noCompetitionData ? 8 : 0),
+          opportunityScore * 0.45 +
+            revenueScore * 0.3 +
+            valueScore * 0.25 -
+            (noCompetitionData ? 8 : 0) +
+            momentum * 0.5,
         ),
       );
 
@@ -401,8 +412,10 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
         },
       });
 
-      // 빅데이터 시계열 스냅샷 — 각 수집의 상위 10위(엑기스)만 append. 조회 시 하루 4회를 취합해 재랭크한다.
-      if (rank <= 10)
+      // 빅데이터 시계열 스냅샷 — 추천된 키워드 전체를 append 한다.
+      // ⚠️ 예전엔 상위 10위만 저장했는데, 키워드가 회차마다 바뀌어 **같은 키워드의 이력이 안 쌓였다.**
+      //    점이 하나뿐이면 기울기(모멘텀)를 못 그린다 — 190행이 쌓였는데 전부 "오늘 처음 등장"이었다.
+      if (rank <= 30)
       await prisma.keywordTrend
         .create({
           data: {

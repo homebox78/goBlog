@@ -282,6 +282,9 @@ export async function generateArticle(
   // 자가학습 — 내 글의 실제 성과(노출·클릭·순위·AI인용)에서 배운 규칙. 표본이 모이기 전엔 null.
   const { getSelfLearning } = await import("../keywords/self-learning.js");
   const selfLearning = await getSelfLearning().catch(() => null);
+  // 트렌드 맥락 — 지금 뜨는 소재인지, 며칠째 지속되는 수요인지. 글의 시의성 표현이 달라져야 한다.
+  const { trendSignalFor } = await import("../keywords/trend-signal.js");
+  const trend = await trendSignalFor(topic).catch(() => null);
   // 말투 프로파일 — 인용 상위 블로거들의 문체를 **실측**한 결과. 전 키워드 공통.
   const style = await getStyleForPrompt(options.stylePlatform ?? "NAVER").catch(() => null);
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
@@ -366,6 +369,18 @@ export async function generateArticle(
             "- 모든 목록을 '① ② ③'처럼 기계적으로 병렬 나열하지 않는다. 중요한 것은 길게, 곁가지는 한 줄로.",
             "- 겪지 않은 경험·후기는 지어내지 않는다. 대신 공식 자료·수치·출처로 신뢰도를 채운다.",
             ...style.rules.map((r) => `- ${r}`),
+          ].join("\n")
+        : "",
+      trend
+        ? [
+            "",
+            `[📈 트렌드 실측 — 이 키워드는 지금 "${trend.summary}"]`,
+            trend.daysSeen === 1
+              ? "- 오늘 처음 잡힌 신규 이슈다. **속보성·최신성**을 앞세우고, 아직 정리된 정보가 적다는 점을 활용해 '가장 먼저 정리한 글'이 되게 쓴다."
+              : trend.daysSeen >= 3
+                ? "- 며칠째 지속되는 수요다. 반짝 이슈가 아니므로 **깊이·완결성**으로 승부한다(단발 속보는 이미 널려 있다)."
+                : "- 이틀째 이어지는 소재다. 배경과 전망을 함께 담아 후발 주자와 차별화한다.",
+            "- ⚠️ 트렌드를 본문에 '순위가 올랐다'는 식으로 직접 쓰지 마라. 이건 소재 선택의 근거지 독자에게 할 말이 아니다.",
           ].join("\n")
         : "",
       selfLearning
@@ -501,6 +516,10 @@ export async function generateArticle(
       styleProfile: style ? { measured: style.metrics, rules: style.rules, sampleSentences: style.samples } : null,
       // 이 키워드에서 AI 브리핑에 인용되는 글들을 실제로 읽고 뽑은 패턴.
       // coveredAngles 는 반복 금지, gaps 는 우리가 파고들 틈이다.
+      // 트렌드 신호 — 시계열에서 실측한 이 키워드의 상승/지속 상태
+      trendContext: trend
+        ? { summary: trend.summary, daysSeen: trend.daysSeen, rankDelta: trend.rankDelta }
+        : null,
       // 자가학습 — 내 글의 실제 성과에서 뽑은 규칙 (표본이 모이면 자동으로 채워진다)
       selfLearning: selfLearning
         ? { worked: selfLearning.worked, failed: selfLearning.failed, rules: selfLearning.rules }
