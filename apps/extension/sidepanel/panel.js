@@ -1,3 +1,24 @@
+
+
+// 발행 대기 목록 — **슬롯 하나로 두면 연속 발행에서 앞 건이 덮어써진다.**
+// 실측: 티스토리 47건 중 4건이 URL 누락됐고, 성공/누락이 번갈아 났다.
+async function addPending(articleId, platform) {
+  const s = await chrome.storage.local.get("pendingPublishes");
+  const list = (Array.isArray(s.pendingPublishes) ? s.pendingPublishes : []).filter(
+    (p) => p.articleId !== articleId,
+  );
+  list.push({ articleId, platform, at: Date.now() });
+  await chrome.storage.local.set({ pendingPublishes: list });
+}
+
+async function removePending(articleId) {
+  const s = await chrome.storage.local.get("pendingPublishes");
+  const list = (Array.isArray(s.pendingPublishes) ? s.pendingPublishes : []).filter(
+    (p) => p.articleId !== articleId,
+  );
+  await chrome.storage.local.set({ pendingPublishes: list });
+  await chrome.storage.local.remove("pendingPublish"); // 구버전 잔여분 정리
+}
 const $ = (selector) => document.querySelector(selector);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -333,9 +354,7 @@ async function applyToForm() {
   // 발행 완료를 백엔드가 자동 기록하도록, '어떤 글을 어느 플랫폼에 올리는 중'인지 저장해둔다.
   // background가 발행 성공(게시글 URL 이동)을 감지하면 이 정보로 자동 기록한다.
   if (currentPlatform === "NAVER_BLOG" || currentPlatform === "TISTORY") {
-    await chrome.storage.local.set({
-      pendingPublish: { articleId: currentArticle.id, platform: currentPlatform },
-    });
+    await addPending(currentArticle.id, currentPlatform);
   }
 
   // 인스타그램: 이미지는 파일 업로더라 자동 삽입 불가 → 캡션+해시태그를 클립보드에 담고 안내
@@ -429,7 +448,7 @@ async function applyToForm() {
       showNotes([`✅ 자동 입력 완료: ${res.done.join(" · ")}`, "⏳ 홈주제 선택 + 공개 발행 진행 중..."]);
 
       // 발행 완료 자동 기록용 (background가 발행 게시글 URL 이동을 감지)
-      await chrome.storage.local.set({ pendingPublish: { articleId: currentArticle.id, platform: "TISTORY" } });
+      await addPending(currentArticle.id, "TISTORY");
 
       // 완료 → 홈주제 자동 선택 → 공개 발행 (원클릭 완전 자동)
       const pub = await chrome.runtime.sendMessage({
@@ -511,7 +530,7 @@ async function recordPublished(tabId, articleId, platform, title) {
       headers: { "Content-Type": "application/json", "X-Extension-Token": config.token },
       body: JSON.stringify({ platform, url, hide: true }),
     });
-    await chrome.storage.local.remove("pendingPublish"); // background 중복 기록 방지
+    await removePending(articleId); // background 중복 기록 방지 (이 글만 지운다)
   } catch {
     /* 기록 실패 시 background 폴백에 맡김 */
   }

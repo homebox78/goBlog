@@ -163,6 +163,21 @@ extensionRouter.post(
       where: { id },
       data: { status: "PUBLISHED", ...(hide ? { extensionDoneAt: new Date() } : {}) },
     });
-    res.json({ ok: true, url });
+
+    // URL 없이 완료 보고가 오면(티스토리는 발행 후 관리 목록으로 가서 확장이 주소를 못 잡는다)
+    // **20분 크론을 기다리지 않고 지금 바로** RSS에서 찾아 채운다. 목록에 링크가 빈 채로 보이면 안 된다.
+    let resolved = url;
+    if (!url && platform === "TISTORY") {
+      try {
+        const { syncTistoryUrls } = await import("../publishing/tistory-sync.js");
+        // 방금 올린 글이 RSS에 아직 안 떴을 수 있다 → 유령으로 몰면 안 된다(markPhantom=false)
+        const result = await syncTistoryUrls("hom2box", false);
+        resolved = result.filled.find((row) => row.articleId === id)?.url ?? null;
+      } catch {
+        // 실패해도 발행 자체는 성공이다 — URL은 크론이 마저 채운다
+      }
+    }
+
+    res.json({ ok: true, url: resolved });
   }),
 );

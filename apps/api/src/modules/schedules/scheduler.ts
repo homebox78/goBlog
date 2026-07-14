@@ -9,6 +9,7 @@ let keywordJob: Cron | null = null;
 let citationJob: Cron | null = null;
 let analyticsJob: Cron | null = null;
 let imageSweepJob: Cron | null = null;
+let tistorySyncJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -330,6 +331,34 @@ export async function scheduleFromSettings(): Promise<void> {
       },
     );
     console.log("[scheduler] 이미지 미생성 스윕 30분 주기");
+
+    // 티스토리 URL 자기치유 — 확장은 발행 후 '글 주소로 이동'을 엿봐서 URL을 잡는데,
+    // 티스토리는 발행하면 **관리 목록으로 간다**. 그래서 링크가 어떤 건 잡히고 어떤 건 안 잡혔다(47건 중 4건 누락).
+    // 확장을 고쳐도 놓칠 수 있으니, **RSS를 정답으로 삼아** 주기적으로 채운다.
+    tistorySyncJob?.stop();
+    tistorySyncJob = new Cron(
+      "*/20 * * * *",
+      { timezone: "Asia/Seoul", protect: true },
+      async () => {
+        try {
+          const { syncTistoryUrls } = await import("../publishing/tistory-sync.js");
+          const result = await syncTistoryUrls();
+          if (result.filled.length > 0) {
+            console.log(`[scheduler] 티스토리 URL 복구 ${result.filled.length}건`);
+          }
+          if (result.phantom.length > 0) {
+            // 조용히 넘기면 안 된다 — '발행됐다'고 기록됐는데 실물이 없는 글이다
+            console.warn(
+              `[scheduler] ⚠️ 유령 발행 ${result.phantom.length}건 (성공 기록인데 티스토리에 글이 없음): ` +
+                result.phantom.map((row) => `#${row.articleId}`).join(", "),
+            );
+          }
+        } catch (error) {
+          console.error("[scheduler] 티스토리 URL 동기화 실패:", (error as Error).message);
+        }
+      },
+    );
+    console.log("[scheduler] 티스토리 URL 자기치유 20분 주기");
   } catch (error) {
     console.warn("[scheduler] 예약 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }

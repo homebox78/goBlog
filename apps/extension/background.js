@@ -20,13 +20,30 @@ const PUBLISHED_URL = {
   TISTORY: /^https:\/\/[^/]+\.tistory\.com\/(\d+)(?:[/?#]|$)/,
 };
 
+// ⚠️ 대기 슬롯이 **하나뿐이면 연속 발행에서 앞 건이 덮어써진다.**
+//    실측: 티스토리 47건 중 4건 URL 누락 — 성공/누락이 번갈아 났다(뒤 발행이 앞 발행의 대기를 지웠다).
+//    그래서 목록(pendingPublishes)으로 들고, 맞는 것만 골라 지운다.
+//    구버전 단일 슬롯(pendingPublish)도 함께 읽어 확장 갱신 직후를 넘긴다.
+async function readPending() {
+  const s = await chrome.storage.local.get(["pendingPublishes", "pendingPublish"]);
+  const list = Array.isArray(s.pendingPublishes) ? s.pendingPublishes : [];
+  if (s.pendingPublish?.articleId) list.push(s.pendingPublish); // 구버전 잔여분 흡수
+  return list;
+}
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete" || !tab.url) return;
-  chrome.storage.local.get(["pendingPublish", "apiBase", "token"]).then(async (s) => {
-    const pending = s.pendingPublish;
-    if (!pending?.articleId || !s.apiBase || !s.token) return;
-    const re = PUBLISHED_URL[pending.platform];
-    if (!re || !re.test(tab.url)) return; // 발행 게시글 URL이 아니면 무시
+  chrome.storage.local.get(["apiBase", "token"]).then(async (s) => {
+    if (!s.apiBase || !s.token) return;
+    const pendings = await readPending();
+    if (pendings.length === 0) return;
+
+    // 지금 열린 주소가 어느 발행의 결과인지 고른다 (플랫폼별 글 주소 형태로 판별)
+    const pending = pendings.find((p) => {
+      const re = PUBLISHED_URL[p?.platform];
+      return re && re.test(tab.url);
+    });
+    if (!pending) return;
 
     try {
       const res = await fetch(`${s.apiBase}/api/extension/articles/${pending.articleId}/published`, {
@@ -35,12 +52,14 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         body: JSON.stringify({ platform: pending.platform, url: tab.url }),
       });
       if (res.ok) {
+        // **처리한 것만** 지운다 — 통째로 지우면 아직 발행 중인 다른 글의 대기가 날아간다
+        const rest = (await readPending()).filter((p) => p.articleId !== pending.articleId);
+        await chrome.storage.local.set({ pendingPublishes: rest });
         await chrome.storage.local.remove("pendingPublish");
-        // 사이드 패널이 열려 있으면 목록 새로고침하도록 알림
         chrome.runtime.sendMessage({ type: "PUBLISHED", articleId: pending.articleId, url: tab.url }).catch(() => {});
       }
     } catch (_) {
-      // 네트워크 실패 시 pending 유지 → 다음 기회에 재시도 또는 수동 기록
+      // 네트워크 실패 시 대기 유지 → 다음 기회에 재시도 또는 서버의 RSS 자기치유가 채운다
     }
   });
 });
