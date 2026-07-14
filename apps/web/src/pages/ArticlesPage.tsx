@@ -206,9 +206,12 @@ export default function ArticlesPage() {
           { key: k, dir: ["title", "keyword", "ad", "language"].includes(k) ? "asc" : "desc" },
     );
 
+  // 더 보기 — 서버 한도(기본 100)에 걸려 옛 글이 조용히 숨는 것을 막는다
+  const [limit, setLimit] = useState(100);
   const query = useQuery({
-    queryKey: ["articles"],
-    queryFn: () => api.get<{ articles: ArticleListItem[] }>("/api/articles"),
+    queryKey: ["articles", limit],
+    queryFn: () => api.get<{ total: number; articles: ArticleListItem[] }>(`/api/articles?limit=${limit}`),
+    placeholderData: (prev) => prev, // limit 증가 시 화면이 비지 않게 이전 데이터 유지
   });
 
   const deleteMutation = useMutation({
@@ -750,6 +753,17 @@ export default function ArticlesPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {(query.data?.total ?? 0) > (query.data?.articles.length ?? 0) && (
+          <div className="flex items-center justify-center gap-3 py-2">
+            <span className="text-xs text-muted-foreground">
+              전체 {query.data!.total}건 중 {query.data!.articles.length}건 표시
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setLimit((prev) => prev + 100)}>
+              더 보기
+            </Button>
+          </div>
+        )}
         </>
       )}
     </div>

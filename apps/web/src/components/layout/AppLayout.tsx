@@ -10,9 +10,12 @@ import {
   LogOut,
   Loader2,
   Menu,
+  Moon,
   ShoppingBag,
+  Sun,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { currentTheme, toggleTheme, type Theme } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,6 +39,7 @@ export default function AppLayout() {
   const location = useLocation();
   // 모바일 서랍 메뉴 — 데스크톱(md+)에서는 사이드바가 항상 보이므로 이 상태를 쓰지 않는다.
   const [navOpen, setNavOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => currentTheme());
 
   // 메뉴를 눌러 화면이 바뀌면 서랍은 닫는다 (열린 채로 남으면 본문을 가린다).
   useEffect(() => setNavOpen(false), [location.pathname]);
@@ -113,6 +117,14 @@ export default function AppLayout() {
 
       <div className="border-t px-3 py-3">
         <p className="truncate px-3 pb-2 text-xs text-muted-foreground">{meQuery.data.user.email}</p>
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 text-muted-foreground"
+          onClick={() => setTheme(toggleTheme())}
+        >
+          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          {theme === "dark" ? "라이트 모드" : "다크 모드"}
+        </Button>
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-muted-foreground"

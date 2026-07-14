@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { useSaveShortcut, useUnsavedGuard } from "@/hooks/use-editing";
 
 interface ArticleDetail {
   id: number;
@@ -162,6 +163,20 @@ export default function ArticleDetailPage() {
   });
 
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  // 미저장 변경 감지 — 폼이 서버 데이터와 다르면 dirty (탭 닫기 경고 + 저장 버튼 표시)
+  const article0 = query.data?.article;
+  const dirty =
+    !!article0 &&
+    (form.title !== article0.title ||
+      form.metaTitle !== (article0.metaTitle ?? "") ||
+      form.metaDescription !== (article0.metaDescription ?? "") ||
+      form.excerpt !== (article0.excerpt ?? "") ||
+      form.contentMarkdown !== (article0.contentMarkdown ?? ""));
+  useUnsavedGuard(dirty);
+  useSaveShortcut(() => {
+    if (dirty && !saveMutation.isPending) saveMutation.mutate();
+  });
 
   const uploadImageMutation = useMutation({
     mutationFn: (dataUrl: string) =>
@@ -606,13 +621,13 @@ export default function ArticleDetailPage() {
               보정
             </Button>
           )}
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} title="Ctrl+S">
             {saveMutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <Save className="size-4" />
             )}
-            저장
+            저장{dirty ? " ●" : ""}
           </Button>
           <Button
             variant="default"

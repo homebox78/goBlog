@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSaveShortcut, useUnsavedGuard } from "@/hooks/use-editing";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -160,6 +161,13 @@ export default function SettingsPage() {
     },
   });
 
+  // ⚠️ 훅은 조기 return(로딩·에러) 위에 있어야 한다 — 아래에 두면 렌더마다 훅 개수가 달라져 터진다
+  const dirtyCount = Object.keys(edited).length;
+  useUnsavedGuard(dirtyCount > 0);
+  useSaveShortcut(() => {
+    if (dirtyCount > 0 && !saveMutation.isPending) saveMutation.mutate(edited);
+  });
+
   if (query.isPending) {
     return (
       <div className="space-y-4">
@@ -174,7 +182,6 @@ export default function SettingsPage() {
   }
 
   const settings = query.data.settings;
-  const dirtyCount = Object.keys(edited).length;
 
   const handleSave = () => {
     if (dirtyCount === 0) {

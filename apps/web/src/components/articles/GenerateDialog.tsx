@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -78,6 +78,11 @@ export function GenerateDialog({
 }) {
   const navigate = useNavigate();
   const [articleType, setArticleType] = useState(product ? "product-review" : "guide");
+  // 완료 시점에 다이얼로그가 아직 열려 있는지 — 닫고 다른 일을 하는 중이면 갑자기 화면을 낚아채지 않는다
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
 
   // 모달이 열릴 때마다 대상 키워드/상품에 맞는 글 유형을 기본 선택한다
   useEffect(() => {
@@ -111,9 +116,18 @@ export function GenerateDialog({
       return result;
     },
     onSuccess: (result) => {
-      toast.success(`글·이미지 생성 완료 (품질 ${result.qualityScore}점)`);
-      onOpenChange(false);
-      navigate(`/articles/${result.articleId}`);
+      if (openRef.current) {
+        // 기다리고 있었음 — 바로 글로 이동
+        toast.success(`글·이미지 생성 완료 (품질 ${result.qualityScore}점)`);
+        onOpenChange(false);
+        navigate(`/articles/${result.articleId}`);
+      } else {
+        // 닫고 다른 작업 중 — 화면을 낚아채지 말고 알림 + 열기 버튼만
+        toast.success(`"${keyword}" 글 생성 완료 (품질 ${result.qualityScore}점)`, {
+          duration: 15000,
+          action: { label: "글 열기", onClick: () => navigate(`/articles/${result.articleId}`) },
+        });
+      }
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : "글 생성에 실패했습니다.";
@@ -129,7 +143,17 @@ export function GenerateDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !mutation.isPending && onOpenChange(next)}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // 생성 중에도 닫을 수 있다 — 요청은 계속 진행되고 완료되면 토스트로 알린다.
+        // (3~4분짜리 모달 잠금은 그동안 관리자 전체를 묶는다)
+        if (!next && mutation.isPending) {
+          toast.info("글 생성은 백그라운드에서 계속됩니다. 완료되면 알려드릴게요.");
+        }
+        onOpenChange(next);
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -216,8 +240,8 @@ export function GenerateDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-            취소
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {mutation.isPending ? "닫기 (백그라운드 계속)" : "취소"}
           </Button>
           <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || (!keywordId && !product)}>
             {mutation.isPending && <Loader2 className="size-4 animate-spin" />}

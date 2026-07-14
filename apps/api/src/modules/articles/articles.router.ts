@@ -11,13 +11,17 @@ export const articlesRouter = Router();
 
 articlesRouter.use(requireAuth);
 
-/** 글 목록 */
+/** 글 목록 (페이지네이션 — 고정 take:100이면 글이 쌓일수록 옛 글이 목록에서 조용히 사라진다) */
 articlesRouter.get(
   "/",
   asyncHandler(async (req, res) => {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 100, 10), 300);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const total = await prisma.article.count();
     const articles = await prisma.article.findMany({
       orderBy: { updatedAt: "desc" },
-      take: 100,
+      take: limit,
+      skip: offset,
       select: {
         id: true,
         title: true,
@@ -45,6 +49,7 @@ articlesRouter.get(
       },
     });
     res.json({
+      total,
       articles: articles.map((article) => {
         const { media, contentMarkdown, adSource, adProduct, publishJobs, ...rest } = article;
         // 플랫폼별 대표 작업 — 성공(SUCCEEDED)이 하나라도 있으면 그걸 우선(중복 대기작업에 가려지지 않게),

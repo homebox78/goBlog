@@ -4,7 +4,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import App from "./App";
+import { applyStoredTheme } from "@/lib/theme";
 import "./index.css";
+
+// 렌더 전에 테마를 적용해야 다크 사용자가 흰 화면 번쩍임을 안 본다
+applyStoredTheme();
 
 const queryClient = new QueryClient({
   defaultOptions: {

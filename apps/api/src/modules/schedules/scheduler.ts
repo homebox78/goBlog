@@ -8,6 +8,7 @@ import { overlapScore, isNonCommercialKeyword } from "../products/product-match.
 let keywordJob: Cron | null = null;
 let citationJob: Cron | null = null;
 let analyticsJob: Cron | null = null;
+let imageSweepJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -288,6 +289,39 @@ export async function scheduleFromSettings(): Promise<void> {
       },
     );
     console.log("[scheduler] Search Console 성과 수집 1회/일 (05:00 KST)");
+
+    // 이미지 미생성 스윕 — 생성 파이프라인이 어떤 이유로든(재시작·중단) 이미지를 못 만들고 지나간 글을
+    // 30분마다 찾아 마저 만든다. 원인 불명의 누락(글 52·55)이 실제로 있었다 — 자기치유가 답이다.
+    imageSweepJob?.stop();
+    imageSweepJob = new Cron(
+      "*/30 * * * *",
+      { timezone: "Asia/Seoul", protect: true },
+      async () => {
+        try {
+          const since = new Date(Date.now() - 3 * 24 * 3600 * 1000);
+          const targets = await prisma.article.findMany({
+            where: {
+              createdAt: { gte: since },
+              media: { some: { prompt: { not: null }, webpUrl: null } },
+            },
+            select: { id: true },
+            take: 2, // Gemini 비용 — 한 번에 몰아치지 않는다
+            orderBy: { createdAt: "asc" },
+          });
+          if (targets.length === 0) return;
+          const { generateArticleImages } = await import("../images/image-service.js");
+          for (const target of targets) {
+            const result = await generateArticleImages(target.id);
+            console.log(
+              `[scheduler] 이미지 스윕: 글 ${target.id} → ${result.generated}장 생성${result.failed ? ` (실패 ${result.failed})` : ""}`,
+            );
+          }
+        } catch (error) {
+          console.error("[scheduler] 이미지 스윕 실패:", (error as Error).message);
+        }
+      },
+    );
+    console.log("[scheduler] 이미지 미생성 스윕 30분 주기");
   } catch (error) {
     console.warn("[scheduler] 예약 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }
