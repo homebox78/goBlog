@@ -72,9 +72,35 @@ async function siteUrls(token: string): Promise<string[]> {
   const data = (await res.json()) as {
     siteEntry?: Array<{ siteUrl: string; permissionLevel: string }>;
   };
-  return (data.siteEntry ?? [])
+  const verified = (data.siteEntry ?? [])
     .filter((entry) => entry.permissionLevel !== "siteUnverifiedUser")
     .map((entry) => entry.siteUrl);
+
+  // ⚠️ 이 구글 계정에는 **우리 블로그가 아닌 사이트**도 등록돼 있다(실제로 mondayproject.co.kr가 섞여 들어와
+  //    그 사이트의 성과 행을 우리 글에 매칭하려다 전부 unmatched 로 버려지고 있었다).
+  //    우리가 **실제로 발행한 호스트**만 남긴다 — 발행 기록이 정답이지, 계정에 뭐가 등록됐는지는 우리 소관이 아니다.
+  const published = await prisma.publishJob.findMany({
+    where: { publishedUrl: { not: null } },
+    select: { publishedUrl: true },
+    distinct: ["publishedUrl"],
+  });
+  const ourHosts = new Set<string>();
+  for (const job of published) {
+    try {
+      ourHosts.add(new URL(job.publishedUrl!).hostname);
+    } catch {
+      // 발행 URL이 깨져 있으면 그냥 건너뛴다
+    }
+  }
+  if (ourHosts.size === 0) return verified; // 아직 발행 기록이 없으면 거를 근거가 없다
+
+  return verified.filter((siteUrl) => {
+    try {
+      return ourHosts.has(new URL(siteUrl).hostname);
+    } catch {
+      return false;
+    }
+  });
 }
 
 /** 한 속성의 일자·페이지별 성과 */
