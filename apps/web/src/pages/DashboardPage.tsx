@@ -274,6 +274,23 @@ export default function DashboardPage() {
       ),
   });
 
+  // 유입 검색어 — 성과 카드와 마찬가지로 "수집 전"과 "성과 0"을 구분해서 온다.
+  const queries = useQuery({
+    queryKey: ["dashboard-queries"],
+    queryFn: () =>
+      api.get<{
+        days: number;
+        collected: boolean;
+        queries: Array<{
+          query: string;
+          impressions: number;
+          clicks: number;
+          ctr: number;
+          avgPosition: number | null;
+        }>;
+      }>("/api/analytics/queries?days=28"),
+  });
+
   if (query.isPending) {
     return (
       <div className="space-y-6">
@@ -509,6 +526,42 @@ export default function DashboardPage() {
                       {row.avgPosition ? `${row.avgPosition.toFixed(1)}위` : "—"}
                     </Badge>
                   </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 유입 쿼리 — 사람들이 실제로 친 말. 다음 글을 무슨 말로 써야 하는지가 여기에 있다. */}
+      {queries.data && (
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle className="text-base">
+              유입 검색어 (최근 {queries.data.days}일)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!queries.data.collected ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                아직 유입 검색어가 없습니다. 노출이 잡히기 시작하면 여기에 쌓입니다.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {queries.data.queries.slice(0, 12).map((row, index) => (
+                  <div key={row.query} className="flex items-center gap-3 py-1">
+                    <span className="w-4 shrink-0 text-xs text-muted-foreground">{index + 1}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm">{row.query}</span>
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      노출 {row.impressions.toLocaleString("ko-KR")}
+                    </span>
+                    <Badge variant="outline" className="shrink-0 font-mono">
+                      클릭 {row.clicks.toLocaleString("ko-KR")}
+                    </Badge>
+                    <Badge variant="secondary" className="hidden shrink-0 font-mono sm:inline-flex">
+                      {row.avgPosition ? `${row.avgPosition.toFixed(1)}위` : "—"}
+                    </Badge>
+                  </div>
                 ))}
               </div>
             )}

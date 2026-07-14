@@ -330,6 +330,7 @@ model Article {
   categories      ArticleCategory[]
   tags            ArticleTag[]
   analytics       AnalyticsDaily[]
+  searchQueries   SearchQueryDaily[]
 
   @@index([status])
   @@map("articles")
@@ -543,4 +544,27 @@ model AnalyticsDaily {
 
   @@unique([date, articleId, source])
   @@map("analytics_daily")
+}
+
+/// 유입 쿼리 — **사람들이 실제로 검색해서 내 글에 들어온 말.**
+///
+/// `analytics_daily` 는 "이 글이 몇 번 노출됐나"만 안다. 어떤 검색어로 들어왔는지는 모른다.
+/// 그런데 자가학습에 정말 필요한 건 그쪽이다: 내가 "무선이어폰 추천"이라고 썼는데
+/// 사람들은 "이어폰 배터리 오래가는거"로 들어온다면, **다음 글은 그 말로 써야 한다.**
+///
+/// ⚠️ 글과 못 이은 쿼리는 저장하지 않는다 (목록·태그 페이지의 쿼리는 글의 성과가 아니다).
+model SearchQueryDaily {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @db.Date
+  articleId   Int
+  query       String   @db.VarChar(255)
+  impressions Int
+  clicks      Int
+  position    Float?
+  createdAt   DateTime @default(now())
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([date, articleId, query])
+  @@index([articleId])
+  @@map("search_query_daily")
 }

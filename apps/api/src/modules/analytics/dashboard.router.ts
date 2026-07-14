@@ -176,6 +176,52 @@ dashboardRouter.get(
   }),
 );
 
+/**
+ * 유입 쿼리 — **사람들이 실제로 검색해서 들어온 말.**
+ *
+ * 노출·클릭은 "얼마나 읽혔나"만 말해 준다. 왜 안 읽혔는지, 무슨 말로 써야 하는지는 여기에 있다.
+ * 내가 "무선이어폰 추천"이라고 썼는데 사람들이 "이어폰 배터리 오래가는거"로 들어온다면,
+ * **다음 글은 그 말로 써야 한다.** (B-3 쿼리 역주입의 재료)
+ *
+ * `?articleId=` 를 주면 그 글의 쿼리만, 없으면 전체 상위 쿼리.
+ */
+dashboardRouter.get(
+  "/queries",
+  asyncHandler(async (req, res) => {
+    const days = Math.min(Math.max(Number(req.query.days) || 28, 7), 90);
+    const articleId = req.query.articleId ? Number(req.query.articleId) : undefined;
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    since.setDate(since.getDate() - days);
+
+    const rows = await prisma.searchQueryDaily.groupBy({
+      by: ["query"],
+      where: { date: { gte: since }, ...(articleId ? { articleId } : {}) },
+      _sum: { impressions: true, clicks: true },
+      _avg: { position: true },
+      orderBy: { _sum: { impressions: "desc" } },
+      take: 50,
+    });
+
+    // 수집 전(0건)과 "성과가 0"을 구분한다 — 화면에서 다르게 안내해야 한다
+    res.json({
+      days,
+      collected: rows.length > 0,
+      queries: rows.map((row) => {
+        const impressions = row._sum.impressions ?? 0;
+        const clicks = row._sum.clicks ?? 0;
+        return {
+          query: row.query,
+          impressions,
+          clicks,
+          ctr: impressions > 0 ? clicks / impressions : 0,
+          avgPosition: row._avg.position ?? null,
+        };
+      }),
+    });
+  }),
+);
+
 /** Search Console 성과 수집 (수동 실행 — 스케줄러도 같은 함수를 쓴다) */
 dashboardRouter.post(
   "/collect",

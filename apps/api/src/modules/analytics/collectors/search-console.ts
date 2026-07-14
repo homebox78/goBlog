@@ -103,8 +103,14 @@ async function siteUrls(token: string): Promise<string[]> {
   });
 }
 
-/** 한 속성의 일자·페이지별 성과 */
-async function queryRows(token: string, siteUrl: string, start: string, end: string): Promise<GscRow[]> {
+/** 한 속성의 성과 행. dimensions 를 바꿔 페이지별/쿼리별을 같은 함수로 받는다. */
+async function queryRows(
+  token: string,
+  siteUrl: string,
+  start: string,
+  end: string,
+  dimensions: string[] = ["date", "page"],
+): Promise<GscRow[]> {
   const res = await fetch(
     `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
     {
@@ -113,7 +119,7 @@ async function queryRows(token: string, siteUrl: string, start: string, end: str
       body: JSON.stringify({
         startDate: start,
         endDate: end,
-        dimensions: ["date", "page"],
+        dimensions,
         // ⚠️ 학습에는 **확정(final) 데이터만** 쓴다. "all"로 바꾸면 최신 2~3일의 미확정값이 섞여
         //    아직 덜 집계된 수치를 성과로 착각해 학습한다. 기본값이 final이지만 명시해 둔다.
         dataState: "final",
@@ -227,6 +233,7 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
   unmatched: number;
   unmatchedSamples: string[];
   ambiguous: string[]; // 같은 주소에 여러 글이 걸려 제외된 키 (수집 성공과 구분해야 한다)
+  queries: number; // 글과 이어진 유입 쿼리 행 수
 }> {
   const token = await accessToken();
   const sites = await siteUrls(token);
@@ -250,6 +257,7 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
   let rowCount = 0;
   let matched = 0;
   let unmatched = 0;
+  let queries = 0;
   // 매칭이 0건일 때 "성과가 없다"와 "URL이 안 맞는다"를 구분하려면 실제 주소를 봐야 한다
   const unmatchedSamples: string[] = [];
 
@@ -292,7 +300,44 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
         create: data,
       });
     }
+
+    // ── 유입 쿼리 ──────────────────────────────────────────────────
+    // 노출·클릭만으로는 "왜 안 읽혔나"를 모른다. **사람들이 실제로 친 말**을 알아야
+    // 다음 글을 그 말로 쓸 수 있다. (page 를 함께 받아야 어느 글의 쿼리인지 이을 수 있다)
+    const queryDim = await queryRows(token, site, iso(start), iso(end), ["date", "query", "page"]);
+    for (const row of queryDim) {
+      const [dateKey, query, page] = row.keys;
+      const articleId = articleMap.get(normalizeUrl(page)) ?? null;
+      if (!articleId || !query) continue; // 글과 못 이은 쿼리는 글의 성과가 아니다
+      if (row.clicks > row.impressions) continue; // 오염된 값은 저장하지 않는다
+
+      const date = new Date(`${dateKey}T00:00:00.000Z`);
+      // 쿼리는 컬럼이 255자다. 넘치면 잘라서라도 남긴다(버리면 그 유입을 영영 모른다).
+      const text = query.slice(0, 255);
+      const payload = {
+        date,
+        articleId,
+        query: text,
+        impressions: Math.round(row.impressions),
+        clicks: Math.round(row.clicks),
+        position: row.position,
+      };
+      await prisma.searchQueryDaily.upsert({
+        where: { date_articleId_query: { date, articleId, query: text } },
+        update: payload,
+        create: payload,
+      });
+      queries += 1;
+    }
   }
 
-  return { sites: sites.length, rows: rowCount, matched, unmatched, unmatchedSamples, ambiguous };
+  return {
+    sites: sites.length,
+    rows: rowCount,
+    matched,
+    unmatched,
+    unmatchedSamples,
+    ambiguous,
+    queries,
+  };
 }
