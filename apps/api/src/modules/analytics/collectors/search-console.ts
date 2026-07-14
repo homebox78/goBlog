@@ -132,6 +132,7 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
   rows: number;
   matched: number;
   unmatched: number;
+  unmatchedSamples: string[];
 }> {
   const token = await accessToken();
   const sites = await siteUrls(token);
@@ -149,6 +150,8 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
   let rowCount = 0;
   let matched = 0;
   let unmatched = 0;
+  // 매칭이 0건일 때 "성과가 없다"와 "URL이 안 맞는다"를 구분하려면 실제 주소를 봐야 한다
+  const unmatchedSamples: string[] = [];
 
   for (const site of sites) {
     const rows = await queryRows(token, site, iso(start), iso(end));
@@ -157,8 +160,12 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
     for (const row of rows) {
       const [dateKey, page] = row.keys;
       const articleId = articleMap.get(normalizeUrl(page)) ?? null;
-      if (articleId) matched += 1;
-      else unmatched += 1;
+      if (articleId) {
+        matched += 1;
+      } else {
+        unmatched += 1;
+        if (unmatchedSamples.length < 5) unmatchedSamples.push(page);
+      }
 
       // 글과 못 이은 페이지(목록·태그 페이지 등)는 저장하지 않는다 — 글 단위 성과만 다룬다
       if (!articleId) continue;
@@ -181,5 +188,5 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
     }
   }
 
-  return { sites: sites.length, rows: rowCount, matched, unmatched };
+  return { sites: sites.length, rows: rowCount, matched, unmatched, unmatchedSamples };
 }
