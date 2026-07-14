@@ -100,24 +100,53 @@ async function queryRows(token: string, siteUrl: string, start: string, end: str
   return data.rows ?? [];
 }
 
-/** 발행 URL → articleId 맵. URL 끝 슬래시·쿼리 차이를 흡수한다. */
-async function urlToArticle(): Promise<Map<string, number>> {
+/**
+ * 발행 URL → articleId 맵.
+ *
+ * ⚠️ 한 정규화 키에 **두 개 이상의 글**이 걸리면 그 키는 통째로 버린다(AMBIGUOUS).
+ *    억지로 하나를 고르면 남의 글 성과가 내 글에 붙는다 — 잘못된 성과로 학습하면
+ *    데이터가 없는 것보다 나쁘다.
+ */
+async function urlToArticle(): Promise<{ map: Map<string, number>; ambiguous: string[] }> {
   const jobs = await prisma.publishJob.findMany({
     where: { publishedUrl: { not: null } },
     select: { articleId: true, publishedUrl: true },
   });
-  const map = new Map<string, number>();
+
+  const byKey = new Map<string, Set<number>>();
   for (const job of jobs) {
     if (!job.publishedUrl) continue;
-    map.set(normalizeUrl(job.publishedUrl), job.articleId);
+    const key = normalizeUrl(job.publishedUrl);
+    const set = byKey.get(key) ?? new Set<number>();
+    set.add(job.articleId);
+    byKey.set(key, set);
   }
-  return map;
+
+  const map = new Map<string, number>();
+  const ambiguous: string[] = [];
+  for (const [key, ids] of byKey) {
+    if (ids.size === 1) map.set(key, [...ids][0]);
+    else ambiguous.push(key); // 같은 주소에 여러 글 — 어느 글의 성과인지 알 수 없다
+  }
+  return { map, ambiguous };
 }
+
+/** 추적용 파라미터만 버리고, 글을 식별하는 쿼리(?p=6 같은 것)는 반드시 남긴다 */
+const TRACKING_PARAMS = /^(utm_|fbclid|gclid|msclkid|ref|source|napm|originchannelinfo)/i;
 
 function normalizeUrl(raw: string): string {
   try {
     const url = new URL(raw);
-    return `${url.origin}${url.pathname.replace(/\/+$/, "")}`.toLowerCase();
+    // ⚠️ 쿼리를 통째로 버리면 안 된다.
+    //    워드프레스 기본 퍼머링크는 `?p=6` 형태라, 쿼리를 버리면 **모든 글이 같은 키로 뭉개진다**
+    //    (실제로 그랬다 — 44개 글의 성과가 한 글에 몰아서 붙을 뻔했다).
+    const params = [...url.searchParams.entries()]
+      .filter(([key]) => !TRACKING_PARAMS.test(key))
+      .sort(([a], [b]) => a.localeCompare(b));
+    const query = params.length > 0 ? `?${params.map(([k, v]) => `${k}=${v}`).join("&")}` : "";
+    const host = url.hostname.replace(/^www\./, "");
+    const path = url.pathname.replace(/\/+$/, "");
+    return `${host}${path}${query}`.toLowerCase();
   } catch {
     return raw.replace(/\/+$/, "").toLowerCase();
   }
@@ -133,6 +162,7 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
   matched: number;
   unmatched: number;
   unmatchedSamples: string[];
+  ambiguous: string[]; // 같은 주소에 여러 글이 걸려 제외된 키 (수집 성공과 구분해야 한다)
 }> {
   const token = await accessToken();
   const sites = await siteUrls(token);
@@ -146,7 +176,13 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
   start.setDate(start.getDate() - daysBack);
   const iso = (date: Date) => date.toISOString().slice(0, 10);
 
-  const articleMap = await urlToArticle();
+  const { map: articleMap, ambiguous } = await urlToArticle();
+  if (ambiguous.length > 0) {
+    // 조용히 넘기지 않는다 — 같은 주소를 쓰는 글이 있다는 건 발행 URL 기록이 잘못됐다는 뜻이다
+    console.warn(
+      `[gsc] ⚠️ 같은 URL에 여러 글이 걸려 성과 매칭에서 제외: ${ambiguous.slice(0, 3).join(", ")}${ambiguous.length > 3 ? ` 외 ${ambiguous.length - 3}건` : ""}`,
+    );
+  }
   let rowCount = 0;
   let matched = 0;
   let unmatched = 0;
@@ -188,5 +224,5 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
     }
   }
 
-  return { sites: sites.length, rows: rowCount, matched, unmatched, unmatchedSamples };
+  return { sites: sites.length, rows: rowCount, matched, unmatched, unmatchedSamples, ambiguous };
 }
