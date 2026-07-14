@@ -146,7 +146,23 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
     // 아직 안 쓴 추천 키워드끼리의 중복(실제로 가장 많았다)을 못 걸렀다.
     const allKeywordTexts = (await prisma.keyword.findMany({ select: { text: true } })).map((row) => row.text);
 
-    // 3) Claude로 후보 키워드 발굴·분류
+    // 3) 연관 키워드 확장 — 네이버 검색광고가 힌트당 수백 개를 검색량과 함께 돌려준다.
+    //    (예전엔 이 응답에서 물어본 키워드만 쓰고 **나머지를 전부 버렸다** — 공짜 발굴 소스를 낭비)
+    //    실제 검색량이 붙은 '사람들이 진짜 치는 말'이라, Claude가 상상해낸 후보보다 신뢰도가 높다.
+    const hintPool = issues.slice(0, 10).map((issue) => issue.title.replace(/\s+/g, "").slice(0, 20));
+    const { fetchRelatedKeywords } = await import("./related-keywords.js");
+    const related = await fetchRelatedKeywords(hintPool, 60).catch(() => []);
+    // 브랜드 단품·이미 다룬 것·제외 주제는 걸러낸다 (그대로 쓰면 블로그 주제로 안 맞는 게 섞인다)
+    const relatedClean = related
+      .filter((row) => row.monthlySearches >= 500) // 검색량 없는 롱테일은 글로 쓸 가치가 낮다
+      .filter((row) => !isExcludedTopic(row.keyword))
+      .filter((row) => !excludedTexts.some((text) => normalizeKeyword(text) === normalizeKeyword(row.keyword)))
+      .slice(0, 40);
+    if (relatedClean.length > 0) {
+      console.log(`[keywords] 연관 키워드 ${relatedClean.length}개 확보 (네이버 실측 검색량 포함)`);
+    }
+
+    // 4) Claude로 후보 키워드 발굴·분류
     const askCount = Math.min(dailyCount * 2, 40);
     const { candidates } = await callClaudeJson<{ candidates: Candidate[] }>({
       operation: "keyword-discovery",
@@ -155,6 +171,10 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
         "당신은 한국어 SEO·수익형 블로그 키워드 리서처다.",
         "오늘 수집된 실시간 이슈·뉴스 목록을 분석해 블로그 글감으로 좋은 검색 키워드를 발굴한다.",
         "실제 사람들이 검색창에 입력할 형태의 한국어 키워드만 만든다 (문장 금지, 2~6어절).",
+        "userPayload.relatedKeywordsWithVolume 은 네이버가 **실측한 월간 검색량**이 붙은 실제 검색어다(추측 아님).",
+        "이 목록을 적극 활용해 후보를 만들어라 — 다만 그대로 베끼지 말고, 오늘의 이슈와 결합해 '글이 될 만한 형태'로 다듬는다.",
+        "(예: 연관어 '골전도이어폰'(74,700) + 이슈 → '골전도이어폰 추천 2026 러닝용 비교')",
+        "검색량이 큰 단어를 무작정 고르지 마라. 경쟁이 세다 — 검색량과 '우리가 이길 수 있는가'를 함께 본다.",
         "검증 불가능한 수치나 통계를 만들지 않는다.",
         "반드시 JSON만 출력한다.",
       ].join(" "),
@@ -171,6 +191,12 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
           REVENUE: "구매·신청·가입 의도가 높은 상업형 키워드",
         },
         excludeKeywords: excludedTexts.slice(0, 300),
+        // 네이버가 실측한 '사람들이 실제로 검색하는 말' — 상상이 아니라 관측이다
+        relatedKeywordsWithVolume: relatedClean.map((row) => ({
+          keyword: row.keyword,
+          monthlySearches: row.monthlySearches,
+          competition: row.competition,
+        })),
         todaysIssues: issues.slice(0, 120).map((issue) => ({
           title: issue.title,
           source: issue.source,

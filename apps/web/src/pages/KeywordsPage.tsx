@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Bookmark, Loader2, PenLine, RefreshCw, Trash2 } from "lucide-react";
@@ -350,12 +350,12 @@ export default function KeywordsPage() {
                   <div className="flex items-start gap-2">
                     <span className="mt-0.5 text-xs text-muted-foreground">{item.rank}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium break-keep">
+                      <Link to={`/keywords/${item.id}`} className="text-sm font-medium break-keep hover:underline">
                         {item.keyword}
                         {item.status === "SAVED" && (
                           <Bookmark className="ml-1 inline size-3.5 fill-current text-amber-500" />
                         )}
-                      </p>
+                      </Link>
                       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                         {item.reason ?? "추천 이유 없음"}
                       </p>
@@ -456,12 +456,15 @@ export default function KeywordsPage() {
                       <TableCell>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="cursor-default font-medium">
+                            <Link
+                              to={`/keywords/${item.id}`}
+                              className="font-medium hover:underline"
+                            >
                               {item.keyword}
                               {item.status === "SAVED" && (
                                 <Bookmark className="ml-1 inline size-3.5 fill-current text-amber-500" />
                               )}
-                            </span>
+                            </Link>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-80">
                             <p>{item.reason ?? "추천 이유 없음"}</p>

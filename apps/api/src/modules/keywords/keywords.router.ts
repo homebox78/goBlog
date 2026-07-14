@@ -337,3 +337,109 @@ keywordsRouter.patch(
     res.json({ id: keyword.id, status: keyword.status });
   }),
 );
+
+/**
+ * 키워드 상세 — 흩어진 데이터를 **한 화면에** 모은다.
+ * 지금까지 키워드는 표의 '한 줄'이 전부였다. 시계열·경쟁·인용 상위 글·학습 인사이트가
+ * 전부 따로 있어서, 이 키워드로 글을 쓸지 판단하려면 여러 화면을 헤매야 했다.
+ */
+keywordsRouter.get(
+  "/:id/detail",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const keyword = await prisma.keyword.findUnique({
+      where: { id },
+      include: {
+        metrics: true,
+        recommendations: { orderBy: { date: "desc" }, take: 1 },
+      },
+    });
+    if (!keyword) throw new HttpError(404, "키워드를 찾을 수 없습니다.");
+
+    const [trends, citations, insight, articles] = await Promise.all([
+      // 시계열 — 검색량·순위 추세 그래프용
+      prisma.keywordTrend.findMany({
+        where: { keywordText: keyword.text },
+        orderBy: { collectedAt: "asc" },
+        take: 120,
+        select: {
+          date: true,
+          collectedAt: true,
+          rank: true,
+          searchVolume: true,
+          finalScore: true,
+          competitionScore: true,
+        },
+      }),
+      // 이 키워드에서 실제로 인용된 상위 글 (경쟁 글이 무엇을 썼는가)
+      prisma.blogCitation.findMany({
+        where: { keywordText: keyword.text },
+        orderBy: [{ date: "desc" }, { rank: "asc" }],
+        take: 10,
+        select: { rank: true, title: true, url: true, blogName: true, citedLabel: true, citedCount: true },
+      }),
+      // 학습된 인사이트 (왜 인용됐나 · 빈 각도)
+      prisma.citationInsight.findUnique({ where: { keywordText: keyword.text } }),
+      // 이 키워드로 이미 쓴 글
+      prisma.article.findMany({
+        where: { keywordId: id },
+        select: { id: true, title: true, status: true, qualityScore: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    // 트렌드 모멘텀 (오르는 중인가 · 며칠째인가)
+    const { trendSignalFor } = await import("./trend-signal.js");
+    const trend = await trendSignalFor(keyword.text).catch(() => null);
+
+    // 연관 키워드 — 네이버 실측 검색량 (예전엔 받아놓고 버리던 데이터)
+    // ⚠️ 긴 문구를 통째로 물으면 네이버가 거의 못 준다("주담대 한도 줄었을 때 대안 대출" → 1개).
+    //    **핵심 단어로 잘라서** 함께 묻는다 (앞 2어절 = 대개 주제어).
+    const { fetchRelatedKeywords } = await import("./related-keywords.js");
+    const words = keyword.text.split(/\s+/).filter(Boolean);
+    const hints = [...new Set([keyword.text, words.slice(0, 2).join(" "), words[0]])].filter(
+      (hint) => hint && hint.length >= 2,
+    );
+    const related = await fetchRelatedKeywords(hints, 15).catch(() => []);
+
+    // ⚠️ metrics 는 소스별(구글/네이버) 배열이다 — 그대로 내려주면 화면이 못 읽는다.
+    //    목록 API와 같은 모양으로 평평하게 정리해서 준다.
+    const google = keyword.metrics.find((row) => row.source === "GOOGLE_ADS");
+    const naver = keyword.metrics.find((row) => row.source === "NAVER_SEARCHAD");
+    const recommendation = keyword.recommendations[0];
+
+    res.json({
+      keyword: {
+        id: keyword.id,
+        text: keyword.text,
+        status: keyword.status,
+        category: keyword.category,
+        type: keyword.sourceType,
+        searchIntent: keyword.searchIntent,
+        reason: recommendation?.reason ?? null,
+      },
+      metrics: {
+        naverMonthlySearches: naver?.avgMonthlySearches ?? null,
+        googleMonthlySearches: google?.avgMonthlySearches ?? null,
+        // CPC는 마이크로 단위로 저장된다 (1원 = 1,000,000 마이크로)
+        googleCpcKrw:
+          google?.cpcMicros != null ? Math.round(Number(google.cpcMicros) / 1_000_000) : null,
+        totalDocs: recommendation?.totalDocs ?? null,
+        competitionScore: recommendation?.competitionScore ?? null,
+      },
+      trend,
+      trends: trends.map((row) => ({
+        date: row.date.toISOString().slice(0, 10),
+        at: row.collectedAt.toISOString(),
+        rank: row.rank,
+        searchVolume: row.searchVolume,
+        finalScore: row.finalScore,
+        competitionScore: row.competitionScore,
+      })),
+      citations,
+      insight: insight?.data ?? null,
+      related,
+      articles,
+    });
+  }),
+);
