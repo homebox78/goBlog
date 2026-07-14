@@ -91,6 +91,16 @@ extensionRouter.get(
         ? disclosureText({ source: "COUPANG" })
         : null;
 
+    // 내부 링크(goblog://article/<id>)를 그 플랫폼의 자기 글 URL로 바꾼다.
+    // platform 이 안 오면(구버전 확장) 어느 플랫폼인지 모르므로 링크를 벗기고 글자만 남긴다 —
+    // goblog:// 주소가 그대로 발행되는 것만은 절대 막는다.
+    const platformParam = String(req.query.platform ?? "").toUpperCase();
+    const platform = (["BLOGGER", "WORDPRESS", "TISTORY", "NAVER_BLOG"] as const).find(
+      (name) => name === platformParam,
+    );
+    const { resolveInternalLinks } = await import("../publishing/internal-links.js");
+    const contentHtml = await resolveInternalLinks(article.contentHtml ?? "", platform ?? "NAVER_BLOG");
+
     res.json({
       article: {
         id: article.id,
@@ -98,7 +108,7 @@ extensionRouter.get(
         category: suggestNaverCategory(article.keyword?.category, article.keyword?.text ?? article.title),
         titleForNaver: article.title,
         naverDisclosure: naverPrefix,
-        contentHtml: article.contentHtml,
+        contentHtml,
         contentMarkdown: article.contentMarkdown,
         excerpt: article.excerpt,
         tags: article.tags.map((row) => row.tag.name),

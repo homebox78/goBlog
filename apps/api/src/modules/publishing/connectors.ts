@@ -1,5 +1,6 @@
 import { prisma } from "../../common/prisma.js";
 import { getSettingValues } from "../settings/settings.service.js";
+import { resolveInternalLinks } from "./internal-links.js";
 
 export interface PublishResult {
   url: string;
@@ -78,7 +79,7 @@ export async function publishToBlogger(article: {
     headers,
     body: JSON.stringify({
       title: article.title,
-      content: article.contentHtml ?? "",
+      content: await resolveInternalLinks(article.contentHtml ?? "", "BLOGGER"),
       ...(labels.length > 0 ? { labels } : {}),
     }),
   });
@@ -183,7 +184,8 @@ export async function publishToWordpress(article: {
     headers: authHeaders,
     body: JSON.stringify({
       title: article.title,
-      content: article.contentHtml ?? "",
+      // 내부 링크는 발행 시점에 그 플랫폼의 자기 글 URL로 바뀐다 (없으면 링크를 벗기고 글자만 남긴다)
+      content: await resolveInternalLinks(article.contentHtml ?? "", "WORDPRESS"),
       excerpt: article.excerpt ?? "",
       slug: article.slug ?? undefined,
       status: "publish",

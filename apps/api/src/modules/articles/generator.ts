@@ -265,6 +265,9 @@ export async function generateArticle(
   // 실시간 그라운딩 — 생성 시점의 최신 뉴스를 주입해 학습 데이터의 옛 사실(상장·출시·발표 등) 오류를 막는다.
   const { fetchRecentNews } = await import("./grounding.js");
   const recentNews = await fetchRecentNews(topic).catch(() => []);
+  // 내부 링크 후보 — 이미 발행된 내 글 중 주제가 가까운 것. 없으면 빈 배열(링크 규칙도 안 넣는다).
+  const { internalLinkCandidates } = await import("../publishing/internal-links.js");
+  const internalLinks = await internalLinkCandidates(topic).catch(() => []);
 
   // 인용 학습 — 이 키워드에서 AI 브리핑에 실제로 인용된 글들을 읽고 뽑아낸 인사이트.
   // 말투·구조·정보 담는 방식과 "이미 다뤄진 각도 / 빈 각도"를 프롬프트에 넣어, 인용될 만한 글을 쓴다.
@@ -425,6 +428,17 @@ export async function generateArticle(
       product
         ? "- 본문에서 상품 구매 링크 배너가 들어갈 위치에 [PRODUCT_BANNER] 마커를 정확히 2번 넣는다 (도입부 다음 1번, 결론 직전 1번)."
         : "",
+      internalLinks.length > 0
+        ? [
+            "",
+            "[🔗 내부 링크 — 이미 발행한 내 글로 연결]",
+            "- userPayload.internalLinkCandidates 는 내가 이미 발행한 글 목록이다. 이 중 **본문 흐름에 자연스럽게 맞는 글 2~3개**를 골라 링크한다.",
+            "- 링크 형식은 반드시 `[앵커 텍스트](goblog://article/<id>)` 다. 실제 URL을 쓰지 않는다 — 발행 시 플랫폼별 자기 글 주소로 자동 치환된다.",
+            "- 앵커 텍스트는 '여기', '이 글' 같은 무의미한 말 대신 **무엇을 다루는 글인지 드러나는 문구**로 쓴다.",
+            "- 억지로 넣지 않는다. 맥락에 맞는 글이 없으면 링크를 걸지 않는다 (관련 없는 글로 보내면 독자가 이탈한다).",
+            "- 후보에 없는 id를 지어내지 않는다.",
+          ].join("\n")
+        : "",
       "",
       "본문 목표 분량을 충분히 채우되 물타기 없이 밀도 있게 쓴다. 반드시 JSON만 출력한다.",
     ]
@@ -437,6 +451,8 @@ export async function generateArticle(
       topic,
       // 실시간 그라운딩 — 학습 데이터보다 이 최신 뉴스를 우선해 시점 민감 사실을 판단
       recentNews: recentNews.length > 0 ? recentNews : "최신 뉴스 없음(시점 민감 사실 단정 금지)",
+      // 내부 링크 후보 — 이미 발행된 내 글. 링크는 goblog://article/<id> 로 걸면 발행 시 플랫폼별 URL로 치환된다.
+      internalLinkCandidates: internalLinks,
       keywordContext: keyword
         ? {
             category: keyword.category,
