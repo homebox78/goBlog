@@ -402,6 +402,10 @@ keywordsRouter.get(
     );
     const related = await fetchRelatedKeywords(hints, 15).catch(() => []);
 
+    // 수요층 — 이 키워드를 실제로 검색하는 연령·성별. 쇼핑성 키워드가 아니면 null (지어내지 않는다).
+    const { fetchDemographics } = await import("./demographics.js");
+    const demographics = await fetchDemographics(keyword.id, keyword.text).catch(() => null);
+
     // ⚠️ metrics 는 소스별(구글/네이버) 배열이다 — 그대로 내려주면 화면이 못 읽는다.
     //    목록 API와 같은 모양으로 평평하게 정리해서 준다.
     const google = keyword.metrics.find((row) => row.source === "GOOGLE_ADS");
@@ -441,6 +445,7 @@ keywordsRouter.get(
       citations,
       insight: insight?.data ?? null,
       related,
+      demographics,
       articles,
     });
   }),

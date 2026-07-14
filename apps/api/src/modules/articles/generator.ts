@@ -285,6 +285,11 @@ export async function generateArticle(
   // 트렌드 맥락 — 지금 뜨는 소재인지, 며칠째 지속되는 수요인지. 글의 시의성 표현이 달라져야 한다.
   const { trendSignalFor } = await import("../keywords/trend-signal.js");
   const trend = await trendSignalFor(topic).catch(() => null);
+  // 수요층 — 이 키워드를 실제로 검색하는 연령·성별(네이버 쇼핑인사이트 실측). 쇼핑성 키워드만 값이 있다.
+  const { fetchDemographics, demographicsPrompt } = await import("../keywords/demographics.js");
+  const demographics = keyword
+    ? await fetchDemographics(keyword.id, keyword.text).catch(() => null)
+    : null;
   // 말투 프로파일 — 인용 상위 블로거들의 문체를 **실측**한 결과. 전 키워드 공통.
   const style = await getStyleForPrompt(options.stylePlatform ?? "NAVER").catch(() => null);
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
@@ -371,6 +376,7 @@ export async function generateArticle(
             ...style.rules.map((r) => `- ${r}`),
           ].join("\n")
         : "",
+      demographics ? `\n${demographicsPrompt(demographics)}` : "",
       trend
         ? [
             "",

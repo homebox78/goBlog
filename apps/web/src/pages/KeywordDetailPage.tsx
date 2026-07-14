@@ -58,6 +58,12 @@ interface KeywordDetail {
     coveredAngles?: string[];
   } | null;
   related: Array<{ keyword: string; monthlySearches: number; competition: string | null }>;
+  demographics: {
+    category: string;
+    summary: string;
+    ages: Array<{ group: string; ratio: number }>;
+    genders: Array<{ group: "f" | "m"; ratio: number }>;
+  } | null;
   articles: Array<{ id: number; title: string; status: string; qualityScore: number | null }>;
 }
 
@@ -148,6 +154,51 @@ export default function KeywordDetailPage() {
                 />
               </AreaChart>
             </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 수요층 — 누가 이걸 검색하는가. 쇼핑성 키워드가 아니면 카드 자체를 숨긴다(빈 값을 지어내지 않는다). */}
+      {data.demographics && (
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+              누가 검색하나
+              <Badge variant="secondary">{data.demographics.summary}</Badge>
+              <span className="text-xs font-normal text-muted-foreground">
+                네이버 쇼핑인사이트 실측 · {data.demographics.category}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              {data.demographics.ages
+                .sort((a, b) => Number(a.group) - Number(b.group))
+                .map((age) => (
+                  <div key={age.group} className="flex items-center gap-2">
+                    <span className="w-10 shrink-0 text-xs text-muted-foreground">{age.group}대</span>
+                    <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-[var(--chart-1)]"
+                        style={{ width: `${age.ratio}%` }}
+                      />
+                    </div>
+                    <span className="w-8 shrink-0 text-right font-mono text-xs">{age.ratio}</span>
+                  </div>
+                ))}
+            </div>
+            {data.demographics.genders.length > 0 && (
+              <div className="flex flex-wrap gap-2 border-t pt-3">
+                {data.demographics.genders.map((gender) => (
+                  <Badge key={gender.group} variant="outline" className="font-mono">
+                    {gender.group === "f" ? "여성" : "남성"} {gender.ratio}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              1위 그룹을 100으로 둔 상대값입니다. 글의 말투·예시·상품 추천이 이 층에 맞춰집니다.
+            </p>
           </CardContent>
         </Card>
       )}
