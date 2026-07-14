@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../common/prisma.js";
+import { minQualityScore } from "./quality-gate.js";
 import { asyncHandler, HttpError, parseBody } from "../../common/http.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { generateArticle } from "./generator.js";
@@ -50,6 +51,7 @@ articlesRouter.get(
     });
     res.json({
       total,
+      minQualityScore: await minQualityScore(),
       articles: articles.map((article) => {
         const { media, contentMarkdown, adSource, adProduct, publishJobs, ...rest } = article;
         // 플랫폼별 대표 작업 — 성공(SUCCEEDED)이 하나라도 있으면 그걸 우선(중복 대기작업에 가려지지 않게),

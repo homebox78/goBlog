@@ -53,6 +53,7 @@ interface PerformanceArticle {
 
 interface DashboardData {
   db: boolean;
+  minQualityScore?: number; // 자동발행 기준선 (설정값) — 화면이 85를 하드코딩하지 않게 서버가 내려준다
   keywordsToday: number;
   articleCount: number;
   todo?: {
@@ -229,7 +230,12 @@ export default function DashboardPage() {
           <CardContent className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <TodoCard label="검토 대기" value={data.todo.review} to="/articles?filter=review" hint="내용 확인 후 발행" />
             <TodoCard label="이미지 없는 글" value={data.todo.noImage} to="/articles?filter=noimage" hint="이미지 생성 필요" />
-            <TodoCard label="85점 미만" value={data.todo.lowQuality} to="/articles?filter=lowq" hint="보정 필요" />
+            <TodoCard
+              label={`${data.minQualityScore ?? 85}점 미만`}
+              value={data.todo.lowQuality}
+              to="/articles?filter=lowq"
+              hint="보정 필요"
+            />
             <TodoCard label="미발행 글" value={data.todo.notPublished} to="/articles?filter=unpublished" hint="발행 대기 중" />
           </CardContent>
         </Card>
@@ -289,7 +295,9 @@ export default function DashboardPage() {
 
           <Card className="min-w-0">
             <CardHeader>
-              <CardTitle className="text-base">품질 점수 추이 (자동발행 기준 85점)</CardTitle>
+              <CardTitle className="text-base">
+                품질 점수 추이 (자동발행 기준 {data.minQualityScore ?? 85}점)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ChartContainer config={QUALITY_CHART} className="h-48 w-full">

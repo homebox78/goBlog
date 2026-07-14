@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../../common/prisma.js";
 import { asyncHandler } from "../../common/http.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { minQualityScore } from "../articles/quality-gate.js";
 
 export const dashboardRouter = Router();
 
@@ -11,6 +12,7 @@ dashboardRouter.get(
   "/dashboard",
   asyncHandler(async (req, res) => {
     try {
+      const minScore = await minQualityScore();
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
 
@@ -63,8 +65,8 @@ dashboardRouter.get(
         prisma.article.count({ where: { status: "REVIEW" } }),
         // 이미지가 아직 안 만들어진 글 (프롬프트만 있고 webpUrl 없는 미디어 보유)
         prisma.article.count({ where: { media: { some: { webpUrl: null, prompt: { not: null } } } } }),
-        // 85점 미만 (82점 초과 — 이하는 생성 시 폐기됨)
-        prisma.article.count({ where: { qualityScore: { lt: 85 }, status: { not: "PUBLISHED" } } }),
+        // 품질 기준 미만 — 기준선은 설정값이다 (85 하드코딩이면 설정을 90으로 올려도 화면이 거짓말한다)
+        prisma.article.count({ where: { qualityScore: { lt: minScore }, status: { not: "PUBLISHED" } } }),
         // 아직 발행 안 된 글 (발행완료 체크도 안 됨)
         prisma.article.count({ where: { status: { notIn: ["PUBLISHED"] }, extensionDoneAt: null } }),
       ]);
@@ -87,6 +89,8 @@ dashboardRouter.get(
 
       res.json({
         db: true,
+        // 화면이 "85점 미만" 같은 문구를 하드코딩하지 않도록 기준선을 함께 내려준다
+        minQualityScore: minScore,
         keywordsToday,
         articleCount,
         todo: {

@@ -55,19 +55,19 @@ const FILTERS: Array<{ key: ListFilter; label: string }> = [
   { key: "all", label: "전체" },
   { key: "review", label: "검토 대기" },
   { key: "noimage", label: "이미지 없음" },
-  { key: "lowq", label: "85점 미만" },
+  { key: "lowq", label: "품질 미달" },
   { key: "unpublished", label: "미발행" },
   { key: "ad", label: "광고 있음" },
 ];
 
-function matchFilter(article: ArticleListItem, filter: ListFilter): boolean {
+function matchFilter(article: ArticleListItem, filter: ListFilter, minScore: number): boolean {
   switch (filter) {
     case "review":
       return article.status === "REVIEW";
     case "noimage":
       return article.pendingImages > 0;
     case "lowq":
-      return article.qualityScore !== null && article.qualityScore < 85 && article.status !== "PUBLISHED";
+      return article.qualityScore !== null && article.qualityScore < minScore && article.status !== "PUBLISHED";
     case "unpublished":
       return article.status !== "PUBLISHED" && !article.extensionDoneAt;
     case "ad":
@@ -210,9 +210,15 @@ export default function ArticlesPage() {
   const [limit, setLimit] = useState(100);
   const query = useQuery({
     queryKey: ["articles", limit],
-    queryFn: () => api.get<{ total: number; articles: ArticleListItem[] }>(`/api/articles?limit=${limit}`),
+    queryFn: () =>
+      api.get<{ total: number; minQualityScore: number; articles: ArticleListItem[] }>(
+        `/api/articles?limit=${limit}`,
+      ),
     placeholderData: (prev) => prev, // limit 증가 시 화면이 비지 않게 이전 데이터 유지
   });
+
+  // 품질 기준선 — 설정값(서버). 85 하드코딩이면 설정을 90으로 올려도 목록이 거짓말한다.
+  const minScore = query.data?.minQualityScore ?? 85;
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/api/articles/${id}`),
@@ -278,7 +284,7 @@ export default function ArticlesPage() {
 
   const all = query.data?.articles ?? [];
   const filtered = all
-    .filter((a) => matchFilter(a, filter) && matchSearch(a, search))
+    .filter((a) => matchFilter(a, filter, minScore) && matchSearch(a, search))
     .sort((a, b) => {
       const va = sortValue(a, sort.key);
       const vb = sortValue(b, sort.key);
@@ -302,7 +308,7 @@ export default function ArticlesPage() {
         <div className="flex flex-wrap gap-1.5">
           {FILTERS.map(({ key, label }) => {
             // 개수는 검색어까지 반영해야 "필터를 눌렀는데 0건"인 상황이 안 생긴다.
-            const count = key === "all" ? undefined : all.filter((a) => matchFilter(a, key) && matchSearch(a, search)).length;
+            const count = key === "all" ? undefined : all.filter((a) => matchFilter(a, key, minScore) && matchSearch(a, search)).length;
             return (
               <button
                 key={key}
@@ -483,7 +489,7 @@ export default function ArticlesPage() {
                           )}
                         </Button>
                       )}
-                      {article.qualityScore !== null && article.qualityScore < 85 && (
+                      {article.qualityScore !== null && article.qualityScore < minScore && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -701,7 +707,7 @@ export default function ArticlesPage() {
                               )}
                             </Button>
                           )}
-                          {article.qualityScore !== null && article.qualityScore < 85 && (
+                          {article.qualityScore !== null && article.qualityScore < minScore && (
                             <Button
                               variant="ghost"
                               size="icon"
