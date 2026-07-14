@@ -424,8 +424,10 @@ keywordsRouter.get(
         // CPC는 마이크로 단위로 저장된다 (1원 = 1,000,000 마이크로)
         googleCpcKrw:
           google?.cpcMicros != null ? Math.round(Number(google.cpcMicros) / 1_000_000) : null,
-        totalDocs: recommendation?.totalDocs ?? null,
-        competitionScore: recommendation?.competitionScore ?? null,
+        // 경쟁문서·경쟁효율은 추천 레코드의 data(JSON) 안에 들어 있다 (목록 API와 동일하게 읽는다)
+        totalDocs: (recommendation?.data as { totalDocs?: number } | null)?.totalDocs ?? null,
+        competitionScore:
+          (recommendation?.data as { competitionScore?: number } | null)?.competitionScore ?? null,
       },
       trend,
       trends: trends.map((row) => ({
