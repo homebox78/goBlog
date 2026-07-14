@@ -16,7 +16,7 @@ articlesRouter.use(requireAuth);
 articlesRouter.get(
   "/",
   asyncHandler(async (req, res) => {
-    const limit = Math.min(Math.max(Number(req.query.limit) || 100, 10), 300);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 15, 5), 400);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
     const total = await prisma.article.count();
     const articles = await prisma.article.findMany({

@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -211,16 +218,19 @@ export default function ArticlesPage() {
           { key: k, dir: ["title", "keyword", "ad", "language"].includes(k) ? "asc" : "desc" },
     );
 
-  // 더 보기 — 서버 한도(기본 100)에 걸려 옛 글이 조용히 숨는 것을 막는다
-  const [limit, setLimit] = useState(100);
+  // 페이징 — 기본 15개씩. 서버 한도(고정 100)에 걸려 옛 글이 조용히 숨던 문제를 함께 해결한다.
+  const [pageSize, setPageSize] = useState(15);
+  const [page, setPage] = useState(0);
   const query = useQuery({
-    queryKey: ["articles", limit],
+    queryKey: ["articles", pageSize, page],
     queryFn: () =>
       api.get<{ total: number; minQualityScore: number; articles: ArticleListItem[] }>(
-        `/api/articles?limit=${limit}`,
+        `/api/articles?limit=${pageSize}&offset=${page * pageSize}`,
       ),
-    placeholderData: (prev) => prev, // limit 증가 시 화면이 비지 않게 이전 데이터 유지
+    placeholderData: (prev) => prev, // 페이지 이동 시 화면이 비지 않게
   });
+  const total = query.data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   // 품질 기준선 — 설정값(서버). 85 하드코딩이면 설정을 90으로 올려도 목록이 거짓말한다.
   const minScore = query.data?.minQualityScore ?? 85;
@@ -349,6 +359,26 @@ export default function ArticlesPage() {
             </button>
           )}
         </div>
+
+        {/* 보기 개수 — 목록이 길어지면 스크롤이 고문이다. 한 화면에 몇 건 볼지 직접 고르게 한다. */}
+        <Select
+          value={String(pageSize)}
+          onValueChange={(value) => {
+            setPageSize(Number(value));
+            setPage(0); // 개수를 바꾸면 페이지 번호가 범위를 벗어날 수 있다
+          }}
+        >
+          <SelectTrigger className="w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[15, 30, 60, 100, 200, 300, 400].map((size) => (
+              <SelectItem key={size} value={String(size)}>
+                {size}개씩
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {search.trim() && !query.isPending && (
@@ -771,13 +801,38 @@ export default function ArticlesPage() {
           </CardContent>
         </Card>
 
-        {(query.data?.total ?? 0) > (query.data?.articles.length ?? 0) && (
-          <div className="flex items-center justify-center gap-3 py-2">
-            <span className="text-xs text-muted-foreground">
-              전체 {query.data!.total}건 중 {query.data!.articles.length}건 표시
+        {pageCount > 1 && (
+          <div className="flex flex-wrap items-center justify-center gap-2 py-2">
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(0)}>
+              «
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              이전
+            </Button>
+            <span className="px-2 text-sm">
+              <span className="font-semibold">{page + 1}</span> / {pageCount}
+              <span className="ml-2 text-xs text-muted-foreground">(전체 {total}건)</span>
             </span>
-            <Button variant="outline" size="sm" onClick={() => setLimit((prev) => prev + 100)}>
-              더 보기
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pageCount - 1}
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            >
+              다음
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pageCount - 1}
+              onClick={() => setPage(pageCount - 1)}
+            >
+              »
             </Button>
           </div>
         )}

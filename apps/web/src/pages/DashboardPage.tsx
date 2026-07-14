@@ -122,6 +122,77 @@ interface BrokenImage {
   repairable: boolean;
 }
 
+interface Drift {
+  articleId: number;
+  title: string;
+  platform: string;
+  url: string;
+  dbLinks: number;
+  liveLinks: number;
+  autoFixable: boolean;
+  severity: "전멸" | "일부";
+}
+
+/**
+ * 광고 링크 유실 감시 — 발행한 뒤 배너를 넣으면 플랫폼엔 옛 버전이 남아 **수익 링크가 통째로 빠진다**.
+ * 실제로 글 5개·발행 14건이 그 상태였다. 시각 비교가 아니라 **발행글을 직접 긁어** 확인한다.
+ */
+function PublishDriftCard() {
+  const queryClient = useQueryClient();
+  const drift = useQuery({
+    queryKey: ["publish-drift"],
+    queryFn: () => api.get<{ checked: number; drifts: Drift[] }>("/api/publish-jobs/drift"),
+    staleTime: 10 * 60 * 1000, // 발행글을 전부 긁어오므로 자주 돌리지 않는다
+  });
+
+  const repair = useMutation({
+    mutationFn: () =>
+      api.post<{ repaired: unknown[]; needsExtension: Drift[]; failed: unknown[] }>(
+        "/api/publish-jobs/drift/repair",
+      ),
+    onSuccess: (r) => {
+      toast.success(
+        `자동 복구 ${r.repaired.length}건 — 확장 필요 ${r.needsExtension.length}건, 실패 ${r.failed.length}건`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["publish-drift"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "복구 실패"),
+  });
+
+  const dead = drift.data?.drifts.filter((d) => d.severity === "전멸") ?? [];
+  if (!drift.data || dead.length === 0) return null;
+
+  const autoFixable = dead.filter((d) => d.autoFixable).length;
+  return (
+    <Card className="border-destructive/50 bg-destructive/5">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <AlertTriangle className="size-4 text-destructive" />
+          광고 링크 유실 {dead.length}건
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          발행 후 배너를 넣으면 플랫폼엔 옛 버전이 남습니다 — 수익 링크가 없는 채로 서비스됩니다.
+        </p>
+        <div className="space-y-1 text-sm">
+          {dead.slice(0, 5).map((d) => (
+            <p key={`${d.articleId}-${d.platform}`} className="truncate">
+              · [{d.platform}] {d.title}
+            </p>
+          ))}
+          {dead.length > 5 && <p className="text-xs text-muted-foreground">· 외 {dead.length - 5}건</p>}
+        </div>
+        <Button size="sm" onClick={() => repair.mutate()} disabled={repair.isPending}>
+          {repair.isPending
+            ? "복구 중..."
+            : `자동 복구 (${autoFixable}건 · 티스토리·네이버는 확장 필요)`}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 /**
  * 깨진 이미지 감시 — 예전엔 발행 직전에 엑박을 보고서야 알았다.
  * 이상이 없으면 아무것도 그리지 않는다 (평소 대시보드를 어지럽히지 않게).
@@ -261,6 +332,7 @@ export default function DashboardPage() {
       )}
 
       <MediaHealthCard />
+      <PublishDriftCard />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="오늘의 추천 키워드" value={data.keywordsToday} />

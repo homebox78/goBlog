@@ -84,3 +84,35 @@ publishRouter.post(
     res.json(await verifyPublishedUrls());
   }),
 );
+
+/** 발행 드리프트 스캔 — 광고 링크가 발행글에 살아 있는지 실측 (시각 비교가 아니라 실제 페이지 확인) */
+publishRouter.get(
+  "/drift",
+  asyncHandler(async (_req, res) => {
+    const { scanPublishDrift } = await import("./publish-drift.js");
+    res.json(await scanPublishDrift());
+  }),
+);
+
+/** 드리프트 자동 복구 — WP·Blogger는 기존 글을 덮어쓴다(URL 유지). 티스토리·네이버는 확장 필요 목록 반환 */
+publishRouter.post(
+  "/drift/repair",
+  asyncHandler(async (_req, res) => {
+    const { repairPublishDrift } = await import("./publish-drift.js");
+    res.json(await repairPublishDrift());
+  }),
+);
+
+/** 한 글을 한 플랫폼에 재발행 (기존 글 덮어쓰기 — 새 글로 올리지 않는다) */
+publishRouter.post(
+  "/republish",
+  asyncHandler(async (req, res) => {
+    const articleId = Number(req.body?.articleId);
+    const platform = String(req.body?.platform ?? "");
+    if (!articleId || (platform !== "WORDPRESS" && platform !== "BLOGGER")) {
+      throw new HttpError(400, "articleId와 platform(WORDPRESS|BLOGGER)이 필요합니다. 티스토리·네이버는 확장으로 재발행하세요.");
+    }
+    const { republish } = await import("./republish.js");
+    res.json(await republish(articleId, platform));
+  }),
+);
