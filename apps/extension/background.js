@@ -775,100 +775,85 @@ async function scrapeConnect(tabId, memberId, days) {
  * "못 찾았다"고 말하고 주소를 보여주는 편이 낫다.
  */
 async function scrapeCoupang(tabId) {
+  // 페이지를 **새로고침**해서 tap(content/coupang-tap.js, MAIN world, document_start)이
+  // 첫 요청부터 전부 기록하게 한다. performance 기록으로는 실적 요청이 안 잡혔다.
+  await chrome.tabs.reload(tabId);
+  await new Promise((resolve) => {
+    const timer = setTimeout(resolve, 25000);
+    const listener = (id, info) => {
+      if (id === tabId && info.status === "complete") {
+        clearTimeout(timer);
+        chrome.tabs.onUpdated.removeListener(listener);
+        setTimeout(resolve, 6000); // 차트가 데이터를 불러올 시간
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+  });
+
   const [res] = await chrome.scripting.executeScript({
     target: { tabId },
-    func: async () => {
-      const urls = performance
-        .getEntriesByType("resource")
-        .filter((e) => e.initiatorType === "xmlhttprequest" || e.initiatorType === "fetch")
-        .map((e) => e.name);
-      // ⚠️ 내가 짐작한 낱말(report|revenue…)로 거르면 **진짜 주소를 걸러낸다** (실제로 그랬다).
-      //    정적 리소스만 빼고 XHR 은 전부 후보로 본다. 어느 게 맞는지는 불러 보면 안다.
-      const candidates = [...new Set(urls)]
-        .filter((u) => !/\.(js|css|png|jpg|jpeg|gif|svg|woff2?|ico)(\?|$)/i.test(u))
-        .sort((a, b) => {
-          const score = (u) => (/report|revenue|commission|click|stat|summary|dashboard|performance/i.test(u) ? 0 : 1);
-          return score(a) - score(b); // 그럴듯한 것부터 먼저 시도
-        });
-
+    world: "MAIN",
+    func: () => {
+      const calls = window.__goblogTap || [];
       const pickDate = (row) => {
-        const raw = String(row.date ?? row.reportDate ?? row.statDate ?? row.day ?? row.dt ?? "");
+        const raw = String(row.date ?? row.reportDate ?? row.statDate ?? row.day ?? row.dt ?? row.baseDate ?? "");
         const compact = raw.match(/^(\d{4})(\d{2})(\d{2})$/); // 20260713 형태도 받는다
         if (compact) return compact[1] + "-" + compact[2] + "-" + compact[3];
         const dashed = raw.match(/^\d{4}-\d{2}-\d{2}/);
         return dashed ? dashed[0] : null;
       };
 
-      for (const url of candidates) {
-        try {
-          const r = await fetch(url, { credentials: "include", headers: { accept: "application/json" } });
-          if (!r.ok) continue;
-          const body = await r.json();
-          const list = Array.isArray(body)
-            ? body
-            : (body?.data ?? body?.rows ?? body?.list ?? body?.result ?? body?.content ?? null);
-          if (!Array.isArray(list) || list.length === 0) continue;
-
+      // 기록된 응답 중 **일별 실적 배열**을 찾는다 (날짜 + 클릭이 함께 있는 행)
+      const findRows = (value) => {
+        if (!value || typeof value !== "object") return null;
+        if (Array.isArray(value)) {
           const rows = [];
-          for (const row of list) {
-            if (!row || typeof row !== "object") continue;
-            const date = pickDate(row);
-            if (!date) continue;
+          for (const item of value) {
+            if (!item || typeof item !== "object") continue;
+            const date = pickDate(item);
+            const hasMetric =
+              "click" in item || "clicks" in item || "clickCount" in item || "commission" in item || "revenue" in item;
+            if (!date || !hasMetric) continue;
             rows.push({
               date,
-              clicks: Number(row.click ?? row.clicks ?? row.clickCount ?? 0) || 0,
-              orders: Number(row.order ?? row.orders ?? row.orderCount ?? 0) || 0,
-              salesAmount: Number(row.gmv ?? row.salesAmount ?? row.amount ?? 0) || 0,
-              commission: Number(row.commission ?? row.revenue ?? row.earning ?? 0) || 0,
-              raw: { from: url },
+              clicks: Number(item.click ?? item.clicks ?? item.clickCount ?? 0) || 0,
+              orders: Number(item.order ?? item.orders ?? item.orderCount ?? item.purchaseCount ?? 0) || 0,
+              salesAmount: Number(item.gmv ?? item.salesAmount ?? item.amount ?? item.totalAmount ?? 0) || 0,
+              commission: Number(item.commission ?? item.revenue ?? item.earning ?? item.profit ?? 0) || 0,
             });
           }
-          if (rows.length > 0) return { ok: true, rows, endpoint: url };
-        } catch (_) {
-          // 이 주소는 아니었다 — 다음 후보
+          return rows.length > 0 ? rows : null;
         }
+        for (const key of Object.keys(value)) {
+          const found = findRows(value[key]); // data.rows.list … 어디에 있든 찾는다
+          if (found) return found;
+        }
+        return null;
+      };
+
+      for (const call of calls) {
+        let body;
+        try {
+          body = JSON.parse(call.body);
+        } catch (_) {
+          continue;
+        }
+        const rows = findRows(body);
+        if (rows) return { ok: true, rows: rows.map((r) => ({ ...r, raw: { from: call.url } })), endpoint: call.url };
       }
 
-      // 못 찾았다 — 어떤 모양이 오는지 **응답 본문 샘플**을 함께 보고한다.
-      // 주소만 알아선 파싱을 못 짠다. 모양을 봐야 정확히 짤 수 있다.
-      const samples = [];
-      const apiOnly = candidates.filter((u) => u.indexOf("partners.coupang.com/api/") !== -1).slice(0, 6);
-      for (const url of apiOnly) {
-        try {
-          const r = await fetch(url, { credentials: "include", headers: { accept: "application/json" } });
-          const text = await r.text();
-          samples.push(url + "  =>  [" + r.status + "] " + text.slice(0, 400));
-        } catch (e) {
-          samples.push(url + "  =>  실패: " + String(e?.message || e));
-        }
-      }
+      // 못 찾았다 — 기록된 것들을 그대로 보고한다 (추측으로 파싱하지 않는다)
       return {
         ok: false,
         error:
-          candidates.length === 0
-            ? "쿠팡 리포트 화면을 연 상태에서 다시 시도하세요 (화면이 데이터를 불러와야 주소가 잡힙니다)."
-            : "쿠팡 응답 모양을 서버에 보고했습니다. 개발자가 확인 후 붙입니다.",
-        endpoints: [...candidates.slice(0, 14), ...samples],
+          calls.length === 0
+            ? "쿠팡 페이지 요청을 잡지 못했습니다. 확장을 새로고침한 뒤 다시 시도하세요."
+            : "쿠팡 응답에서 일별 실적을 못 찾았습니다. 기록을 서버에 보고했습니다.",
+        endpoints: calls.map((c) => c.method + " " + c.url + "  =>  " + c.body.slice(0, 300)),
       };
     },
   });
   return res?.result ?? { ok: false, error: "쿠팡 페이지에서 응답이 없습니다." };
-}
-
-/** 커넥트 회원번호 — **서버 설정이 정답이다.** 관리자에 넣은 값을 확장에 또 넣게 하지 않는다. */
-async function connectMemberId(s) {
-  try {
-    const res = await fetch(s.apiBase + "/api/extension/config", {
-      headers: { "X-Extension-Token": s.token },
-    });
-    if (res.ok) {
-      const cfg = await res.json();
-      if (cfg.connectMemberId) return cfg.connectMemberId;
-    }
-  } catch (_) {
-    // 서버를 못 읽으면 확장에 저장된 값으로 폴백
-  }
-  return (s.connectMemberId || "").replace(/\D/g, "");
 }
 
 async function collectAffiliate(source, days = 30) {
