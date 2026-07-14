@@ -850,27 +850,9 @@ async function scrapeCoupang(tabId) {
         return null;
       };
 
-      for (const call of calls) {
-        let body;
-        try {
-          body = JSON.parse(call.body);
-        } catch (_) {
-          continue;
-        }
-        const rows = findRows(body);
-        if (rows) {
-          return {
-            ok: true,
-            rows: rows.map((r) => ({ ...r, raw: { from: call.url } })),
-            endpoint: call.url,
-            // 성공해도 기록을 남긴다 — 지금은 하루치만 온다. 30일치를 받으려면
-            // 이 화면이 날짜 범위를 **어떻게 넘기는지**(요청 본문) 봐야 한다.
-            calls: calls.map((c) => c.method + " " + c.url + (c.req ? "  [요청] " + c.req : "")),
-          };
-        }
-      }
-
-      // ── 30일치 직접 조회 ────────────────────────────────────────────
+      // ── ① 30일치 직접 조회 (먼저!) ─────────────────────────────────
+      // ⚠️ 순서가 중요하다. tap 이 잡은 **하루치 객체**에서 먼저 성공해버리면
+      //    30일치 조회는 실행조차 안 된다 (실제로 그래서 계속 "1일치 저장"만 나왔다).
       // tap 으로 잡힌 report/daily 는 화면의 "어제 요약" 카드다(하루치 객체).
       // 차트는 **날짜 범위**로 조회한다(화면 표기: 2026.07.01-2026.07.13).
       // 그래서 범위를 넣어 직접 물어본다.
@@ -911,11 +893,36 @@ async function scrapeCoupang(tabId) {
         if (collected.size > 1) break; // 여러 날이 왔다 = 범위 조회가 먹혔다
       }
 
-      if (collected.size > 0) {
+      if (collected.size > 1) {
+        // 여러 날이 왔다 = 범위 조회 성공
         return {
           ok: true,
           rows: [...collected.values()],
           endpoint: "range-probe",
+          calls: calls.map((c) => c.method + " " + c.url + (c.req ? "  [요청] " + c.req : "")),
+        };
+      }
+
+      // ── ② 폴백: tap 이 잡은 응답에서 읽는다 (대개 어제 하루치) ──────────
+      // 범위 조회가 안 먹혔어도 **하루치라도 남긴다** — 증적이 끊기면 안 된다.
+      for (const call of calls) {
+        let body;
+        try {
+          body = JSON.parse(call.body);
+        } catch (_) {
+          continue;
+        }
+        const rows = findRows(body);
+        if (rows) {
+          for (const row of rows) collected.set(row.date, { ...row, raw: { from: call.url } });
+        }
+      }
+      if (collected.size > 0) {
+        return {
+          ok: true,
+          rows: [...collected.values()],
+          endpoint: "tap",
+          partial: collected.size === 1, // 하루치뿐 — 30일 범위 조회는 실패했다
           calls: calls.map((c) => c.method + " " + c.url + (c.req ? "  [요청] " + c.req : "")),
         };
       }
