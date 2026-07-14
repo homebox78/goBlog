@@ -864,11 +864,22 @@ async function scrapeCoupang(tabId) {
       const endDay = new Date(Date.now() - 86400000); // 전일자 데이터가 오후 4시 전후 반영 → 어제까지
       const startDay = new Date(endDay.getTime() - 29 * 86400000);
 
-      const paths = ["/api/v1/report/daily", "/api/v1/report/trend/daily", "/api/v1/report/trend"];
+      // ✅ 화면이 실제로 쓰는 형식 (tap 으로 확인함 — 평범한 {startDate,endDate} 가 아니다):
+      //    POST /api/v1/report/daily
+      //    {"filters":[{"column":"startDate","operator":"EQUAL","value":["2026-07-13"]},
+      //                {"column":"endDate","operator":"EQUAL","value":["2026-07-13"]}]}
+      //    화면은 어제 하루만 물었지만, 같은 형식에 **범위**를 넣으면 일별 목록이 온다.
+      const filterBody = (from, to) => ({
+        filters: [
+          { column: "startDate", operator: "EQUAL", value: [from] },
+          { column: "endDate", operator: "EQUAL", value: [to] },
+        ],
+      });
+
+      const paths = ["/api/v1/report/daily", "/api/v1/report/trend/daily"];
       const bodies = [
-        { startDate: ymd(startDay, "-"), endDate: ymd(endDay, "-") },
-        { startDate: ymd(startDay, ""), endDate: ymd(endDay, "") },
-        { startDate: ymd(startDay, "-"), endDate: ymd(endDay, "-"), subIds: [] },
+        filterBody(ymd(startDay, "-"), ymd(endDay, "-")),
+        // 혹시 범위를 안 받으면, 하루씩이라도 받아 채운다 (아래 dayByDay 에서 처리)
       ];
 
       const collected = new Map();
@@ -891,6 +902,28 @@ async function scrapeCoupang(tabId) {
           }
         }
         if (collected.size > 1) break; // 여러 날이 왔다 = 범위 조회가 먹혔다
+      }
+
+      // 범위를 안 받는다면 **하루씩 30번** 물어서라도 전부 채운다.
+      // 느리지만 12시간에 한 번 도는 일이라 괜찮다 — 과거 실적이 빈칸으로 남는 게 더 나쁘다.
+      if (collected.size <= 1) {
+        for (let i = 0; i < 30; i += 1) {
+          const day = ymd(new Date(endDay.getTime() - i * 86400000), "-");
+          if (collected.has(day)) continue;
+          try {
+            const r = await fetch("/api/v1/report/daily", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json", accept: "application/json" },
+              body: JSON.stringify(filterBody(day, day)),
+            });
+            if (!r.ok) continue;
+            const rows = findRows(await r.json());
+            if (rows) for (const row of rows) collected.set(row.date, { ...row, raw: { from: "daily", day } });
+          } catch (_) {
+            // 이 날짜는 건너뛴다
+          }
+        }
       }
 
       if (collected.size > 1) {
