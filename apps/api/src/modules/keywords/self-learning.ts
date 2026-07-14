@@ -20,7 +20,22 @@ import { callClaudeJson } from "../ai/claude.js";
 const SELF_KEY = "__SELF__:PERFORMANCE";
 const MIN_SAMPLE = 6;
 
+/**
+ * 표본 크기에 따라 **적용 강도를 달리한다.**
+ * 6건에서 곧바로 "이대로 써라"라고 강제하면 우연을 법칙으로 굳힌다.
+ * 표본이 커질수록 확신을 키운다 — 데이터가 말할 자격을 얻는 만큼만 말하게 한다.
+ */
+export type Confidence = "참고" | "권장" | "적용";
+
+export function confidenceOf(sampleSize: number): Confidence {
+  if (sampleSize >= 50) return "적용"; // 충분 — 그대로 따른다
+  if (sampleSize >= 20) return "권장"; // 쓸 만하다 — 따르되 다른 지침과 충돌하면 재량
+  return "참고"; // 6~19건 — 힌트일 뿐, 강제하지 않는다
+}
+
 export interface SelfLearning {
+  /** 표본 크기에서 나온 적용 강도 — 프롬프트 주입 세기를 결정한다 */
+  confidence: Confidence;
   /** 성과가 좋았던 글에서 반복 관찰된 특징 */
   worked: string[];
   /** 성과가 나빴던 글에서 반복 관찰된 특징 — 피해야 할 것 */
@@ -206,6 +221,7 @@ export async function buildSelfLearning(): Promise<SelfLearning | null> {
   });
 
   const learning: SelfLearning = {
+    confidence: confidenceOf(scored.length),
     worked: (result.worked ?? []).slice(0, 8),
     failed: (result.failed ?? []).slice(0, 8),
     rules: (result.rules ?? []).slice(0, 10),

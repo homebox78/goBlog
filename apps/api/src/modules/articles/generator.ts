@@ -386,10 +386,14 @@ export async function generateArticle(
       selfLearning
         ? [
             "",
-            `[🎯 자가학습 — 내가 쓴 글 ${selfLearning.sampleSize}건의 실제 성과에서 배운 것. 남의 글이 아니라 **내 결과**다. 최우선 반영]`,
-            "- userPayload.selfLearning.rules 를 이 글에 그대로 적용한다.",
-            "- worked 는 실제로 성과가 좋았던 글의 특징이다. failed 는 성과가 나빴던 글의 특징이다 — 반복하지 않는다.",
-            "- 이건 추측이 아니라 측정이다. 다른 지침과 충돌하면 이쪽을 따른다.",
+            `[🎯 자가학습 — 내가 쓴 글 ${selfLearning.sampleSize}건의 실제 성과 측정 (신뢰도: ${selfLearning.confidence})]`,
+            // ⚠️ 표본이 작은데 "무조건 따르라"고 하면 우연을 법칙으로 굳힌다. 강도를 표본 크기에 맞춘다.
+            selfLearning.confidence === "적용"
+              ? "- 표본이 충분하다(50건+). rules 를 그대로 적용한다. 다른 지침과 충돌하면 이쪽을 따른다."
+              : selfLearning.confidence === "권장"
+                ? "- 표본이 쓸 만하다(20건+). rules 를 따르되, 글의 맥락과 충돌하면 맥락을 우선한다."
+                : "- ⚠️ 표본이 아직 작다(6~19건). rules 는 **힌트**로만 참고하고 억지로 끼워 맞추지 마라. 우연일 수 있다.",
+            "- worked 는 성과가 좋았던 글의 특징, failed 는 나빴던 글의 특징이다.",
           ].join("\n")
         : "",
       knowledge

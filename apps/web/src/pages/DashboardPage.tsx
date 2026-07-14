@@ -45,7 +45,13 @@ interface SelfLearningStatus {
   published: number;
   withSignal: number;
   minSample: number;
-  learned: { worked: string[]; failed: string[]; rules: string[]; sampleSize: number } | null;
+  learned: {
+    worked: string[];
+    failed: string[];
+    rules: string[];
+    sampleSize: number;
+    confidence: "참고" | "권장" | "적용";
+  } | null;
 }
 
 interface PerformanceArticle {
@@ -361,10 +367,21 @@ export default function DashboardPage() {
           <CardContent>
             {selfLearning.data.learned ? (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  내 글 {selfLearning.data.learned.sampleSize}건의 실제 성과에서 배운 규칙 —
-                  다음 글 생성에 자동 적용됩니다.
-                </p>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={selfLearning.data.learned.confidence === "적용" ? "default" : "outline"}
+                  >
+                    신뢰도 {selfLearning.data.learned.confidence}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">
+                    내 글 {selfLearning.data.learned.sampleSize}건 측정 —{" "}
+                    {selfLearning.data.learned.confidence === "참고"
+                      ? "표본이 작아 힌트로만 씁니다 (20건부터 권장, 50건부터 자동 적용)"
+                      : selfLearning.data.learned.confidence === "권장"
+                        ? "글 생성에 반영하되 맥락이 우선합니다 (50건부터 자동 적용)"
+                        : "글 생성에 그대로 적용됩니다"}
+                  </p>
+                </div>
                 {selfLearning.data.learned.rules.map((rule) => (
                   <p key={rule} className="text-sm">
                     · {rule}

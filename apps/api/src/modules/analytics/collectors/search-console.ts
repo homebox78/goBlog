@@ -88,6 +88,9 @@ async function queryRows(token: string, siteUrl: string, start: string, end: str
         startDate: start,
         endDate: end,
         dimensions: ["date", "page"],
+        // ⚠️ 학습에는 **확정(final) 데이터만** 쓴다. "all"로 바꾸면 최신 2~3일의 미확정값이 섞여
+        //    아직 덜 집계된 수치를 성과로 착각해 학습한다. 기본값이 final이지만 명시해 둔다.
+        dataState: "final",
         rowLimit: 5000,
       }),
     },
@@ -116,10 +119,13 @@ async function urlToArticle(): Promise<{ map: Map<string, number>; ambiguous: st
   const byKey = new Map<string, Set<number>>();
   for (const job of jobs) {
     if (!job.publishedUrl) continue;
-    const key = normalizeUrl(job.publishedUrl);
-    const set = byKey.get(key) ?? new Set<number>();
-    set.add(job.articleId);
-    byKey.set(key, set);
+    // 원본 주소 + 리다이렉트 최종 주소 + canonical — 셋 다 키로 등록해 어느 형태로 보고돼도 잡는다
+    for (const form of await canonicalOf(job.publishedUrl)) {
+      const key = normalizeUrl(form);
+      const set = byKey.get(key) ?? new Set<number>();
+      set.add(job.articleId);
+      byKey.set(key, set);
+    }
   }
 
   const map = new Map<string, number>();
@@ -129,6 +135,38 @@ async function urlToArticle(): Promise<{ map: Map<string, number>; ambiguous: st
     else ambiguous.push(key); // 같은 주소에 여러 글 — 어느 글의 성과인지 알 수 없다
   }
   return { map, ambiguous };
+}
+
+/**
+ * 발행 URL의 **최종 주소**를 알아낸다 — GSC는 canonical 기준으로 집계한다.
+ * 워드프레스가 `?p=6`을 예쁜 주소로 리다이렉트하거나 canonical을 따로 지정하면,
+ * 우리가 저장한 주소와 GSC가 보고하는 주소가 **다르다** → 전부 미매칭이 된다.
+ *
+ * 실패하면 원본을 그대로 쓴다(네트워크 오류를 '주소가 바뀌었다'로 오판하지 않는다).
+ */
+const canonicalCache = new Map<string, string[]>();
+
+async function canonicalOf(raw: string): Promise<string[]> {
+  const cached = canonicalCache.get(raw);
+  if (cached) return cached;
+
+  const forms = new Set<string>([raw]);
+  try {
+    const res = await fetch(raw, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; goBlog/1.0)" },
+      redirect: "follow",
+    });
+    if (res.url && res.url !== raw) forms.add(res.url); // 리다이렉트 최종 주소
+    const html = await res.text();
+    const canonical = html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1];
+    if (canonical) forms.add(canonical);
+  } catch {
+    // 네트워크 실패 — 원본만 쓴다 (다음 실행에서 다시 시도하도록 캐시에 넣지 않는다)
+    return [...forms];
+  }
+  const result = [...forms];
+  canonicalCache.set(raw, result);
+  return result;
 }
 
 /** 추적용 파라미터만 버리고, 글을 식별하는 쿼리(?p=6 같은 것)는 반드시 남긴다 */
@@ -205,6 +243,12 @@ export async function collectSearchConsole(daysBack = 3): Promise<{
 
       // 글과 못 이은 페이지(목록·태그 페이지 등)는 저장하지 않는다 — 글 단위 성과만 다룬다
       if (!articleId) continue;
+
+      // 정합성 — 클릭이 노출보다 많을 수는 없다. 이런 행은 저장하지 않는다(오염된 값으로 학습 금지).
+      if (row.clicks > row.impressions) {
+        console.warn(`[gsc] ⚠️ 불가능한 값 무시 (클릭 ${row.clicks} > 노출 ${row.impressions}): ${page}`);
+        continue;
+      }
 
       const date = new Date(`${dateKey}T00:00:00.000Z`);
       const data = {
