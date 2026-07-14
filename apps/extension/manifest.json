@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "goBlog 포스팅 어시스턴트",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "description": "goBlog에서 작성한 홍보 글을 네이버 블로그·티스토리·인스타그램에 입력합니다.",
   "permissions": [
     "sidePanel",
@@ -9,7 +9,8 @@
     "activeTab",
     "scripting",
     "clipboardWrite",
-    "debugger"
+    "debugger",
+    "alarms"
   ],
   "host_permissions": [
     "https://blog.naver.com/*",
@@ -20,7 +21,9 @@
     "https://shopping.naver.com/*",
     "https://brand.naver.com/*",
     "https://hom2box.com/*",
-    "http://localhost:8787/*"
+    "http://localhost:8787/*",
+    "https://gw-brandconnect.naver.com/*",
+    "https://brandconnect.naver.com/*"
   ],
   "background": {
     "service_worker": "background.js"

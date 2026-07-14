@@ -222,6 +222,55 @@ dashboardRouter.get(
   }),
 );
 
+/**
+ * 제휴 실적 — 네이버 커넥트 / 쿠팡 파트너스의 일별 유입·거래액·수수료.
+ * 확장이 로그인된 브라우저로 수집해 넣어준다(두 곳 다 공개 API가 없다).
+ */
+dashboardRouter.get(
+  "/affiliate",
+  asyncHandler(async (req, res) => {
+    const days = Math.min(Math.max(Number(req.query.days) || 30, 7), 180);
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    since.setDate(since.getDate() - days);
+
+    const rows = await prisma.affiliateDaily.findMany({
+      where: { date: { gte: since } },
+      orderBy: { date: "asc" },
+    });
+
+    const bySource = new Map<string, { clicks: number; salesAmount: number; commission: number; orders: number }>();
+    for (const row of rows) {
+      const entry = bySource.get(row.source) ?? { clicks: 0, salesAmount: 0, commission: 0, orders: 0 };
+      entry.clicks += row.clicks;
+      entry.salesAmount += row.salesAmount;
+      entry.commission += row.commission;
+      entry.orders += row.orders;
+      bySource.set(row.source, entry);
+    }
+
+    // 마지막 수집 시각을 함께 준다 — "실적 0"과 "며칠째 수집이 안 됨"은 다른 문제다
+    const latest = rows.reduce<Date | null>(
+      (acc, row) => (!acc || row.collectedAt > acc ? row.collectedAt : acc),
+      null,
+    );
+
+    res.json({
+      days,
+      collected: rows.length > 0,
+      collectedAt: latest,
+      totals: [...bySource.entries()].map(([source, value]) => ({ source, ...value })),
+      series: rows.map((row) => ({
+        date: row.date.toISOString().slice(0, 10),
+        source: row.source,
+        clicks: row.clicks,
+        salesAmount: row.salesAmount,
+        commission: row.commission,
+      })),
+    });
+  }),
+);
+
 /** Search Console 성과 수집 (수동 실행 — 스케줄러도 같은 함수를 쓴다) */
 dashboardRouter.post(
   "/collect",

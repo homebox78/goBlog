@@ -21,6 +21,8 @@
       <input id="token" type="password" />
       <label>티스토리 블로그 이름 (xxx.tistory.com의 xxx)</label>
       <input id="tistoryBlog" placeholder="hom2box" />
+      <label>네이버 커넥트 회원번호 (대시보드 주소의 숫자)</label>
+      <input id="connectMemberId" placeholder="972626246071328" />
       <button id="saveSetup">저장</button>
     </section>
 
@@ -36,6 +38,18 @@
       </div>
       <p id="catList" class="muted"></p>
       <div id="list"><p class="muted">불러오는 중...</p></div>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h2>제휴 실적</h2>
+        <button id="collectAffiliate" class="ghost">지금 수집</button>
+      </div>
+      <p class="muted">
+        커넥트·쿠팡은 공개 API가 없어, 로그인된 이 브라우저로만 실적을 가져올 수 있습니다.
+        12시간마다 자동 수집됩니다.
+      </p>
+      <p id="affiliateResult" class="muted"></p>
     </section>
 
     <section id="detail" class="card hidden">

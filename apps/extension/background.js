@@ -673,3 +673,82 @@ async function sendToTab(tabId, payload) {
   const res = await chrome.tabs.sendMessage(tabId, payload);
   return res ?? { ok: false, error: "응답 없음" };
 }
+
+// ── 제휴 실적 수집 (네이버 쇼핑커넥트) ──────────────────────────────────────
+//
+// 커넥트는 공개 API가 없다. 대신 대시보드가 스스로 부르는 JSON을 **같은 로그인 세션으로** 그대로 부른다
+// (화면을 긁지 않는다 — 디자인이 바뀌어도 안 깨진다).
+//   GET https://gw-brandconnect.naver.com/affiliate/query/sales-performances/summary/chart
+//       ?startDate=&endDate=&chartPeriod=DAY   → [{startDate, accessCnt, salesAmount}, ...]
+//   GET .../summary?startDate=&endDate=        → {accessCnt, productOrderCnt, salesAmount, commissionAmount}
+// 인증: 네이버 로그인 쿠키 + x-space-id 헤더.
+const CONNECT_GW = "https://gw-brandconnect.naver.com/affiliate/query/sales-performances";
+
+async function collectNaverConnect(days = 30) {
+  const s = await chrome.storage.local.get(["apiBase", "token", "connectMemberId"]);
+  if (!s.apiBase || !s.token || !s.connectMemberId) {
+    return { ok: false, error: "커넥트 회원번호(설정)와 서버 연결이 필요합니다." };
+  }
+
+  const end = new Date();
+  const start = new Date(Date.now() - (days - 1) * 86400000);
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const headers = { accept: "application/json", "x-space-id": String(s.connectMemberId) };
+
+  const [chartRes, sumRes] = await Promise.all([
+    fetch(`${CONNECT_GW}/summary/chart?startDate=${iso(start)}&endDate=${iso(end)}&chartPeriod=DAY`, {
+      headers,
+      credentials: "include",
+    }),
+    fetch(`${CONNECT_GW}/summary?startDate=${iso(start)}&endDate=${iso(end)}`, {
+      headers,
+      credentials: "include",
+    }),
+  ]);
+  if (!chartRes.ok) {
+    // 로그인이 풀리면 302/401이 온다 — 조용히 0건으로 넘기면 "실적이 없다"고 착각한다
+    return { ok: false, error: `커넥트 조회 실패 (HTTP ${chartRes.status}). 네이버 로그인을 확인하세요.` };
+  }
+
+  const chart = await chartRes.json();
+  const summary = sumRes.ok ? await sumRes.json() : null;
+
+  // 일별은 유입·거래액만 준다. 주문·수수료는 기간 합계만 나와서, 거래액 비율로 나눠 담지 않는다
+  // (없는 값을 지어내지 않는다 — 합계는 합계대로 raw 에 남긴다).
+  const rows = (chart?.chart ?? []).map((row) => ({
+    date: row.startDate,
+    clicks: row.accessCnt ?? 0,
+    salesAmount: row.salesAmount ?? 0,
+    orders: 0,
+    commission: 0,
+    raw: { periodSummary: summary },
+  }));
+  if (rows.length === 0) return { ok: false, error: "커넥트에서 받은 실적이 0건입니다." };
+
+  const res = await fetch(`${s.apiBase}/api/extension/affiliate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Extension-Token": s.token },
+    body: JSON.stringify({ source: "NAVER_CONNECT", rows }),
+  });
+  if (!res.ok) return { ok: false, error: `서버 저장 실패 (HTTP ${res.status})` };
+  const saved = await res.json();
+  return { ok: true, saved: saved.saved, days: rows.length, summary };
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== "COLLECT_AFFILIATE") return false;
+  collectNaverConnect(message.days || 30)
+    .then(sendResponse)
+    .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
+  return true; // 비동기 응답
+});
+
+// 하루 한 번 자동 수집 — 사용자가 버튼을 누르지 않아도 실적이 쌓이게 한다.
+// (실적은 소급 정정되므로 최근 30일을 통째로 다시 받아 덮어쓴다)
+chrome.alarms.create("affiliate-daily", { periodInMinutes: 720 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name !== "affiliate-daily") return;
+  collectNaverConnect(30).then((r) => {
+    if (!r.ok) console.warn("[goBlog] 제휴 실적 자동 수집 실패:", r.error);
+  });
+});

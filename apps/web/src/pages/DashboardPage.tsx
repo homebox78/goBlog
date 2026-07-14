@@ -291,6 +291,24 @@ export default function DashboardPage() {
       }>("/api/analytics/queries?days=28"),
   });
 
+  // 제휴 실적 — 확장이 로그인된 브라우저로 수집해 넣는다(커넥트·쿠팡 모두 공개 API가 없다).
+  const affiliate = useQuery({
+    queryKey: ["dashboard-affiliate"],
+    queryFn: () =>
+      api.get<{
+        days: number;
+        collected: boolean;
+        collectedAt: string | null;
+        totals: Array<{
+          source: string;
+          clicks: number;
+          orders: number;
+          salesAmount: number;
+          commission: number;
+        }>;
+      }>("/api/analytics/affiliate?days=30"),
+  });
+
   if (query.isPending) {
     return (
       <div className="space-y-6">
@@ -526,6 +544,49 @@ export default function DashboardPage() {
                       {row.avgPosition ? `${row.avgPosition.toFixed(1)}위` : "—"}
                     </Badge>
                   </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 제휴 실적 — 글이 돈이 됐는지. 공개 API가 없어 확장이 로그인된 브라우저로 가져온다. */}
+      {affiliate.data && (
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+              제휴 실적 (최근 {affiliate.data.days}일)
+              {affiliate.data.collectedAt && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  마지막 수집 {new Date(affiliate.data.collectedAt).toLocaleString("ko-KR")}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!affiliate.data.collected ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                아직 수집된 실적이 없습니다. 확장 프로그램 사이드패널에서 “지금 수집”을 누르세요
+                (네이버 커넥트·쿠팡은 공개 API가 없어 로그인된 브라우저로만 가져올 수 있습니다).
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {affiliate.data.totals.map((row) => (
+                  <div key={row.source} className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">
+                      {row.source === "NAVER_CONNECT" ? "네이버 쇼핑커넥트" : "쿠팡 파트너스"}
+                    </p>
+                    <p className="mt-1 text-2xl font-bold">
+                      ₩{new Intl.NumberFormat("ko-KR").format(row.commission)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">내 수익 (수수료)</p>
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      <span>유입 {row.clicks.toLocaleString("ko-KR")}</span>
+                      <span>주문 {row.orders.toLocaleString("ko-KR")}</span>
+                      <span>거래액 ₩{new Intl.NumberFormat("ko-KR").format(row.salesAmount)}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

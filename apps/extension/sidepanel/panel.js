@@ -30,12 +30,13 @@ let currentRestricted = null; // 쇼핑 커넥트 활동 제한 채널명(있으
 init();
 
 async function init() {
-  const stored = await chrome.storage.local.get(["apiBase", "token", "tistoryBlog"]);
+  const stored = await chrome.storage.local.get(["apiBase", "token", "tistoryBlog", "connectMemberId"]);
   config.apiBase = stored.apiBase || "https://hom2box.com/goBlog";
   config.token = stored.token || "";
   config.tistoryBlog = stored.tistoryBlog || "hom2box";
   $("#apiBase").value = config.apiBase;
   $("#token").value = config.token;
+  $("#connectMemberId").value = stored.connectMemberId || "";
   $("#tistoryBlog").value = config.tistoryBlog;
 
   $("#version").textContent = "v" + chrome.runtime.getManifest().version;
@@ -98,6 +99,8 @@ async function saveSetup() {
   config.apiBase = $("#apiBase").value.trim().replace(/\/+$/, "");
   config.token = $("#token").value.trim();
   config.tistoryBlog = $("#tistoryBlog").value.trim().replace(/\.tistory\.com.*$/i, "") || "hom2box";
+  // 커넥트 회원번호 — 대시보드 주소(brandconnect.naver.com/{번호}/...)의 숫자. x-space-id 헤더에 필요하다.
+  config.connectMemberId = $("#connectMemberId").value.trim().replace(/\D/g, "");
   await chrome.storage.local.set(config);
   $("#setup").classList.add("hidden");
   loadArticles();
@@ -610,3 +613,20 @@ async function markPublished() {
   $("#notes").appendChild(li);
   loadArticles();
 }
+
+
+// ── 제휴 실적 수집 ────────────────────────────────────────────────
+// 커넥트는 API가 없어 **로그인된 이 브라우저**로만 가져올 수 있다 (background가 실제 호출을 한다).
+$("#collectAffiliate")?.addEventListener("click", async () => {
+  const out = $("#affiliateResult");
+  out.textContent = "수집 중...";
+  const res = await chrome.runtime.sendMessage({ type: "COLLECT_AFFILIATE", days: 30 });
+  if (!res?.ok) {
+    out.textContent = `❌ ${res?.error || "수집 실패"}`;
+    return;
+  }
+  const sum = res.summary;
+  out.textContent = sum
+    ? `✅ ${res.saved}일치 저장 · 최근 30일 유입 ${sum.accessCnt ?? 0} · 거래액 ${(sum.salesAmount ?? 0).toLocaleString("ko-KR")}원 · 수수료 ${(sum.commissionAmount ?? 0).toLocaleString("ko-KR")}원`
+    : `✅ ${res.saved}일치 저장`;
+});

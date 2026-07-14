@@ -546,6 +546,29 @@ model AnalyticsDaily {
   @@map("analytics_daily")
 }
 
+/// 제휴 실적 — 네이버 쇼핑커넥트 / 쿠팡 파트너스의 **일별 유입·매출·수수료**.
+///
+/// ⚠️ 두 곳 다 **공개 API가 없다**(쿠팡은 Open API 키 발급이 중지됐고, 브랜드커넥트는 애초에 API가 없다).
+///    유일한 길은 **로그인된 브라우저**로 대시보드가 스스로 부르는 JSON을 그대로 받아오는 것이다.
+///    그래서 확장 프로그램이 수집해 서버로 보낸다 (네이버·티스토리 발행과 같은 구조).
+///
+/// 실적은 소급 정정된다(주문 취소·확정 지연) → 같은 (날짜, 출처)는 **덮어쓴다**.
+model AffiliateDaily {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @db.Date
+  source      String // NAVER_CONNECT | COUPANG
+  clicks      Int      @default(0) // 유입수 (커넥트 accessCnt)
+  orders      Int      @default(0) // 주문 건수
+  salesAmount Int      @default(0) // 거래액 (원)
+  commission  Int      @default(0) // 수수료 = 내 수익 (원)
+  raw         Json?
+  collectedAt DateTime @default(now())
+
+  @@unique([date, source])
+  @@index([date])
+  @@map("affiliate_daily")
+}
+
 /// 유입 쿼리 — **사람들이 실제로 검색해서 내 글에 들어온 말.**
 ///
 /// `analytics_daily` 는 "이 글이 몇 번 노출됐나"만 안다. 어떤 검색어로 들어왔는지는 모른다.

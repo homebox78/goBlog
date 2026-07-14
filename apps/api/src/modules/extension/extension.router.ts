@@ -181,3 +181,56 @@ extensionRouter.post(
     res.json({ ok: true, url: resolved });
   }),
 );
+
+/**
+ * 제휴 실적 수집 — 확장이 **로그인된 브라우저**로 대시보드의 JSON을 받아 보내준다.
+ *
+ * 왜 이렇게 하나: 네이버 쇼핑커넥트는 **공개 API가 없고**(개발자센터·커머스 API센터 어디에도 없다),
+ * 쿠팡 파트너스는 Open API 키 **발급이 중지**됐다. 서버에서 부를 방법이 없다.
+ * 남는 길은 이미 로그인돼 있는 사용자 브라우저뿐이라, 발행과 똑같이 확장에 맡긴다.
+ *
+ * 실적은 나중에 정정된다(주문 취소·정산 확정) → 같은 (날짜, 출처)는 **덮어쓴다.**
+ * 그래서 며칠치를 다시 보내도 중복되지 않고, 최신 값으로 갱신된다.
+ */
+extensionRouter.post(
+  "/affiliate",
+  asyncHandler(async (req, res) => {
+    const raw = String(req.body?.source ?? "");
+    const source = raw === "COUPANG" ? "COUPANG" : raw === "NAVER_CONNECT" ? "NAVER_CONNECT" : null;
+    if (!source) throw new HttpError(400, "source 는 NAVER_CONNECT 또는 COUPANG 이어야 합니다.");
+
+    const rows: unknown[] = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    if (rows.length === 0) throw new HttpError(400, "rows 가 비어 있습니다.");
+
+    const num = (value: unknown): number => {
+      const parsed = Math.round(Number(value));
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    };
+
+    let saved = 0;
+    for (const item of rows as Array<Record<string, unknown>>) {
+      const day = String(item.date ?? "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue; // 날짜가 아니면 버린다 (오염된 행으로 그래프를 그리지 않는다)
+      const date = new Date(`${day}T00:00:00.000Z`);
+
+      const data = {
+        date,
+        source,
+        clicks: num(item.clicks),
+        orders: num(item.orders),
+        salesAmount: num(item.salesAmount),
+        commission: num(item.commission),
+        raw: (item.raw ?? null) as never,
+        collectedAt: new Date(),
+      };
+      await prisma.affiliateDaily.upsert({
+        where: { date_source: { date, source } },
+        update: data,
+        create: data,
+      });
+      saved += 1;
+    }
+
+    res.json({ ok: true, source, saved });
+  }),
+);
