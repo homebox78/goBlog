@@ -262,3 +262,22 @@ dashboardRouter.get(
     res.json({ days, series });
   }),
 );
+
+/** 자가학습 상태 — 관측 중인지 학습됐는지 정직하게 보여준다 */
+dashboardRouter.get(
+  "/self-learning",
+  asyncHandler(async (_req, res) => {
+    const { selfLearningStatus } = await import("../keywords/self-learning.js");
+    res.json(await selfLearningStatus());
+  }),
+);
+
+/** 자가학습 수동 실행 (표본이 모자라면 null) */
+dashboardRouter.post(
+  "/self-learning/rebuild",
+  asyncHandler(async (_req, res) => {
+    const { buildSelfLearning } = await import("../keywords/self-learning.js");
+    const learned = await buildSelfLearning();
+    res.json({ learned });
+  }),
+);

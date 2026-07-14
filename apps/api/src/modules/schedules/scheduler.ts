@@ -282,6 +282,14 @@ export async function scheduleFromSettings(): Promise<void> {
           console.log(
             `[scheduler] 성과 수집: 속성 ${result.sites}개 · 행 ${result.rows}건 → 글 매칭 ${result.matched}건 (미매칭 ${result.unmatched})`,
           );
+          // 성과가 갱신됐으니 자가학습을 다시 돌린다 — 표본이 모자라면 스스로 건너뛴다(배운 척 금지)
+          const { buildSelfLearning } = await import("../keywords/self-learning.js");
+          const learned = await buildSelfLearning();
+          if (learned)
+            console.log(
+              `[scheduler] 자가학습: 표본 ${learned.sampleSize}건 → 규칙 ${learned.rules.length}개 갱신`,
+            );
+          else console.log("[scheduler] 자가학습: 성과 표본 부족 — 관측만 계속 (학습 보류)");
         } catch (error) {
           // 설정 누락·권한 없음도 여기서 드러나야 한다 — 조용히 0건으로 넘어가지 않는다
           console.error("[scheduler] 성과 수집 실패:", (error as Error).message);

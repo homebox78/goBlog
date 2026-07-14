@@ -41,6 +41,13 @@ const COST_CHART: ChartConfig = {
   costKrw: { label: "AI 비용", color: "var(--chart-4)" },
 };
 
+interface SelfLearningStatus {
+  published: number;
+  withSignal: number;
+  minSample: number;
+  learned: { worked: string[]; failed: string[]; rules: string[]; sampleSize: number } | null;
+}
+
 interface PerformanceArticle {
   articleId: number;
   title: string;
@@ -173,6 +180,12 @@ export default function DashboardPage() {
   const trends = useQuery({
     queryKey: ["dashboard-trends"],
     queryFn: () => api.get<{ days: number; series: TrendPoint[] }>("/api/analytics/trends?days=14"),
+  });
+
+  // 자가학습 — 내 글의 실제 성과에서 배운 규칙. 표본이 모자라면 learned:null (관측 중).
+  const selfLearning = useQuery({
+    queryKey: ["self-learning"],
+    queryFn: () => api.get<SelfLearningStatus>("/api/analytics/self-learning"),
   });
 
   // 검색 성과 — Search Console 수집분. 아직 수집 전이면 collected:false 로 온다.
@@ -336,6 +349,44 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {selfLearning.data && (
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle className="text-base">
+              🎯 자가학습 {selfLearning.data.learned ? "" : "(관측 중)"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selfLearning.data.learned ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  내 글 {selfLearning.data.learned.sampleSize}건의 실제 성과에서 배운 규칙 —
+                  다음 글 생성에 자동 적용됩니다.
+                </p>
+                {selfLearning.data.learned.rules.map((rule) => (
+                  <p key={rule} className="text-sm">
+                    · {rule}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              // 표본이 없는데 규칙을 지어내면 '배운 척'하는 시스템이 된다 — 진행 상황만 정직하게 보여준다
+              <div className="space-y-2">
+                <p className="text-sm">
+                  발행 {selfLearning.data.published}건 · 성과 신호가 붙은 글{" "}
+                  <span className="font-mono font-semibold">{selfLearning.data.withSignal}</span>/
+                  {selfLearning.data.minSample}건
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Search Console 노출·클릭 또는 네이버 AI 인용이 잡히면 학습이 자동으로 시작됩니다.
+                  표본이 모자란 상태에서 배우면 우연을 법칙으로 착각합니다.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {perf.data && (

@@ -279,6 +279,9 @@ export async function generateArticle(
   // 전역 지식 — 지금까지 학습한 모든 인용 분석을 종합한 '주제 무관 법칙'. 키워드 인사이트가 없어도 항상 쓴다.
   const { getKnowledge } = await import("../keywords/citation-knowledge.js");
   const knowledge = await getKnowledge().catch(() => null);
+  // 자가학습 — 내 글의 실제 성과(노출·클릭·순위·AI인용)에서 배운 규칙. 표본이 모이기 전엔 null.
+  const { getSelfLearning } = await import("../keywords/self-learning.js");
+  const selfLearning = await getSelfLearning().catch(() => null);
   // 말투 프로파일 — 인용 상위 블로거들의 문체를 **실측**한 결과. 전 키워드 공통.
   const style = await getStyleForPrompt(options.stylePlatform ?? "NAVER").catch(() => null);
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
@@ -363,6 +366,15 @@ export async function generateArticle(
             "- 모든 목록을 '① ② ③'처럼 기계적으로 병렬 나열하지 않는다. 중요한 것은 길게, 곁가지는 한 줄로.",
             "- 겪지 않은 경험·후기는 지어내지 않는다. 대신 공식 자료·수치·출처로 신뢰도를 채운다.",
             ...style.rules.map((r) => `- ${r}`),
+          ].join("\n")
+        : "",
+      selfLearning
+        ? [
+            "",
+            `[🎯 자가학습 — 내가 쓴 글 ${selfLearning.sampleSize}건의 실제 성과에서 배운 것. 남의 글이 아니라 **내 결과**다. 최우선 반영]`,
+            "- userPayload.selfLearning.rules 를 이 글에 그대로 적용한다.",
+            "- worked 는 실제로 성과가 좋았던 글의 특징이다. failed 는 성과가 나빴던 글의 특징이다 — 반복하지 않는다.",
+            "- 이건 추측이 아니라 측정이다. 다른 지침과 충돌하면 이쪽을 따른다.",
           ].join("\n")
         : "",
       knowledge
@@ -489,6 +501,10 @@ export async function generateArticle(
       styleProfile: style ? { measured: style.metrics, rules: style.rules, sampleSentences: style.samples } : null,
       // 이 키워드에서 AI 브리핑에 인용되는 글들을 실제로 읽고 뽑은 패턴.
       // coveredAngles 는 반복 금지, gaps 는 우리가 파고들 틈이다.
+      // 자가학습 — 내 글의 실제 성과에서 뽑은 규칙 (표본이 모이면 자동으로 채워진다)
+      selfLearning: selfLearning
+        ? { worked: selfLearning.worked, failed: selfLearning.failed, rules: selfLearning.rules }
+        : null,
       // 누적 지식 — 엔진이 바뀌어도 그대로 쓰이는 평문 지식 (특정 AI에 묶이지 않는다)
       citationKnowledge: knowledge
         ? { laws: knowledge.laws, infoPatterns: knowledge.infoPatterns, antiPatterns: knowledge.antiPatterns }
