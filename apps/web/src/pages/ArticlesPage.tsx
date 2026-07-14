@@ -77,6 +77,11 @@ function matchFilter(article: ArticleListItem, filter: ListFilter, minScore: num
   }
 }
 
+/** 목록 제목은 30자에서 자른다 — 긴 제목이 표 폭을 밀어 다른 열을 좁힌다 (전체 제목은 title 속성으로 남긴다) */
+function shortTitle(title: string): string {
+  return title.length > 30 ? `${title.slice(0, 30)}...` : title;
+}
+
 /** 발행 일시 — 년월일 + 시:분:초 (언제 나갔는지 초까지 남긴다) */
 function formatStamp(iso: string): { date: string; time: string } {
   const d = new Date(iso);
@@ -397,8 +402,9 @@ export default function ArticlesPage() {
                       <Link
                         to={`/articles/${article.id}`}
                         className="line-clamp-2 text-sm font-medium break-keep hover:underline"
+                        title={article.title}
                       >
-                        {article.title}
+                        {shortTitle(article.title)}
                       </Link>
                       <p className="mt-1 truncate text-xs text-muted-foreground">
                         {article.keyword?.text ?? "키워드 없음"} ·{" "}
@@ -452,7 +458,8 @@ export default function ArticlesPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
                     <div className="flex flex-wrap items-center gap-1">
                       <PublishChip
-                        label="WP"
+                        label="WordPress"
+                        short="W"
                         state={article.wordpress}
                         busy={publishing === `${article.id}:WORDPRESS`}
                         onPublish={() => {
@@ -462,6 +469,7 @@ export default function ArticlesPage() {
                       />
                       <PublishChip
                         label="Blogger"
+                        short="B"
                         state={article.blogger}
                         busy={publishing === `${article.id}:BLOGGER`}
                         onPublish={() => {
@@ -469,8 +477,8 @@ export default function ArticlesPage() {
                           publishMutation.mutate({ id: article.id, platform: "BLOGGER" });
                         }}
                       />
-                      <ExtLinkChip label="네이버" state={article.naver} />
-                      <ExtLinkChip label="티스토리" state={article.tistory} />
+                      <ExtLinkChip label="네이버" short="N" state={article.naver} />
+                      <ExtLinkChip label="티스토리" short="T" state={article.tistory} />
                     </div>
 
                     <div className="flex items-center gap-0.5">
@@ -582,8 +590,9 @@ export default function ArticlesPage() {
                         <Link
                           to={`/articles/${article.id}`}
                           className="font-medium hover:underline"
+                          title={article.title}
                         >
-                          {article.title}
+                          {shortTitle(article.title)}
                         </Link>
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">
@@ -643,7 +652,8 @@ export default function ArticlesPage() {
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <PublishChip
-                            label="WP"
+                            label="WordPress"
+                        short="W"
                             state={article.wordpress}
                             busy={publishing === `${article.id}:WORDPRESS`}
                             onPublish={() => {
@@ -653,6 +663,7 @@ export default function ArticlesPage() {
                           />
                           <PublishChip
                             label="Blogger"
+                        short="B"
                             state={article.blogger}
                             busy={publishing === `${article.id}:BLOGGER`}
                             onPublish={() => {
@@ -661,8 +672,8 @@ export default function ArticlesPage() {
                             }}
                           />
                           {/* 네이버·티스토리는 확장 발행 — 발행됨이면 링크만 표시 */}
-                          <ExtLinkChip label="네이버" state={article.naver} />
-                          <ExtLinkChip label="티스토리" state={article.tistory} />
+                          <ExtLinkChip label="네이버" short="N" state={article.naver} />
+                          <ExtLinkChip label="티스토리" short="T" state={article.tistory} />
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-mono">
@@ -779,26 +790,31 @@ export default function ArticlesPage() {
 /** WordPress·Blogger 발행 상태 칩 — 발행됨(링크)/발행중/실패(재시도)/미발행(발행 버튼) */
 function PublishChip({
   label,
+  short,
   state,
   busy,
   onPublish,
 }: {
   label: string;
+  short: string; // 화면 표시는 약자(W·B·N·T) — 발행처 열이 4개라 이름을 다 쓰면 표가 밀린다
   state: { status: string; url: string | null } | null;
   busy: boolean;
   onPublish: () => void;
 }) {
   if (busy || state?.status === "QUEUED" || state?.status === "RUNNING") {
     return (
-      <span className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] text-muted-foreground">
-        <Loader2 className="size-3 animate-spin" /> {label}
+      <span
+        title={`${label} 발행 중`}
+        className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] text-muted-foreground"
+      >
+        <Loader2 className="size-3 animate-spin" /> {short}
       </span>
     );
   }
   if (state?.status === "SUCCEEDED") {
     const chip = (
       <span className="inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-        ✓ {label}
+        ✓{short}
       </span>
     );
     return state.url ? (
@@ -820,17 +836,25 @@ function PublishChip({
         failed ? "border-destructive/50 text-destructive" : "text-muted-foreground"
       }`}
     >
-      {failed ? `↻ ${label}` : `+ ${label}`}
+      {failed ? `↻${short}` : `+${short}`}
     </button>
   );
 }
 
 /** 확장 발행 플랫폼(네이버·티스토리) — 발행됨이면 게시글 링크, 아니면 미표시(발행 버튼 없음) */
-function ExtLinkChip({ label, state }: { label: string; state: { status: string; url: string | null } | null }) {
+function ExtLinkChip({
+  label,
+  short,
+  state,
+}: {
+  label: string;
+  short: string;
+  state: { status: string; url: string | null } | null;
+}) {
   if (state?.status !== "SUCCEEDED") return null; // 미발행이면 아무것도 안 보임 (확장에서만 발행)
   const chip = (
     <span className="inline-flex items-center gap-0.5 rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-      ✓ {label}
+      ✓{short}
     </span>
   );
   return state.url ? (
