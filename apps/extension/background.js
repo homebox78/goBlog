@@ -724,8 +724,10 @@ async function scrapeConnect(tabId, memberId, days) {
     target: { tabId },
     func: async (spaceId, dayCount) => {
       const iso = (d) => d.toISOString().slice(0, 10);
-      const end = new Date();
-      const start = new Date(Date.now() - (dayCount - 1) * 86400000);
+      // 종료일을 **오늘**로 보내면 HTTP 400 이다 — 커넥트는 어제까지만 집계한다
+      // (대시보드도 endDate 를 어제로 보낸다. 오늘을 넣으면 집계 안 된 날이라 거부한다.)
+      const end = new Date(Date.now() - 86400000);
+      const start = new Date(end.getTime() - (dayCount - 1) * 86400000);
       const gw = "https://gw-brandconnect.naver.com/affiliate/query/sales-performances";
       const headers = { accept: "application/json", "x-space-id": String(spaceId) };
       try {
@@ -827,13 +829,26 @@ async function scrapeCoupang(tabId) {
         }
       }
 
+      // 못 찾았다 — 어떤 모양이 오는지 **응답 본문 샘플**을 함께 보고한다.
+      // 주소만 알아선 파싱을 못 짠다. 모양을 봐야 정확히 짤 수 있다.
+      const samples = [];
+      const apiOnly = candidates.filter((u) => u.indexOf("partners.coupang.com/api/") !== -1).slice(0, 6);
+      for (const url of apiOnly) {
+        try {
+          const r = await fetch(url, { credentials: "include", headers: { accept: "application/json" } });
+          const text = await r.text();
+          samples.push(url + "  =>  [" + r.status + "] " + text.slice(0, 400));
+        } catch (e) {
+          samples.push(url + "  =>  실패: " + String(e?.message || e));
+        }
+      }
       return {
         ok: false,
         error:
           candidates.length === 0
             ? "쿠팡 리포트 화면을 연 상태에서 다시 시도하세요 (화면이 데이터를 불러와야 주소가 잡힙니다)."
-            : "쿠팡 리포트 API를 찾지 못했습니다.",
-        endpoints: candidates.slice(0, 20),
+            : "쿠팡 응답 모양을 서버에 보고했습니다. 개발자가 확인 후 붙입니다.",
+        endpoints: [...candidates.slice(0, 14), ...samples],
       };
     },
   });
