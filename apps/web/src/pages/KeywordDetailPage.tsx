@@ -60,6 +60,7 @@ interface KeywordDetail {
   related: Array<{ keyword: string; monthlySearches: number; competition: string | null }>;
   demographics: {
     category: string;
+    term: string;
     summary: string;
     ages: Array<{ group: string; ratio: number }>;
     genders: Array<{ group: "f" | "m"; ratio: number }>;
@@ -196,8 +197,12 @@ export default function KeywordDetailPage() {
                 ))}
               </div>
             )}
+            {/* 조회어를 숨기지 않는다 — 긴 키워드는 상품명으로 줄여서 묻기 때문에, 엉뚱하게 줄었으면 여기서 바로 보인다 */}
             <p className="text-[11px] text-muted-foreground">
               1위 그룹을 100으로 둔 상대값입니다. 글의 말투·예시·상품 추천이 이 층에 맞춰집니다.
+              {data.demographics.term !== data.keyword.text && (
+                <> · 조회어: “{data.demographics.term}”</>
+              )}
             </p>
           </CardContent>
         </Card>
