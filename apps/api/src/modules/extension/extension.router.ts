@@ -234,3 +234,46 @@ extensionRouter.post(
     res.json({ ok: true, source, saved });
   }),
 );
+
+/**
+ * 확장이 쓰는 설정 — **서버가 정답이다.**
+ *
+ * 커넥트 회원번호를 관리자에도 넣고 확장에도 또 넣게 하는 건 말이 안 된다.
+ * (실제로 관리자에 넣어뒀는데 확장이 "회원번호를 입력하세요"라고 우겼다.)
+ * 확장은 여기서 읽어간다. 설정은 한 군데에만 있어야 한다.
+ */
+extensionRouter.get(
+  "/config",
+  asyncHandler(async (_req, res) => {
+    const rows = await prisma.setting.findMany({
+      where: { key: { in: ["naver.brandconnectMemberId"] } },
+    });
+    const get = (key: string) => rows.find((row) => row.key === key)?.value ?? "";
+    res.json({ connectMemberId: get("naver.brandconnectMemberId").replace(/\D/g, "") });
+  }),
+);
+
+/**
+ * 쿠팡 리포트 API 주소 찾기 — 확장이 **화면이 실제로 부른 XHR 주소들**을 보내준다.
+ *
+ * 쿠팡은 Open API 키 발급이 중지됐고 자동화 브라우저는 403으로 막는다.
+ * 로그인된 실제 크롬 안에서만 리포트 주소를 알 수 있는데, 사용자에게 콘솔을 읽어 오라고 할 순 없다.
+ * 그래서 확장이 후보 주소를 서버로 보내고, 여기 저장해 두면 개발자가 바로 확인할 수 있다.
+ */
+extensionRouter.post(
+  "/affiliate/debug",
+  asyncHandler(async (req, res) => {
+    const source = String(req.body?.source ?? "UNKNOWN");
+    const endpoints: string[] = Array.isArray(req.body?.endpoints)
+      ? req.body.endpoints.map((value: unknown) => String(value)).slice(0, 60)
+      : [];
+    const key = `debug.affiliateEndpoints.${source}`;
+    const value = JSON.stringify({ at: new Date().toISOString(), endpoints });
+    await prisma.setting.upsert({
+      where: { key },
+      create: { key, value, isSecret: false },
+      update: { value },
+    });
+    res.json({ ok: true, saved: endpoints.length });
+  }),
+);

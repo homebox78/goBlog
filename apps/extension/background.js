@@ -780,9 +780,14 @@ async function scrapeCoupang(tabId) {
         .getEntriesByType("resource")
         .filter((e) => e.initiatorType === "xmlhttprequest" || e.initiatorType === "fetch")
         .map((e) => e.name);
-      const candidates = [...new Set(urls)].filter((u) =>
-        /report|revenue|commission|click|stat|summary|dashboard|performance/i.test(u),
-      );
+      // ⚠️ 내가 짐작한 낱말(report|revenue…)로 거르면 **진짜 주소를 걸러낸다** (실제로 그랬다).
+      //    정적 리소스만 빼고 XHR 은 전부 후보로 본다. 어느 게 맞는지는 불러 보면 안다.
+      const candidates = [...new Set(urls)]
+        .filter((u) => !/\.(js|css|png|jpg|jpeg|gif|svg|woff2?|ico)(\?|$)/i.test(u))
+        .sort((a, b) => {
+          const score = (u) => (/report|revenue|commission|click|stat|summary|dashboard|performance/i.test(u) ? 0 : 1);
+          return score(a) - score(b); // 그럴듯한 것부터 먼저 시도
+        });
 
       const pickDate = (row) => {
         const raw = String(row.date ?? row.reportDate ?? row.statDate ?? row.day ?? row.dt ?? "");
@@ -835,16 +840,34 @@ async function scrapeCoupang(tabId) {
   return res?.result ?? { ok: false, error: "쿠팡 페이지에서 응답이 없습니다." };
 }
 
+/** 커넥트 회원번호 — **서버 설정이 정답이다.** 관리자에 넣은 값을 확장에 또 넣게 하지 않는다. */
+async function connectMemberId(s) {
+  try {
+    const res = await fetch(s.apiBase + "/api/extension/config", {
+      headers: { "X-Extension-Token": s.token },
+    });
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg.connectMemberId) return cfg.connectMemberId;
+    }
+  } catch (_) {
+    // 서버를 못 읽으면 확장에 저장된 값으로 폴백
+  }
+  return (s.connectMemberId || "").replace(/\D/g, "");
+}
+
 async function collectAffiliate(source, days = 30) {
   const s = await chrome.storage.local.get(["apiBase", "token", "connectMemberId"]);
   if (!s.apiBase || !s.token) return { source, ok: false, error: "서버 연결 설정이 필요합니다." };
-  if (source === "NAVER_CONNECT" && !s.connectMemberId) {
-    return { source, ok: false, error: "설정에 커넥트 회원번호를 입력하세요." };
+
+  const memberId = source === "NAVER_CONNECT" ? await connectMemberId(s) : "";
+  if (source === "NAVER_CONNECT" && !memberId) {
+    return { source, ok: false, error: "관리자 설정 → 네이버 → 브랜드커넥트 회원 ID 를 입력하세요." };
   }
 
   let tab;
   try {
-    tab = await ensureAffiliateTab(source, s.connectMemberId);
+    tab = await ensureAffiliateTab(source, memberId);
   } catch (e) {
     return { source, ok: false, error: "탭을 열지 못했습니다: " + String(e?.message || e) };
   }
@@ -853,7 +876,7 @@ async function collectAffiliate(source, days = 30) {
   try {
     result =
       source === "NAVER_CONNECT"
-        ? await scrapeConnect(tab.tabId, s.connectMemberId, days)
+        ? await scrapeConnect(tab.tabId, memberId, days)
         : await scrapeCoupang(tab.tabId);
   } catch (e) {
     result = { ok: false, error: String(e?.message || e) };
@@ -863,6 +886,14 @@ async function collectAffiliate(source, days = 30) {
   }
 
   if (!result.ok) {
+    // 후보 주소를 서버에 남긴다 — 사용자에게 콘솔을 읽어 오라고 할 순 없다.
+    if (result.endpoints?.length) {
+      fetch(s.apiBase + "/api/extension/affiliate/debug", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Extension-Token": s.token },
+        body: JSON.stringify({ source, endpoints: result.endpoints }),
+      }).catch(() => {});
+    }
     return { source, ok: false, error: result.error, endpoints: result.endpoints };
   }
 

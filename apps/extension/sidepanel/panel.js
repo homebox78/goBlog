@@ -36,7 +36,6 @@ async function init() {
   config.tistoryBlog = stored.tistoryBlog || "hom2box";
   $("#apiBase").value = config.apiBase;
   $("#token").value = config.token;
-  $("#connectMemberId").value = stored.connectMemberId || "";
   $("#tistoryBlog").value = config.tistoryBlog;
 
   $("#version").textContent = "v" + chrome.runtime.getManifest().version;
@@ -99,8 +98,6 @@ async function saveSetup() {
   config.apiBase = $("#apiBase").value.trim().replace(/\/+$/, "");
   config.token = $("#token").value.trim();
   config.tistoryBlog = $("#tistoryBlog").value.trim().replace(/\.tistory\.com.*$/i, "") || "hom2box";
-  // 커넥트 회원번호 — 대시보드 주소(brandconnect.naver.com/{번호}/...)의 숫자. x-space-id 헤더에 필요하다.
-  config.connectMemberId = $("#connectMemberId").value.trim().replace(/\D/g, "");
   await chrome.storage.local.set(config);
   $("#setup").classList.add("hidden");
   loadArticles();
