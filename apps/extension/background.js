@@ -862,6 +862,22 @@ async function scrapeCoupang(tabId) {
   return res?.result ?? { ok: false, error: "쿠팡 페이지에서 응답이 없습니다." };
 }
 
+/** 커넥트 회원번호 — **서버 설정이 정답이다.** 관리자에 넣은 값을 확장에 또 넣게 하지 않는다. */
+async function connectMemberId(s) {
+  try {
+    const res = await fetch(s.apiBase + "/api/extension/config", {
+      headers: { "X-Extension-Token": s.token },
+    });
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg.connectMemberId) return cfg.connectMemberId;
+    }
+  } catch (_) {
+    // 서버를 못 읽으면 확장에 저장된 값으로 폴백
+  }
+  return (s.connectMemberId || "").replace(/\D/g, "");
+}
+
 async function collectAffiliate(source, days = 30) {
   const s = await chrome.storage.local.get(["apiBase", "token", "connectMemberId"]);
   if (!s.apiBase || !s.token) return { source, ok: false, error: "서버 연결 설정이 필요합니다." };

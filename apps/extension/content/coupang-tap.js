@@ -10,9 +10,14 @@
   if (window.__goblogTap) return;
   window.__goblogTap = [];
 
-  const record = (url, method, body) => {
+  const record = (rawUrl, method, body) => {
     try {
-      if (!/partners\.coupang\.com|coupang\.com\/api/i.test(url)) return;
+      // ⚠️ SPA는 **상대 주소**로 부른다 ("/api/v1/report/..."). 문자열만 보고 거르면
+      //    진짜 요청을 전부 버린다 (실제로 그랬다 — 구글 애널리틱스만 잡혔다).
+      //    절대 주소로 바꿔 **출처(host)** 로 판단한다.
+      const url = new URL(String(rawUrl), location.origin).href;
+      const host = new URL(url).hostname;
+      if (!/(^|\.)coupang\.com$/i.test(host)) return; // 남의 집(GA 등)은 안 본다
       if (/\.(js|css|png|jpg|jpeg|gif|svg|woff2?|ico)(\?|$)/i.test(url)) return;
       // 응답이 커도 앞부분만 — 모양만 알면 된다
       window.__goblogTap.push({ url, method, body: String(body ?? "").slice(0, 1200) });
