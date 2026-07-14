@@ -32,7 +32,12 @@ extensionRouter.get(
  * 예전엔 글 단위 플래그(extensionDoneAt)로 숨겨서, 티스토리에 발행하면 네이버 목록에서도
  * 사라져 "발행 대기 글이 없습니다"가 됐다. 한 글을 여러 플랫폼에 올리는 게 정상이므로
  * 해당 플랫폼에 SUCCEEDED 발행 기록이 있는 글만 제외한다.
+ *
+ * 검수 전(DRAFT·REVIEW)과 실패(FAILED) 글은 손으로 올릴 물건이 아니다 — 대기 목록에서 뺀다.
+ * PUBLISHED 는 남긴다: 다른 플랫폼엔 아직 안 올린 글일 수 있다.
  */
+const PUBLISHABLE_STATUSES = ["APPROVED", "SCHEDULED", "PUBLISHED"] as const;
+
 extensionRouter.get(
   "/articles",
   asyncHandler(async (req, res) => {
@@ -40,9 +45,12 @@ extensionRouter.get(
     const isExtPlatform = platform === "NAVER_BLOG" || platform === "TISTORY";
 
     const rows = await prisma.article.findMany({
-      where: isExtPlatform
-        ? { publishJobs: { none: { platform, status: "SUCCEEDED" } } }
-        : { extensionDoneAt: null }, // 플랫폼 미지정(감지 전)은 기존 동작 유지
+      where: {
+        status: { in: [...PUBLISHABLE_STATUSES] },
+        ...(isExtPlatform
+          ? { publishJobs: { none: { platform, status: "SUCCEEDED" } } }
+          : { extensionDoneAt: null }), // 플랫폼 미지정(감지 전)은 기존 동작 유지
+      },
       orderBy: { updatedAt: "desc" },
       take: 100,
       select: {
