@@ -276,6 +276,9 @@ export async function generateArticle(
   // 말투·구조·정보 담는 방식과 "이미 다뤄진 각도 / 빈 각도"를 프롬프트에 넣어, 인용될 만한 글을 쓴다.
   const { getInsightForPrompt, getStyleForPrompt } = await import("../keywords/citation-study.js");
   const insight = keyword ? await getInsightForPrompt(keyword.text).catch(() => null) : null;
+  // 전역 지식 — 지금까지 학습한 모든 인용 분석을 종합한 '주제 무관 법칙'. 키워드 인사이트가 없어도 항상 쓴다.
+  const { getKnowledge } = await import("../keywords/citation-knowledge.js");
+  const knowledge = await getKnowledge().catch(() => null);
   // 말투 프로파일 — 인용 상위 블로거들의 문체를 **실측**한 결과. 전 키워드 공통.
   const style = await getStyleForPrompt(options.stylePlatform ?? "NAVER").catch(() => null);
   // 문체는 사용자가 고르지 않고 AI가 글 성격에 맞게 판단한다 (options.tone이 있으면만 힌트로 사용)
@@ -360,6 +363,15 @@ export async function generateArticle(
             "- 모든 목록을 '① ② ③'처럼 기계적으로 병렬 나열하지 않는다. 중요한 것은 길게, 곁가지는 한 줄로.",
             "- 겪지 않은 경험·후기는 지어내지 않는다. 대신 공식 자료·수치·출처로 신뢰도를 채운다.",
             ...style.rules.map((r) => `- ${r}`),
+          ].join("\n")
+        : "",
+      knowledge
+        ? [
+            "",
+            `[📚 누적 지식 — 인용 분석 ${knowledge.basedOnKeywords}개 주제를 종합해 뽑은 '주제 무관 법칙'. 관찰의 산물이지 추측이 아니다]`,
+            "- userPayload.citationKnowledge.laws 는 여러 주제에서 반복 관찰된 '인용을 부르는 법칙'이다. 이 글에도 적용한다.",
+            "- infoPatterns 는 AI가 뽑아 쓰기 좋게 정보를 담는 방식이다. 핵심 사실(수치·조건·날짜·절차)은 반드시 본문 텍스트에 쓴다.",
+            "- antiPatterns 는 반복 관찰된 실패 패턴이다. 하지 않는다.",
           ].join("\n")
         : "",
       insight
@@ -477,6 +489,10 @@ export async function generateArticle(
       styleProfile: style ? { measured: style.metrics, rules: style.rules, sampleSentences: style.samples } : null,
       // 이 키워드에서 AI 브리핑에 인용되는 글들을 실제로 읽고 뽑은 패턴.
       // coveredAngles 는 반복 금지, gaps 는 우리가 파고들 틈이다.
+      // 누적 지식 — 엔진이 바뀌어도 그대로 쓰이는 평문 지식 (특정 AI에 묶이지 않는다)
+      citationKnowledge: knowledge
+        ? { laws: knowledge.laws, infoPatterns: knowledge.infoPatterns, antiPatterns: knowledge.antiPatterns }
+        : null,
       citationInsight: insight
         ? {
             whyTheyGetCited: insight.whyCited,
@@ -923,12 +939,25 @@ export async function improveArticle(
 
   let lastTags: string[] = [];
   let claudeError: string | null = null;
-  for (let attempt = 0; attempt < 2 && quality.score < minScore; attempt += 1) {
+  // 3회까지 시도한다 — 2회로는 '키워드 문구 반복' 같은 항목이 끝내 안 채워져 점수가 기준선 아래에 멈춘다
+  for (let attempt = 0; attempt < 3 && quality.score < minScore; attempt += 1) {
     const issues = quality.items
       .filter((item) => !item.ok)
       .map((item) => item.label + (item.note ? ` — ${item.note}` : ""));
     if (quality.policyRisks.length > 0) {
       issues.push("정책 위험 문구 제거: " + quality.policyRisks.join(", "));
+    }
+
+    // ⚠️ '키워드 반복'은 label만 주면 LLM이 뭘 해야 하는지 모른다 (긴 문구는 자연스럽지 않아 회피한다).
+    // 지금 몇 회고 몇 회가 필요한지 숫자로 못박아 준다.
+    const kwCount =
+      (markdown.replace(/\s+/g, "").split(topic.replace(/\s+/g, "")).length - 1) || 0;
+    if (kwCount < 2) {
+      issues.push(
+        `⚠️ 최우선: 핵심 키워드 문구 "${topic}" 가 본문에 지금 ${kwCount}회만 등장한다. ` +
+          `이 문구를 **토씨·띄어쓰기 하나 바꾸지 말고 그대로** 최소 2회(권장 3회) 넣어라 — ` +
+          `①도입부 첫 문단 ②본문 중반 ③마무리 부근. 단, 문장 안에 자연스럽게 녹여라(나열·반복 금지).`,
+      );
     }
     let revised: Partial<Pick<GeneratedContent, "title" | "metaDescription" | "excerpt" | "contentMarkdown">> & {
       tags?: string[];

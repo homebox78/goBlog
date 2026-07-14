@@ -252,6 +252,13 @@ export async function scheduleFromSettings(): Promise<void> {
           const study = await studyPendingKeywords(5);
           console.log(`[scheduler] 인용 학습: 키워드 ${study.studied}개 분석 완료`);
           // 말투 프로파일 — 인용 상위 블로거들의 문체를 실측해 전 글 생성에 적용한다 (하루 1회 갱신)
+          // 누적 지식 갱신 — 새 인사이트가 쌓일수록 '주제 무관 법칙'을 다시 종합한다 (계속 증적되는 지식)
+          const { rebuildKnowledge } = await import("../keywords/citation-knowledge.js");
+          const knowledge = await rebuildKnowledge();
+          if (knowledge)
+            console.log(
+              `[scheduler] 누적 지식 갱신: ${knowledge.basedOnKeywords}개 주제 종합 → 법칙 ${knowledge.laws.length}개`,
+            );
           const style = await studyStyle();
           if (style) console.log(`[scheduler] 말투 학습: ${style.metrics.posts}명 실측 (하십시오체 ${style.metrics.formalRatio}%)`);
         } catch (error) {

@@ -21,10 +21,22 @@ interface PublishJob {
   platform: string;
   status: string;
   scheduledAt: string | null;
+  finishedAt: string | null; // 실제로 발행이 끝난 시각 (초까지 기록)
   publishedUrl: string | null;
   error: string | null;
   createdAt: string;
   article: { id: number; title: string };
+}
+
+/** 발행일시 — 년월일 시:분:초 (언제 나갔는지 초까지 남긴다) */
+function formatStamp(iso: string): string {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("ko-KR")} ${d.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })}`;
 }
 
 const STATUS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
@@ -119,6 +131,7 @@ export default function SchedulePage() {
                   <TableHead>글</TableHead>
                   <TableHead className="text-center">플랫폼</TableHead>
                   <TableHead className="text-center">예약</TableHead>
+                  <TableHead className="text-center">발행일시</TableHead>
                   <TableHead className="text-center">상태</TableHead>
                   <TableHead>결과</TableHead>
                   <TableHead className="w-16 text-center">액션</TableHead>
@@ -142,6 +155,9 @@ export default function SchedulePage() {
                       </TableCell>
                       <TableCell className="text-center text-xs text-muted-foreground">
                         {job.scheduledAt ? new Date(job.scheduledAt).toLocaleString("ko-KR") : "즉시"}
+                      </TableCell>
+                      <TableCell className="text-center font-mono text-xs whitespace-nowrap text-muted-foreground">
+                        {job.status === "SUCCEEDED" && job.finishedAt ? formatStamp(job.finishedAt) : "—"}
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant={status.variant}>{status.label}</Badge>

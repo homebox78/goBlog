@@ -732,21 +732,36 @@ function CitationsView() {
             <Card>
               <CardContent className="py-4">
                 <p className="mb-3 text-sm font-medium">🏆 자주 인용되는 블로거 (내 키워드 기준)</p>
-                <div className="flex flex-wrap gap-2">
-                  {query.data!.topBlogs.map((b) => (
-                    <a
-                      key={b.blogId}
-                      href={`https://blog.naver.com/${b.blogId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-md border px-2 py-1 text-xs hover:bg-accent"
-                    >
-                      <span className="font-medium">{b.blogName ?? b.blogId}</span>
-                      <span className="ml-1 font-mono text-emerald-600">{citedText(b.citedCount, null)}</span>
-                      <span className="ml-1 text-muted-foreground">· {b.posts}건</span>
-                    </a>
+                {/* 순위가 핵심인데 태그처럼 흩뿌리면 누가 위인지 안 보인다 — 인용수 내림차순 랭킹 목록으로 */}
+                <ol className="space-y-1">
+                  {query.data!.topBlogs.map((b, index) => (
+                    <li key={b.blogId}>
+                      <a
+                        href={`https://blog.naver.com/${b.blogId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="-mx-2 flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
+                      >
+                        <span
+                          className={`w-6 shrink-0 text-center font-mono text-xs ${
+                            index < 3 ? "font-bold text-amber-600" : "text-muted-foreground"
+                          }`}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                          {b.blogName ?? b.blogId}
+                        </span>
+                        <span className="shrink-0 font-mono text-xs text-emerald-600">
+                          {citedText(b.citedCount, null)}
+                        </span>
+                        <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
+                          {b.posts}건
+                        </span>
+                      </a>
+                    </li>
                   ))}
-                </div>
+                </ol>
               </CardContent>
             </Card>
           )}
