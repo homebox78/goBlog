@@ -683,6 +683,8 @@ async function sendToTab(tabId, payload) {
 //
 // 두 곳 다 공개 API가 없다: 커넥트는 아예 없고, 쿠팡은 Open API 키 발급이 중지됐다.
 
+const COUPANG_REPORT_URL = "https://partners.coupang.com/#affiliate/ws/report/trend/daily";
+
 const AFFILIATE_TABS = {
   NAVER_CONNECT: {
     match: "https://brandconnect.naver.com/*",
@@ -690,7 +692,8 @@ const AFFILIATE_TABS = {
   },
   COUPANG: {
     match: "https://partners.coupang.com/*",
-    open: () => "https://partners.coupang.com/#affiliate/ws",
+    // 홈이 아니라 **일별 리포트 화면**을 연다 — 여기서만 일별 실적 요청이 나간다.
+    open: () => COUPANG_REPORT_URL,
   },
 };
 
@@ -775,8 +778,11 @@ async function scrapeConnect(tabId, memberId, days) {
  * "못 찾았다"고 말하고 주소를 보여주는 편이 낫다.
  */
 async function scrapeCoupang(tabId) {
-  // 페이지를 **새로고침**해서 tap(content/coupang-tap.js, MAIN world, document_start)이
-  // 첫 요청부터 전부 기록하게 한다. performance 기록으로는 실적 요청이 안 잡혔다.
+  // 열려 있는 탭이 홈일 수 있다 → **일별 리포트 화면으로 보낸 뒤** 새로고침한다.
+  // 새로고침을 해야 tap(content/coupang-tap.js, MAIN world, document_start)이 **첫 요청부터** 기록한다.
+  // (해시 라우트만 바꾸면 SPA가 페이지를 새로 안 띄워서 tap이 안 걸린다 → update 후 reload)
+  await chrome.tabs.update(tabId, { url: COUPANG_REPORT_URL });
+  await new Promise((r) => setTimeout(r, 1500));
   await chrome.tabs.reload(tabId);
   await new Promise((resolve) => {
     const timer = setTimeout(resolve, 25000);
