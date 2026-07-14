@@ -614,19 +614,34 @@ async function markPublished() {
   loadArticles();
 }
 
-
 // ── 제휴 실적 수집 ────────────────────────────────────────────────
-// 커넥트는 API가 없어 **로그인된 이 브라우저**로만 가져올 수 있다 (background가 실제 호출을 한다).
+// 커넥트·쿠팡은 공개 API가 없다. background 가 **대시보드 탭 안에서**(페이지 출신으로) 호출한다
+// — 확장 출신으로 부르면 CORS에 막힌다.
+const SOURCE_LABEL = { NAVER_CONNECT: "커넥트", COUPANG: "쿠팡" };
+
 $("#collectAffiliate")?.addEventListener("click", async () => {
   const out = $("#affiliateResult");
-  out.textContent = "수집 중...";
+  out.textContent = "수집 중... (대시보드를 열어 확인합니다)";
   const res = await chrome.runtime.sendMessage({ type: "COLLECT_AFFILIATE", days: 30 });
-  if (!res?.ok) {
-    out.textContent = `❌ ${res?.error || "수집 실패"}`;
+  if (!res?.results) {
+    out.textContent = "❌ 확장 백그라운드가 응답하지 않습니다. 확장을 새로고침하세요.";
     return;
   }
-  const sum = res.summary;
-  out.textContent = sum
-    ? `✅ ${res.saved}일치 저장 · 최근 30일 유입 ${sum.accessCnt ?? 0} · 거래액 ${(sum.salesAmount ?? 0).toLocaleString("ko-KR")}원 · 수수료 ${(sum.commissionAmount ?? 0).toLocaleString("ko-KR")}원`
-    : `✅ ${res.saved}일치 저장`;
+
+  // 한 줄로 뭉뚱그리지 않는다 — 어느 쪽이 왜 실패했는지 보여야 고칠 수 있다
+  out.innerHTML = res.results
+    .map((r) => {
+      const name = SOURCE_LABEL[r.source] || r.source;
+      if (r.ok) {
+        const sum = r.summary;
+        const detail = sum
+          ? ` · 유입 ${sum.accessCnt ?? 0} · 수수료 ${(sum.commissionAmount ?? 0).toLocaleString("ko-KR")}원`
+          : "";
+        return `✅ ${name}: ${r.saved}일치 저장${detail}`;
+      }
+      const hint = r.endpoints?.length ? `<br><small>후보 주소 ${r.endpoints.length}개 (콘솔 확인)</small>` : "";
+      if (r.endpoints?.length) console.log(`[goBlog] ${name} 후보 주소:`, r.endpoints);
+      return `❌ ${name}: ${r.error || "실패"}${hint}`;
+    })
+    .join("<br>");
 });

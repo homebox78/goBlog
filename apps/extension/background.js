@@ -674,81 +674,232 @@ async function sendToTab(tabId, payload) {
   return res ?? { ok: false, error: "응답 없음" };
 }
 
-// ── 제휴 실적 수집 (네이버 쇼핑커넥트) ──────────────────────────────────────
+// ── 제휴 실적 수집 (네이버 커넥트 · 쿠팡 파트너스) ──────────────────────────
 //
-// 커넥트는 공개 API가 없다. 대신 대시보드가 스스로 부르는 JSON을 **같은 로그인 세션으로** 그대로 부른다
-// (화면을 긁지 않는다 — 디자인이 바뀌어도 안 깨진다).
-//   GET https://gw-brandconnect.naver.com/affiliate/query/sales-performances/summary/chart
-//       ?startDate=&endDate=&chartPeriod=DAY   → [{startDate, accessCnt, salesAmount}, ...]
-//   GET .../summary?startDate=&endDate=        → {accessCnt, productOrderCnt, salesAmount, commissionAmount}
-// 인증: 네이버 로그인 쿠키 + x-space-id 헤더.
-const CONNECT_GW = "https://gw-brandconnect.naver.com/affiliate/query/sales-performances";
+// ⚠️ **확장 출신(chrome-extension://)으로 부르면 CORS에 막힌다.** 쿠키가 있어도 소용없다.
+//    네이버 게이트웨이는 origin 이 brandconnect.naver.com 일 때만 응답한다.
+//    → 그래서 **대시보드 탭 안에서(페이지 출신으로) 부른다.** 화면이 스스로 부르는 것과 똑같아진다.
+//    (첫 구현은 이걸 몰라서 '수집 실패'만 떴다.)
+//
+// 두 곳 다 공개 API가 없다: 커넥트는 아예 없고, 쿠팡은 Open API 키 발급이 중지됐다.
 
-async function collectNaverConnect(days = 30) {
+const AFFILIATE_TABS = {
+  NAVER_CONNECT: {
+    match: "https://brandconnect.naver.com/*",
+    open: (id) => `https://brandconnect.naver.com/${id}/affiliate/sales-dashboard`,
+  },
+  COUPANG: {
+    match: "https://partners.coupang.com/*",
+    open: () => "https://partners.coupang.com/#affiliate/ws",
+  },
+};
+
+/** 해당 사이트 탭을 찾는다. 없으면 백그라운드로 연다(로그인 세션이 필요하므로 반드시 실제 탭이어야 한다). */
+async function ensureAffiliateTab(source, memberId) {
+  const spec = AFFILIATE_TABS[source];
+  const [found] = await chrome.tabs.query({ url: spec.match });
+  if (found?.id) return { tabId: found.id, opened: false };
+
+  const tab = await chrome.tabs.create({ url: spec.open(memberId), active: false });
+  await new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }, 20000);
+    const listener = (id, info) => {
+      if (id === tab.id && info.status === "complete") {
+        clearTimeout(timer);
+        chrome.tabs.onUpdated.removeListener(listener);
+        setTimeout(resolve, 3000); // SPA가 데이터를 마저 불러올 시간
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+  });
+  return { tabId: tab.id, opened: true };
+}
+
+/** 커넥트 — 대시보드가 스스로 부르는 JSON을 **페이지 출신으로** 그대로 부른다 (화면을 긁지 않는다). */
+async function scrapeConnect(tabId, memberId, days) {
+  const [res] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: async (spaceId, dayCount) => {
+      const iso = (d) => d.toISOString().slice(0, 10);
+      const end = new Date();
+      const start = new Date(Date.now() - (dayCount - 1) * 86400000);
+      const gw = "https://gw-brandconnect.naver.com/affiliate/query/sales-performances";
+      const headers = { accept: "application/json", "x-space-id": String(spaceId) };
+      try {
+        const [chartRes, sumRes] = await Promise.all([
+          fetch(gw + "/summary/chart?startDate=" + iso(start) + "&endDate=" + iso(end) + "&chartPeriod=DAY", {
+            headers,
+            credentials: "include",
+          }),
+          fetch(gw + "/summary?startDate=" + iso(start) + "&endDate=" + iso(end), {
+            headers,
+            credentials: "include",
+          }),
+        ]);
+        if (!chartRes.ok) {
+          return { ok: false, error: "커넥트 HTTP " + chartRes.status + " — 네이버 로그인을 확인하세요." };
+        }
+        const chart = await chartRes.json();
+        const summary = sumRes.ok ? await sumRes.json() : null;
+        const rows = (chart?.chart ?? []).map((r) => ({
+          date: r.startDate,
+          clicks: r.accessCnt ?? 0,
+          salesAmount: r.salesAmount ?? 0,
+          orders: 0,
+          commission: 0,
+          raw: { periodSummary: summary },
+        }));
+        return { ok: rows.length > 0, rows, summary, error: rows.length ? null : "커넥트 실적이 0건입니다." };
+      } catch (e) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    args: [String(memberId), days],
+  });
+  return res?.result ?? { ok: false, error: "커넥트 페이지에서 응답이 없습니다." };
+}
+
+/**
+ * 쿠팡 — 리포트 화면이 **자기 API를 부르고 있다.** 그 주소를 performance 기록에서 찾아
+ * **페이지 출신으로** 다시 불러 일별 실적을 얻는다.
+ *
+ * (쿠팡은 Open API 키 발급이 중지됐고, 자동화 브라우저는 403으로 막는다.
+ *  하지만 로그인된 실제 크롬 안에서는 화면과 똑같이 부를 수 있다.)
+ *
+ * 못 찾으면 후보 주소를 그대로 돌려준다 — 추측으로 잘못된 숫자를 저장하느니
+ * "못 찾았다"고 말하고 주소를 보여주는 편이 낫다.
+ */
+async function scrapeCoupang(tabId) {
+  const [res] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: async () => {
+      const urls = performance
+        .getEntriesByType("resource")
+        .filter((e) => e.initiatorType === "xmlhttprequest" || e.initiatorType === "fetch")
+        .map((e) => e.name);
+      const candidates = [...new Set(urls)].filter((u) =>
+        /report|revenue|commission|click|stat|summary|dashboard|performance/i.test(u),
+      );
+
+      const pickDate = (row) => {
+        const raw = String(row.date ?? row.reportDate ?? row.statDate ?? row.day ?? row.dt ?? "");
+        const compact = raw.match(/^(\d{4})(\d{2})(\d{2})$/); // 20260713 형태도 받는다
+        if (compact) return compact[1] + "-" + compact[2] + "-" + compact[3];
+        const dashed = raw.match(/^\d{4}-\d{2}-\d{2}/);
+        return dashed ? dashed[0] : null;
+      };
+
+      for (const url of candidates) {
+        try {
+          const r = await fetch(url, { credentials: "include", headers: { accept: "application/json" } });
+          if (!r.ok) continue;
+          const body = await r.json();
+          const list = Array.isArray(body)
+            ? body
+            : (body?.data ?? body?.rows ?? body?.list ?? body?.result ?? body?.content ?? null);
+          if (!Array.isArray(list) || list.length === 0) continue;
+
+          const rows = [];
+          for (const row of list) {
+            if (!row || typeof row !== "object") continue;
+            const date = pickDate(row);
+            if (!date) continue;
+            rows.push({
+              date,
+              clicks: Number(row.click ?? row.clicks ?? row.clickCount ?? 0) || 0,
+              orders: Number(row.order ?? row.orders ?? row.orderCount ?? 0) || 0,
+              salesAmount: Number(row.gmv ?? row.salesAmount ?? row.amount ?? 0) || 0,
+              commission: Number(row.commission ?? row.revenue ?? row.earning ?? 0) || 0,
+              raw: { from: url },
+            });
+          }
+          if (rows.length > 0) return { ok: true, rows, endpoint: url };
+        } catch (_) {
+          // 이 주소는 아니었다 — 다음 후보
+        }
+      }
+
+      return {
+        ok: false,
+        error:
+          candidates.length === 0
+            ? "쿠팡 리포트 화면을 연 상태에서 다시 시도하세요 (화면이 데이터를 불러와야 주소가 잡힙니다)."
+            : "쿠팡 리포트 API를 찾지 못했습니다.",
+        endpoints: candidates.slice(0, 20),
+      };
+    },
+  });
+  return res?.result ?? { ok: false, error: "쿠팡 페이지에서 응답이 없습니다." };
+}
+
+async function collectAffiliate(source, days = 30) {
   const s = await chrome.storage.local.get(["apiBase", "token", "connectMemberId"]);
-  if (!s.apiBase || !s.token || !s.connectMemberId) {
-    return { ok: false, error: "커넥트 회원번호(설정)와 서버 연결이 필요합니다." };
+  if (!s.apiBase || !s.token) return { source, ok: false, error: "서버 연결 설정이 필요합니다." };
+  if (source === "NAVER_CONNECT" && !s.connectMemberId) {
+    return { source, ok: false, error: "설정에 커넥트 회원번호를 입력하세요." };
   }
 
-  const end = new Date();
-  const start = new Date(Date.now() - (days - 1) * 86400000);
-  const iso = (d) => d.toISOString().slice(0, 10);
-  const headers = { accept: "application/json", "x-space-id": String(s.connectMemberId) };
-
-  const [chartRes, sumRes] = await Promise.all([
-    fetch(`${CONNECT_GW}/summary/chart?startDate=${iso(start)}&endDate=${iso(end)}&chartPeriod=DAY`, {
-      headers,
-      credentials: "include",
-    }),
-    fetch(`${CONNECT_GW}/summary?startDate=${iso(start)}&endDate=${iso(end)}`, {
-      headers,
-      credentials: "include",
-    }),
-  ]);
-  if (!chartRes.ok) {
-    // 로그인이 풀리면 302/401이 온다 — 조용히 0건으로 넘기면 "실적이 없다"고 착각한다
-    return { ok: false, error: `커넥트 조회 실패 (HTTP ${chartRes.status}). 네이버 로그인을 확인하세요.` };
+  let tab;
+  try {
+    tab = await ensureAffiliateTab(source, s.connectMemberId);
+  } catch (e) {
+    return { source, ok: false, error: "탭을 열지 못했습니다: " + String(e?.message || e) };
   }
 
-  const chart = await chartRes.json();
-  const summary = sumRes.ok ? await sumRes.json() : null;
+  let result;
+  try {
+    result =
+      source === "NAVER_CONNECT"
+        ? await scrapeConnect(tab.tabId, s.connectMemberId, days)
+        : await scrapeCoupang(tab.tabId);
+  } catch (e) {
+    result = { ok: false, error: String(e?.message || e) };
+  } finally {
+    // 우리가 연 탭만 닫는다 (사용자가 보던 탭은 건드리지 않는다)
+    if (tab.opened) chrome.tabs.remove(tab.tabId).catch(() => {});
+  }
 
-  // 일별은 유입·거래액만 준다. 주문·수수료는 기간 합계만 나와서, 거래액 비율로 나눠 담지 않는다
-  // (없는 값을 지어내지 않는다 — 합계는 합계대로 raw 에 남긴다).
-  const rows = (chart?.chart ?? []).map((row) => ({
-    date: row.startDate,
-    clicks: row.accessCnt ?? 0,
-    salesAmount: row.salesAmount ?? 0,
-    orders: 0,
-    commission: 0,
-    raw: { periodSummary: summary },
-  }));
-  if (rows.length === 0) return { ok: false, error: "커넥트에서 받은 실적이 0건입니다." };
+  if (!result.ok) {
+    return { source, ok: false, error: result.error, endpoints: result.endpoints };
+  }
 
-  const res = await fetch(`${s.apiBase}/api/extension/affiliate`, {
+  const res = await fetch(s.apiBase + "/api/extension/affiliate", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Extension-Token": s.token },
-    body: JSON.stringify({ source: "NAVER_CONNECT", rows }),
+    body: JSON.stringify({ source, rows: result.rows }),
   });
-  if (!res.ok) return { ok: false, error: `서버 저장 실패 (HTTP ${res.status})` };
+  if (!res.ok) return { source, ok: false, error: "서버 저장 실패 (HTTP " + res.status + ")" };
   const saved = await res.json();
-  return { ok: true, saved: saved.saved, days: rows.length, summary };
+  return { source, ok: true, saved: saved.saved, summary: result.summary ?? null };
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== "COLLECT_AFFILIATE") return false;
-  collectNaverConnect(message.days || 30)
-    .then(sendResponse)
-    .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
+  (async () => {
+    const days = message.days || 30;
+    const results = [];
+    // 한쪽이 실패해도 다른 쪽은 저장되게 따로 돌린다
+    for (const source of ["NAVER_CONNECT", "COUPANG"]) {
+      try {
+        results.push(await collectAffiliate(source, days));
+      } catch (e) {
+        results.push({ source, ok: false, error: String(e?.message || e) });
+      }
+    }
+    sendResponse({ ok: results.some((r) => r.ok), results });
+  })();
   return true; // 비동기 응답
 });
 
-// 하루 한 번 자동 수집 — 사용자가 버튼을 누르지 않아도 실적이 쌓이게 한다.
-// (실적은 소급 정정되므로 최근 30일을 통째로 다시 받아 덮어쓴다)
+// 12시간마다 자동 수집 — 실적은 소급 정정되므로(주문 취소·정산 확정) 최근 30일을 통째로 다시 받아 덮어쓴다.
 chrome.alarms.create("affiliate-daily", { periodInMinutes: 720 });
-chrome.alarms.onAlarm.addListener((alarm) => {
+chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== "affiliate-daily") return;
-  collectNaverConnect(30).then((r) => {
-    if (!r.ok) console.warn("[goBlog] 제휴 실적 자동 수집 실패:", r.error);
-  });
+  for (const source of ["NAVER_CONNECT", "COUPANG"]) {
+    const result = await collectAffiliate(source, 30).catch((e) => ({ ok: false, error: String(e) }));
+    if (!result.ok) console.warn("[goBlog] " + source + " 실적 자동 수집 실패:", result.error);
+  }
 });
