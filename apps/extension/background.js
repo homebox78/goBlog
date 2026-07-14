@@ -857,7 +857,16 @@ async function scrapeCoupang(tabId) {
           continue;
         }
         const rows = findRows(body);
-        if (rows) return { ok: true, rows: rows.map((r) => ({ ...r, raw: { from: call.url } })), endpoint: call.url };
+        if (rows) {
+          return {
+            ok: true,
+            rows: rows.map((r) => ({ ...r, raw: { from: call.url } })),
+            endpoint: call.url,
+            // 성공해도 기록을 남긴다 — 지금은 하루치만 온다. 30일치를 받으려면
+            // 이 화면이 날짜 범위를 **어떻게 넘기는지**(요청 본문) 봐야 한다.
+            calls: calls.map((c) => c.method + " " + c.url + (c.req ? "  [요청] " + c.req : "")),
+          };
+        }
       }
 
       // 못 찾았다 — 기록된 것들을 그대로 보고한다 (추측으로 파싱하지 않는다)
@@ -921,15 +930,17 @@ async function collectAffiliate(source, days = 30) {
     if (tab.opened) chrome.tabs.remove(tab.tabId).catch(() => {});
   }
 
+  // 성공/실패와 무관하게 기록을 서버에 남긴다 — 사용자에게 콘솔을 읽어 오라고 할 순 없다.
+  const trace = result.endpoints ?? result.calls;
+  if (trace?.length) {
+    fetch(s.apiBase + "/api/extension/affiliate/debug", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Extension-Token": s.token },
+      body: JSON.stringify({ source, endpoints: trace }),
+    }).catch(() => {});
+  }
+
   if (!result.ok) {
-    // 후보 주소를 서버에 남긴다 — 사용자에게 콘솔을 읽어 오라고 할 순 없다.
-    if (result.endpoints?.length) {
-      fetch(s.apiBase + "/api/extension/affiliate/debug", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Extension-Token": s.token },
-        body: JSON.stringify({ source, endpoints: result.endpoints }),
-      }).catch(() => {});
-    }
     return { source, ok: false, error: result.error, endpoints: result.endpoints };
   }
 
