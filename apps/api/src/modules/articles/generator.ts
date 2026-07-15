@@ -266,6 +266,12 @@ export async function generateArticle(
   // 실시간 그라운딩 — 생성 시점의 최신 뉴스를 주입해 학습 데이터의 옛 사실(상장·출시·발표 등) 오류를 막는다.
   const { fetchRecentNews } = await import("./grounding.js");
   const recentNews = await fetchRecentNews(topic).catch(() => []);
+  // 백과사전 그라운딩 — 드라마·영화·예능·인물처럼 '사실'을 지어내면 안 되는 주제는 위키백과 개요를 근거로 준다.
+  // (2026-07-15 참교육 사고: 그라운딩 없이 줄거리·인물·결말을 통째로 창작해 발행됨)
+  const { needsEncyclopedia, fetchEncyclopedia } = await import("./encyclopedia.js");
+  const encyclopedia = needsEncyclopedia(topic)
+    ? await fetchEncyclopedia(topic).catch(() => null)
+    : null;
   // 품질 기준은 설정에서 읽는다 (하드코딩 85 → 설정값). userPayload·재시도 루프가 모두 이 값을 쓴다.
   const minScore = await minQualityScore();
   // 내부 링크 후보 — 이미 발행된 내 글 중 주제가 가까운 것. 없으면 빈 배열(링크 규칙도 안 넣는다).
@@ -330,6 +336,17 @@ export async function generateArticle(
       recentNews.length === 0
         ? "- (이번엔 최신 뉴스가 없다) 그러므로 시점 민감 사실을 새로 단정하지 말고, 변하지 않는 정보 위주로 쓰고 최신 사항은 '공식 발표·최신 뉴스 확인'으로 안내한다."
         : "",
+      "",
+      // ⚠️ 참교육 드라마 사고 재발 방지 (2026-07-15): 그라운딩 없이 드라마 줄거리·등장인물을
+      //    통째로 지어내 발행됐다(주인공 이름·배우·결말 전부 허구). 아래 백과사전 사실을 최우선으로 따른다.
+      "[⚠️⚠️ 고유명사·사실 — 지어내면 절대 안 되는 것 (가장 중요)]",
+      "- **등장인물 이름, 배우 이름, 배역명, 감독·작가·제작진, 회차 구성, 줄거리, 결말, 관계도**는 창작 대상이 아니라 '사실'이다. 모르면 지어내지 마라.",
+      "- 아래 userPayload의 encyclopedia(백과사전 사실)가 있으면 그것을 **유일한 근거**로 삼는다. 네 학습 데이터의 기억과 충돌하면 무조건 encyclopedia를 따른다.",
+      "- encyclopedia에 없는 인물·배역·줄거리를 **추측으로 채우지 마라.** '주인공 이름은 ○○'처럼 확신 없는 고유명사를 쓰느니, '주요 인물' 같은 일반 표현을 쓰거나 그 문장을 아예 빼라.",
+      "- 특히 드라마·영화·예능·연예인·스포츠처럼 **사실 관계가 명확한 주제**는, 근거(encyclopedia/recentNews)에 없는 구체적 사실(이름·숫자·사건)을 절대 창작하지 않는다. 틀린 사실은 글 전체의 신뢰를 무너뜨린다.",
+      encyclopedia
+        ? "- ✅ 이번엔 백과사전 사실이 제공됐다(encyclopedia). 인물·배역·줄거리·제작진은 이 안의 내용만 쓴다."
+        : "- ⚠️ 이번엔 백과사전 사실이 없다. 그러므로 인물 이름·배역·줄거리·결말 같은 구체적 사실을 **새로 지어내지 말고**, 확실히 아는 일반 정보와 '공식 채널에서 확인' 안내 위주로 쓴다.",
       "",
       "[조회수 극대화 — 최우선]",
       "- 제목: 핵심 키워드를 앞쪽에 자연스럽게 넣고, 구체적 숫자·연도·대상·결과를 담아 클릭하고 싶게 만든다. 단 과장·허위 낚시는 금지(정책 위반).",
@@ -503,6 +520,10 @@ export async function generateArticle(
       topic,
       // 실시간 그라운딩 — 학습 데이터보다 이 최신 뉴스를 우선해 시점 민감 사실을 판단
       recentNews: recentNews.length > 0 ? recentNews : "최신 뉴스 없음(시점 민감 사실 단정 금지)",
+      // 백과사전 사실 — 있으면 인물·배역·줄거리·제작진은 이것만 근거로 쓴다(지어내기 금지)
+      encyclopedia: encyclopedia
+        ? { 출처: encyclopedia.title, 사실: encyclopedia.summary, url: encyclopedia.url }
+        : "백과사전 사실 없음(인물·줄거리·결말 등 구체적 사실을 새로 지어내지 말 것)",
       // 내부 링크 후보 — 이미 발행된 내 글. 링크는 goblog://article/<id> 로 걸면 발행 시 플랫폼별 URL로 치환된다.
       internalLinkCandidates: internalLinks,
       keywordContext: keyword
