@@ -40,6 +40,11 @@ function toProductInput(p: {
  * 둘 다 없으면 null → 광고 없는 정보성 글로 폴백(도배·정책 위험 방지).
  */
 async function findProductForKeyword(keywordId: number, text: string): Promise<ProductInput | null> {
+  // 제휴 배너 전역 스위치 — off면 어떤 글에도 상품을 붙이지 않는다(순수 정보성 블로그 운영).
+  const { getSettingValues } = await import("../settings/settings.service.js");
+  const bannersOn = (await getSettingValues(["affiliate.bannersEnabled"]))["affiliate.bannersEnabled"];
+  if (bannersOn === "false") return null;
+
   // 사건·사고·재난·뉴스·금융 등엔 광고를 붙이지 않는다 (부적절·정책 위험).
   if (isNonCommercialKeyword(text)) return null;
 
@@ -108,6 +113,32 @@ function suggestArticleType(text: string, sourceType: string | null, intent: str
 }
 
 /**
+ * 오늘 하루 자동 생성 남은 여유분. 설정 `scheduler.dailyLimit`(기본 6) 기준.
+ *
+ * 왜: 대량 생성은 애드센스·검색 스팸 정책의 핵심 위험이다(실측: 하루 27개 찍은 날이 있었다).
+ * KST 자정 기준 오늘 만든 글 수를 세어, 상한을 넘으면 그날은 더 안 만든다.
+ * ⚠️ 상한 이하로 요청받은 count 와 남은 여유분 중 작은 값을 반환한다.
+ */
+async function remainingDailyBudget(requested: number): Promise<number> {
+  const { getSettingValues } = await import("../settings/settings.service.js");
+  const raw = (await getSettingValues(["scheduler.dailyLimit"]))["scheduler.dailyLimit"];
+  const limit = Math.max(0, Number(raw ?? 6) || 6);
+
+  // KST 자정 = UTC 15:00 전날. 오늘 KST에 만들어진 글 수.
+  const now = new Date();
+  const kstMidnightUtc = new Date(now);
+  kstMidnightUtc.setUTCHours(15, 0, 0, 0);
+  if (kstMidnightUtc > now) kstMidnightUtc.setUTCDate(kstMidnightUtc.getUTCDate() - 1);
+
+  const madeToday = await prisma.article.count({ where: { createdAt: { gte: kstMidnightUtc } } });
+  const remaining = Math.max(0, limit - madeToday);
+  if (remaining < requested) {
+    console.log(`[scheduler] 하루 생성 상한 ${limit}개 — 오늘 ${madeToday}개 생성, 남은 여유 ${remaining}개`);
+  }
+  return Math.min(requested, remaining);
+}
+
+/**
  * 오늘 누적 추천 중 아직 글로 쓰지 않은 상위 키워드로 글을 자동 생성한다 (검토 대기 상태).
  * 자동 발행이 아니라 자동 작성 — 발행은 관리자 검토 후 수동/예약.
  */
@@ -170,6 +201,12 @@ async function autoGenerateTopArticles(count: number): Promise<number> {
  *  - 등록 상품(트래킹 링크 보유)이 있으면 배너까지, 없으면 정보성 글(배너는 나중에 삽입)
  */
 async function autoGenerateFromBulkMatches(count: number): Promise<number> {
+  // 배너 전역 스위치 off면 이 경로(상품 홍보 글) 자체를 건너뛴다 — 배너 없는 홍보 글은 의미가 없다.
+  const { getSettingValues } = await import("../settings/settings.service.js");
+  if ((await getSettingValues(["affiliate.bannersEnabled"]))["affiliate.bannersEnabled"] === "false") {
+    return 0;
+  }
+
   const hits = await prisma.bulkMatchHit.findMany({
     where: { usedAt: null },
     orderBy: { score: "desc" },
@@ -232,9 +269,12 @@ export async function scheduleFromSettings(): Promise<void> {
         try {
           const result = await runDailyDiscovery("cron");
           console.log(`[scheduler] 키워드 수집: 추천 ${result.recommendedCount}개`);
-          const made = await autoGenerateTopArticles(2);
+          // 하루 생성 상한 안에서만 만든다. 상위 글 → 매칭 글 순으로 남은 여유분을 나눠 쓴다.
+          const topBudget = await remainingDailyBudget(2);
+          const made = topBudget > 0 ? await autoGenerateTopArticles(topBudget) : 0;
           console.log(`[scheduler] 자동 글 ${made}건 생성 (검토 대기)`);
-          const promoMade = await autoGenerateFromBulkMatches(2);
+          const promoBudget = await remainingDailyBudget(2);
+          const promoMade = promoBudget > 0 ? await autoGenerateFromBulkMatches(promoBudget) : 0;
           console.log(`[scheduler] 매칭 기반 자동 글 ${promoMade}건 생성`);
         } catch (error) {
           console.error("[scheduler] 정기 작업 실패:", (error as Error).message);
