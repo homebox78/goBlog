@@ -3,7 +3,7 @@ import { prisma } from "../../common/prisma.js";
 import { runDailyDiscovery, kstToday, isExcludedTopic } from "../keywords/engine.js";
 import { finishArticlePipeline, generateArticle, type ProductInput } from "../articles/generator.js";
 import { searchCoupangProducts } from "../products/coupang.js";
-import { overlapScore, isNonCommercialKeyword } from "../products/product-match.js";
+import { overlapScore, isNonCommercialKeyword, hasBuyingIntent } from "../products/product-match.js";
 
 let keywordJob: Cron | null = null;
 let citationJob: Cron | null = null;
@@ -129,11 +129,16 @@ async function autoGenerateTopArticles(count: number): Promise<number> {
       continue;
     }
     try {
-      // 제휴 수익화: 키워드에 어울리는 상품(등록 상품 우선)을 붙이면 배너·딥링크·대가성 문구가 자동 삽입된다.
-      const product = await findProductForKeyword(rec.keywordId, rec.keyword.text);
+      const articleType = suggestArticleType(rec.keyword.text, rec.keyword.sourceType, rec.keyword.searchIntent);
+      // 제휴 수익화(전략 B): 배너는 **구매 의도가 있는 글에만** 붙인다.
+      // 정보·뉴스 글은 트래픽용으로 깨끗하게 두고, 추천·비교·후기·가격 글에만 상품을 매칭한다.
+      // (전환 안 되는 배너 도배 = 수익 0 + 스팸 인상. hasBuyingIntent 로 걸러낸다.)
+      const product = hasBuyingIntent(rec.keyword.text, articleType)
+        ? await findProductForKeyword(rec.keywordId, rec.keyword.text)
+        : null;
       const result = await generateArticle({
         keywordId: rec.keywordId,
-        articleType: suggestArticleType(rec.keyword.text, rec.keyword.sourceType, rec.keyword.searchIntent),
+        articleType,
         language: "ko",
         schemaTypes: ["BlogPosting", "FAQPage"],
         product: product ?? undefined,
