@@ -4,6 +4,8 @@ export interface RecentNewsItem {
   title: string;
   description: string;
   date: string; // YYYY-MM-DD
+  /** 원문 링크 — '참고자료' 섹션의 재료. 지어낸 링크가 아니라 실제 검색 결과의 주소다. */
+  link?: string;
 }
 
 function stripTags(s: string): string {
@@ -46,10 +48,16 @@ export async function fetchRecentNews(keyword: string, limit = 8): Promise<Recen
     });
     if (!res.ok) return [];
     const data = (await res.json()) as {
-      items?: Array<{ title: string; description: string; pubDate?: string }>;
+      items?: Array<{ title: string; description: string; pubDate?: string; originallink?: string; link?: string }>;
     };
     return (data.items ?? [])
-      .map((it) => ({ title: stripTags(it.title), description: stripTags(it.description), date: toDate(it.pubDate) }))
+      .map((it) => ({
+        title: stripTags(it.title),
+        description: stripTags(it.description),
+        date: toDate(it.pubDate),
+        // 언론사 원문(originallink) 우선 — 네이버 뷰어 링크보다 출처 표기에 적합하다
+        link: (it.originallink || it.link || "").trim() || undefined,
+      }))
       .filter((it) => it.title.length > 4)
       .slice(0, limit);
   } catch {

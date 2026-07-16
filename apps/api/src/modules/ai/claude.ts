@@ -109,6 +109,9 @@ function parseJsonText<T>(text: string): T {
   if (fenced) candidates.push(fenced[1].trim());
   candidates.push(text.trim());
   candidates.push(extractJsonBlock(text));
+  // Claude가 가끔 JSON **문자열 안에** 원시 줄바꿈·탭을 넣는다(이스케이프 없이).
+  // JSON.parse는 이를 거부하므로, 문자열 내부의 제어문자만 이스케이프한 복구본도 시도한다.
+  candidates.push(...candidates.map(repairControlCharsInStrings));
 
   for (const candidate of candidates) {
     try {
@@ -121,6 +124,46 @@ function parseJsonText<T>(text: string): T {
   console.error("[claude] JSON 파싱 실패 — 응답 앞부분:", text.slice(0, 500));
   console.error("[claude] JSON 파싱 실패 — 응답 끝부분:", text.slice(-300));
   throw new HttpError(502, "Claude 응답을 JSON으로 해석하지 못했습니다. (서버 로그 확인)");
+}
+
+/**
+ * JSON **문자열 내부**의 원시 제어문자(줄바꿈·탭 등)만 이스케이프한다.
+ * 문자열 밖(토큰 사이)의 공백·줄바꿈은 합법이므로 건드리지 않는다.
+ */
+function repairControlCharsInStrings(text: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (const ch of text) {
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        out += ch;
+        continue;
+      }
+      if (ch === "\\") {
+        escaped = true;
+        out += ch;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+        out += ch;
+        continue;
+      }
+      const code = ch.charCodeAt(0);
+      if (code < 0x20) {
+        // 문자열 안의 원시 제어문자 → 이스케이프
+        out += ch === "\n" ? "\\n" : ch === "\r" ? "\\r" : ch === "\t" ? "\\t" : `\\u${code.toString(16).padStart(4, "0")}`;
+        continue;
+      }
+      out += ch;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    out += ch;
+  }
+  return out;
 }
 
 function extractJsonBlock(text: string): string {

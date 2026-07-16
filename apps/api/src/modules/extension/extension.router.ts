@@ -48,7 +48,13 @@ extensionRouter.get(
       where: {
         status: { in: [...PUBLISHABLE_STATUSES] },
         ...(isExtPlatform
-          ? { publishJobs: { none: { platform, status: "SUCCEEDED" } } }
+          ? {
+              // 이 플랫폼에 아직 발행 안 된 글
+              publishJobs: { none: { platform, status: "SUCCEEDED" } },
+              // 드립: **릴리즈된 글만** 보여준다(하루 5개씩). 단, 예전 흐름으로 이미 다른 곳에
+              // 발행된 글은 마저 올릴 수 있게 함께 노출한다(부분 발행 마무리).
+              OR: [{ publishAt: { not: null } }, { publishJobs: { some: { status: "SUCCEEDED" } } }],
+            }
           : { extensionDoneAt: null }), // 플랫폼 미지정(감지 전)은 기존 동작 유지
       },
       orderBy: { updatedAt: "desc" },

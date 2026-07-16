@@ -20,6 +20,27 @@ export function isNonCommercialKeyword(text: string): boolean {
   return NON_COMMERCIAL.test(text);
 }
 
+// 구매 의도 신호 — 실제로 물건을 '사려고' 검색하는 말.
+// (제휴 수익은 여기서만 난다. 정보성 글에 배너를 붙이면 전환은 0이고 스팸으로 보인다.)
+const BUYING_INTENT =
+  /추천|비교|후기|리뷰|가성비|best|베스트|순위|어디서|구매|구입|살까|살 때|고르는|고르기|가격|최저가|할인|세일|특가|언박싱|내돈내산|직구|사는 법|필수템|입문용|초보용/i;
+
+/**
+ * 이 키워드가 **구매 의도**를 가졌는가 — 제휴 배너를 붙일 가치가 있는가.
+ *
+ * 왜 필요한가 (2026-07-15, 제휴 전략 B로 전환):
+ *   기존엔 '뉴스·금융이 아니면' 배너를 붙였다(소극적 필터). 그 결과 SK하이닉스 주가 글에
+ *   삼성 모니터 배너가 붙는 식으로, **전환도 안 되고 스팸으로 보이는** 글이 40개 중 9개나 됐다.
+ *   이제 배너는 '사려는 사람'이 읽는 글에만 붙인다: 추천·비교·후기·가격·구매처 류.
+ *
+ * @param articleType suggestArticleType 결과 (product-review·comparison·pricing 은 그 자체로 구매 의도)
+ */
+export function hasBuyingIntent(text: string, articleType?: string | null): boolean {
+  if (isNonCommercialKeyword(text)) return false; // 뉴스·금융·연예·스포츠는 아무리 배너 붙여도 안 산다
+  if (articleType && ["product-review", "comparison", "pricing"].includes(articleType)) return true;
+  return BUYING_INTENT.test(text);
+}
+
 // 상품·키워드 양쪽에 흔히 나오는 일반 단어 — 매칭 근거로 쓰면 오매칭(국내산 채소↔레드미 워치6 국내 구매처)이 난다.
 const STOPWORDS = new Set([
   "국내", "국내산", "국내제조", "국산", "수입", "정품", "최신", "추천", "추천템", "비교", "가격", "요금", "방법",
