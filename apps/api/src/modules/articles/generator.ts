@@ -597,7 +597,7 @@ export async function generateArticle(
           : null,
         imagePrompts: [
           {
-            prompt: "이미지 생성 프롬프트 (영어). 밝고 긍정적인 분위기, 등장인물은 한국인만(외국인 금지). 이미지 속 글자·로고·브랜드 없이. 특정 제품 클로즈업 대신 장면/분위기. 사람이 등장하는 장면이면 아래 characters에 등장 인물을 지정",
+            prompt: "이미지 생성 프롬프트 (영어). **실제 사람이 찍은 사진(photorealistic candid photo, shot on a real camera)처럼** 묘사한다 — 3D 렌더·일러스트·CGI 금지. 구체적인 장면·순간·행동을 자연스럽게(예: 'a Korean woman in her 30s checking her phone at a sunlit kitchen table, candid photo'). 밝고 긍정적, 등장인물은 한국인만(외국인 금지). 이미지 속 글자·로고·브랜드 없이. 특정 제품 클로즈업 대신 장면/분위기. 사람이 등장하는 장면이면 아래 characters에 등장 인물을 지정",
             altText: "한국어 대체 텍스트",
             caption: "캡션",
             position: "본문 [IMAGE:n]의 n (정확히 1, 2, 3 세 장)",

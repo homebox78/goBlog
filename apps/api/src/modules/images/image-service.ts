@@ -65,7 +65,19 @@ async function generateOneImage(prompt: string, fileBase: string, characterKeys:
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const STYLE_GUIDE =
-    "Style: bright, warm, clean and positive mood — never dark, gloomy, or depressing. " +
+    // ── 사진 느낌 강제 (사용자 요청: 실제 사람이 찍은 듯한 리얼함) ──
+    // 이걸 맨 앞에 강하게 둔다. 앞부분이 스타일을 가장 크게 좌우한다.
+    "A PHOTOREALISTIC PHOTOGRAPH — looks like a real photo taken by a real person on an actual camera " +
+    "(DSLR or modern smartphone). This is NOT a 3D render, NOT CGI, NOT an illustration, NOT a digital painting, " +
+    "NOT a video-game render. Avoid the over-smooth, over-clean, glossy, dreamy 'AI-render' look. " +
+    "Candid, natural, documentary/lifestyle photography feel — an ordinary everyday moment, not a staged studio shot. " +
+    "Realistic skin with natural texture (visible pores, subtle imperfections) — never airbrushed or plastic-smooth. " +
+    "Natural, slightly uneven real-world lighting (soft window light, gentle shadows) — not perfectly even or glowing. " +
+    "Shallow, natural depth of field with realistic background blur, as a real 35mm/50mm lens at f/2.0–2.8 produces. " +
+    "Real lived-in environment with small authentic details (slight clutter, worn textures) — not a pristine showroom. " +
+    "Subtle, believable colors and natural film-like grain; avoid oversaturated, glossy, plastic-perfect surfaces. " +
+    // ── 기존 제약 유지 ──
+    "Mood stays warm and positive — never dark, gloomy, or depressing. " +
     "All people must be Korean (East Asian) — absolutely no Western or foreign-looking faces. " +
     "Absolutely NO text, letters, words, numbers, captions, logos, brand marks, trademarks, or brand names anywhere in the image " +
     "(no Apple logo, no Samsung/Nike/etc. marks, no product packaging text) — this avoids copyright/trademark problems. " +
@@ -73,10 +85,12 @@ async function generateOneImage(prompt: string, fileBase: string, characterKeys:
     "Instead show the SCENE or lifestyle around it — e.g. for ramen, a person happily eating ramen, not a ramen package. " +
     "Use only generic, unbranded, logo-free objects and devices. " +
     "If a product must appear, keep it far away as a small unbranded element in a long/wide shot, never the focus. " +
-    "Wide 4:3 landscape composition, natural lighting, clean modern look.";
+    "Wide 4:3 landscape composition.";
   const REFERENCE_GUIDE =
     references.length > 0
-      ? " Reference character image(s) are provided. Use these EXACT characters in the scene — keep their face, hairstyle, clothing, proportions and art style perfectly consistent with the references."
+      ? // 얼굴·정체성은 참조와 일치시키되, 렌더 톤은 사진처럼. (참조가 반실사라 사진화가 자연스럽다)
+        " Reference character image(s) are provided. Keep the SAME person — same face, hairstyle, and overall look " +
+        "as the references — but render them as a real photograph (realistic skin and lighting), not as a smooth 3D character."
       : "";
 
   const requestBody = (withAspect: boolean) => ({
