@@ -107,7 +107,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
         <a href="/tools.php" class="ml-auto text-xs text-zinc-400 hover:text-[<?= $P ?>] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        <?php foreach (TOOLS as $tid => $tt): ?>
+        <?php foreach (array_slice(TOOLS, 0, 6, true) as $tid => $tt): ?>
           <a href="/tool.php?id=<?= nh($tid) ?>" class="flex flex-col items-center gap-1.5 rounded-lg border border-zinc-200 bg-white py-3 hover:border-[<?= $P ?>] hover:shadow-sm transition-all group">
             <span class="material-symbols-outlined text-[24px] text-[<?= $P ?>]"><?= nh($tt['icon']) ?></span>
             <span class="text-[12px] font-bold text-zinc-700 group-hover:text-[<?= $P ?>] text-center px-1 leading-tight"><?= nh(str_replace([' 계산기', ' ↔ ㎡ 변환기'], ['', ' 변환'], $tt['name'])) ?></span>
