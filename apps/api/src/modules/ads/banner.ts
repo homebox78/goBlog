@@ -84,26 +84,57 @@ export async function generateProductBanner(
   const brand = isCoupang ? "쿠팡" : "네이버";
   const cta = isCoupang ? "쿠팡에서 최저가 확인" : "네이버에서 상품 보기";
   const font = await coreFont();
-
-  // 상품 이미지 (실사) — 없거나 실패하면 단색 박스
   const imgBuf = product.imageUrl ? await fetchImage(product.imageUrl) : null;
-
-  const isWide = format === "wide";
-  // 레이아웃 좌표
-  const pad = 18;
-  const imgSize = isWide ? h - pad * 2 : Math.min(w - pad * 2, 150);
-  const imgX = pad;
-  const imgY = isWide ? pad : pad;
-  const textX = isWide ? imgSize + pad * 2 : pad;
-  const textY = isWide ? pad + 10 : imgY + imgSize + 14;
-  const textW = isWide ? w - textX - pad : w - pad * 2;
-
-  const nameLines = wrap(product.name, isWide ? 32 : 24, 2);
   const priceStr = product.price ? `${product.price.toLocaleString("ko-KR")}원` : "";
+  const pad = 16;
+  const isWide = format === "wide";
 
-  const nameTspans = nameLines
-    .map((ln, i) => `<tspan x="${textX}" dy="${i === 0 ? 0 : 26}">${esc(ln)}</tspan>`)
-    .join("");
+  // 포맷별 레이아웃 좌표 계산
+  let imgBox: { x: number; y: number; s: number };
+  let tx: number; // 텍스트 시작 x
+  let brandY: number;
+  let nameY: number;
+  let nameSize: number;
+  let nameUnits: number;
+  let priceSize: number;
+  let ctaY: number;
+  let ctaX: number;
+  let ctaW: number;
+  let textAnchor: "start" | "middle";
+
+  if (isWide) {
+    // 가로형 970×250 — 좌 이미지, 우 텍스트
+    const s = h - pad * 2;
+    imgBox = { x: pad, y: pad, s };
+    tx = pad + s + 24;
+    brandY = 52;
+    nameY = 84;
+    nameSize = 24;
+    nameUnits = 30;
+    priceSize = 30;
+    ctaX = tx;
+    ctaW = 260;
+    ctaY = h - 62;
+    textAnchor = "start";
+  } else {
+    // 세로형(box/card) — 상단 이미지 중앙, 하단 텍스트 중앙, CTA 풀폭
+    const s = format === "card" ? 260 : 118;
+    imgBox = { x: (w - s) / 2, y: 16, s };
+    tx = w / 2;
+    brandY = imgBox.y + s + 22;
+    nameY = brandY + 22;
+    nameSize = format === "card" ? 20 : 15;
+    nameUnits = format === "card" ? 20 : 17;
+    priceSize = format === "card" ? 26 : 20;
+    ctaX = pad;
+    ctaW = w - pad * 2;
+    ctaY = h - 58;
+    textAnchor = "middle";
+  }
+
+  const nameLines = wrap(product.name, nameUnits, 2);
+  const nameTspans = nameLines.map((ln, i) => `<tspan x="${tx}" dy="${i === 0 ? 0 : nameSize + 6}">${esc(ln)}</tspan>`).join("");
+  const priceY = nameY + (nameLines.length - 1) * (nameSize + 6) + priceSize + 8;
 
   const svg = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
     <defs><style>
@@ -111,26 +142,24 @@ export async function generateProductBanner(
       text { font-family:'SC','Noto Sans KR',sans-serif; }
     </style></defs>
     <rect width="${w}" height="${h}" rx="14" fill="#ffffff" stroke="${accent}" stroke-width="2"/>
-    <rect x="${imgX}" y="${imgY}" width="${imgSize}" height="${imgSize}" rx="10" fill="#f4f4f5"/>
-    <rect x="${w - 52}" y="10" width="42" height="19" rx="4" fill="#f1f1f1"/>
-    <text x="${w - 31}" y="23.5" font-size="11" fill="#9aa0a6" text-anchor="middle" font-weight="700">AD</text>
-    <text x="${textX}" y="${textY}" font-size="12" fill="${accent}" font-weight="700">${esc(brand)} 추천</text>
-    <text x="${textX}" y="${textY + 28}" font-size="18" fill="#1a1a1a" font-weight="700">${nameTspans}</text>
-    ${priceStr ? `<text x="${textX}" y="${textY + 28 + nameLines.length * 26 + 6}" font-size="24" fill="${accent}" font-weight="700">${esc(priceStr)}</text>` : ""}
-    <g>
-      <rect x="${textX}" y="${h - (isWide ? 62 : 56)}" width="${Math.min(textW, 240)}" height="42" rx="9" fill="${accent}"/>
-      <text x="${textX + Math.min(textW, 240) / 2}" y="${h - (isWide ? 62 : 56) + 27}" font-size="15" fill="#ffffff" font-weight="700" text-anchor="middle">${esc(cta)} →</text>
-    </g>
+    <rect x="${imgBox.x}" y="${imgBox.y}" width="${imgBox.s}" height="${imgBox.s}" rx="10" fill="#f4f4f5"/>
+    <rect x="${w - 50}" y="10" width="40" height="18" rx="4" fill="#f1f1f1"/>
+    <text x="${w - 30}" y="22.5" font-size="10.5" fill="#9aa0a6" text-anchor="middle" font-weight="700">AD</text>
+    <text x="${tx}" y="${brandY}" font-size="12" fill="${accent}" font-weight="700" text-anchor="${textAnchor}">${esc(brand)} 추천</text>
+    <text x="${tx}" y="${nameY}" font-size="${nameSize}" fill="#1a1a1a" font-weight="700" text-anchor="${textAnchor}">${nameTspans}</text>
+    ${priceStr ? `<text x="${tx}" y="${priceY}" font-size="${priceSize}" fill="${accent}" font-weight="700" text-anchor="${textAnchor}">${esc(priceStr)}</text>` : ""}
+    <rect x="${ctaX}" y="${ctaY}" width="${ctaW}" height="40" rx="9" fill="${accent}"/>
+    <text x="${ctaX + ctaW / 2}" y="${ctaY + 26}" font-size="15" fill="#ffffff" font-weight="700" text-anchor="middle">${esc(cta)} →</text>
   </svg>`;
 
   const composites: Array<{ input: Buffer; top: number; left: number }> = [];
   if (imgBuf) {
     try {
       const resized = await sharp(imgBuf)
-        .resize(imgSize - 8, imgSize - 8, { fit: "contain", background: "#f4f4f5" })
+        .resize(imgBox.s - 8, imgBox.s - 8, { fit: "contain", background: "#f4f4f5" })
         .png()
         .toBuffer();
-      composites.push({ input: resized, top: imgY + 4, left: imgX + 4 });
+      composites.push({ input: resized, top: imgBox.y + 4, left: Math.round(imgBox.x) + 4 });
     } catch {
       // 이미지 처리 실패 시 배경 박스만
     }
