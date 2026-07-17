@@ -55,6 +55,7 @@ enum Platform {
   NAVER_BLOG
   TISTORY
   INSTAGRAM
+  THREADS
 }
 
 model Site {

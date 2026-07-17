@@ -11,7 +11,7 @@ publishRouter.use(requireAuth);
 
 const createSchema = z.object({
   articleId: z.number().int(),
-  platform: z.enum(["BLOGGER", "INSTAGRAM", "WORDPRESS", "NAVER_BLOG", "TISTORY"]),
+  platform: z.enum(["BLOGGER", "INSTAGRAM", "THREADS", "WORDPRESS", "NAVER_BLOG", "TISTORY"]),
   scheduledAt: z.string().datetime().optional(),
 });
 

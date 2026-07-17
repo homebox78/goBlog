@@ -244,6 +244,20 @@ export async function testInstagram(): Promise<TestResult> {
   return { ok: true, message: `연결 성공 — @${data.username}` };
 }
 
+export async function testThreads(): Promise<TestResult> {
+  const values = await getSettingValues(["threads.accessToken"]);
+  const token = values["threads.accessToken"];
+  if (!token) return { ok: false, message: "Threads 액세스 토큰 미설정" };
+  const res = await safeFetch(
+    `https://graph.threads.net/v1.0/me?fields=id,username&access_token=${encodeURIComponent(token)}`,
+  );
+  const data = (await res.json().catch(() => null)) as { id?: string; username?: string; error?: { message?: string } } | null;
+  if (!res.ok || !data?.id) {
+    return { ok: false, message: `계정 조회 실패: ${data?.error?.message ?? `HTTP ${res.status}`}` };
+  }
+  return { ok: true, message: `연결 성공 — @${data.username} (ID ${data.id})` };
+}
+
 /** URL 접근 가능 여부 확인 (블로그 존재 확인용) */
 async function checkUrlReachable(url: string): Promise<TestResult> {
   try {
@@ -275,10 +289,11 @@ export async function testTistory(): Promise<TestResult> {
 
 /** 게시 플랫폼 전체 — 서비스별 결과 목록 */
 export async function testAllPlatforms(): Promise<{ results: TestResult[] }> {
-  const [wordpress, blogger, instagram, naver, tistory] = await Promise.all([
+  const [wordpress, blogger, instagram, threads, naver, tistory] = await Promise.all([
     testWordpress().catch((error) => ({ ok: false, message: (error as Error).message })),
     testBlogger().catch((error) => ({ ok: false, message: (error as Error).message })),
     testInstagram().catch((error) => ({ ok: false, message: (error as Error).message })),
+    testThreads().catch((error) => ({ ok: false, message: (error as Error).message })),
     testNaverBlog().catch((error) => ({ ok: false, message: (error as Error).message })),
     testTistory().catch((error) => ({ ok: false, message: (error as Error).message })),
   ]);
@@ -287,6 +302,7 @@ export async function testAllPlatforms(): Promise<{ results: TestResult[] }> {
       { name: "WordPress", ...wordpress },
       { name: "Blogger", ...blogger },
       { name: "Instagram", ...instagram },
+      { name: "Threads", ...threads },
       { name: "네이버 블로그", ...naver },
       { name: "티스토리", ...tistory },
     ],

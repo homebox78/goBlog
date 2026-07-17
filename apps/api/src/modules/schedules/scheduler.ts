@@ -374,6 +374,14 @@ export async function dripPublishDaily(): Promise<number> {
     round += 1;
   }
 
+  // Threads는 토큰이 설정된 경우에만 자동 발행 대열에 합류 (미설정 시 실패 잡·알림 잡음 방지)
+  const threadsOn = Boolean(
+    (await getSettingValues(["threads.accessToken"]))["threads.accessToken"],
+  );
+  const autoPlatforms: Array<"WORDPRESS" | "BLOGGER" | "THREADS"> = threadsOn
+    ? ["WORDPRESS", "BLOGGER", "THREADS"]
+    : ["WORDPRESS", "BLOGGER"];
+
   let released = 0;
   for (let i = 0; i < picked.length; i += 1) {
     const article = picked[i];
@@ -384,7 +392,7 @@ export async function dripPublishDaily(): Promise<number> {
         where: { id: article.id },
         data: { publishAt: now, status: "SCHEDULED" },
       });
-      for (const platform of ["WORDPRESS", "BLOGGER"] as const) {
+      for (const platform of autoPlatforms) {
         await prisma.publishJob.create({
           data: { articleId: article.id, platform, status: "QUEUED", scheduledAt },
         });

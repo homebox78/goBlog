@@ -79,6 +79,9 @@ export const SETTING_DEFS: SettingDef[] = [
   // Instagram Graph API — 비즈니스/크리에이터 계정 + Facebook 앱 필요. 이미지·캡션 자동 발행 가능.
   { key: "instagram.businessAccountId", group: "platforms", label: "Instagram 비즈니스 계정 ID", secret: false },
   { key: "instagram.accessToken", group: "platforms", label: "Instagram 액세스 토큰", secret: true },
+  // Threads API — '앱 만들기 → 사용 사례: Threads API 액세스'로 발급한 토큰. userId는 비우면 토큰으로 자동 조회.
+  { key: "threads.accessToken", group: "platforms", label: "Threads 액세스 토큰", secret: true },
+  { key: "threads.userId", group: "platforms", label: "Threads 사용자 ID (비우면 자동)", secret: false },
 
   // 텔레그램 알림 — 일일 전체 운영 보고 + 발행 실패 즉시 알림 (@BotFather에서 봇 생성)
   { key: "telegram.botToken", group: "notify", label: "텔레그램 봇 토큰", secret: true },

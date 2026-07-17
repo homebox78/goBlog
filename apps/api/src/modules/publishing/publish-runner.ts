@@ -1,7 +1,7 @@
 import { Cron } from "croner";
 import { prisma } from "../../common/prisma.js";
 import { minQualityScore } from "../articles/quality-gate.js";
-import { publishToBlogger, publishToInstagram, publishToWordpress } from "./connectors.js";
+import { publishToBlogger, publishToInstagram, publishToThreads, publishToWordpress } from "./connectors.js";
 
 const MAX_RETRY = 3;
 let processing = false;
@@ -28,7 +28,7 @@ export async function processQueue(): Promise<void> {
       where: {
         status: "QUEUED",
         // 네이버·티스토리는 Chrome 확장이 처리하므로 서버 러너는 건너뛴다
-        platform: { in: ["WORDPRESS", "BLOGGER", "INSTAGRAM"] },
+        platform: { in: ["WORDPRESS", "BLOGGER", "INSTAGRAM", "THREADS"] },
         OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
       },
       orderBy: { id: "asc" },
@@ -70,6 +70,8 @@ export async function processQueue(): Promise<void> {
           url = (await publishToBlogger(job.article)).url;
         } else if (job.platform === "INSTAGRAM") {
           url = (await publishToInstagram(job.article)).url;
+        } else if (job.platform === "THREADS") {
+          url = (await publishToThreads(job.article)).url;
         } else {
           throw new Error(`${job.platform} 자동 발행은 Chrome 확장(6단계)에서 지원합니다.`);
         }

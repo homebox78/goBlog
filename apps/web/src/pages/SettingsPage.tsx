@@ -74,6 +74,7 @@ const PLATFORM_SUBGROUPS: Array<{ label: string; prefixes: string[]; testName: s
   { label: "네이버 블로그", prefixes: ["naverBlog.", "naverBrandConnect."], testName: "네이버 블로그" },
   { label: "티스토리", prefixes: ["tistory."], testName: "티스토리" },
   { label: "Instagram", prefixes: ["instagram."], testName: "Instagram" },
+  { label: "Threads", prefixes: ["threads."], testName: "Threads" },
 ];
 
 const GROUPS: Array<{ id: string; label: string; description: string; testEndpoint?: string }> = [

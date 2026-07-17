@@ -248,3 +248,59 @@ export async function publishToInstagram(article: {
 
   return { url: `https://www.instagram.com/p/${published.id}` };
 }
+
+/**
+ * Threads 텍스트 발행 — 후킹 요약 + 홈박스 기사 링크로 트래픽을 끌어온다.
+ * 컨테이너 생성 → 발행 → permalink 조회 (graph.threads.net, 토큰은 Threads API 액세스 사용 사례로 발급).
+ */
+export async function publishToThreads(article: {
+  id: number;
+  title: string;
+  excerpt: string | null;
+}): Promise<PublishResult> {
+  const values = await getSettingValues(["threads.userId", "threads.accessToken"]);
+  const token = values["threads.accessToken"];
+  let userId = values["threads.userId"];
+  if (!token) throw new Error("Threads 액세스 토큰이 설정되지 않았습니다. 설정 → 게시 플랫폼에서 입력해주세요.");
+
+  // userId 미입력 시 토큰으로 자동 조회해 저장
+  if (!userId) {
+    const me = (await (
+      await fetch(`https://graph.threads.net/v1.0/me?fields=id,username&access_token=${encodeURIComponent(token)}`)
+    ).json()) as { id?: string; error?: { message?: string } };
+    if (!me.id) throw new Error(`Threads 계정 조회 실패: ${me.error?.message ?? "ID 없음"}`);
+    userId = me.id;
+    const { updateSettings } = await import("../settings/settings.service.js");
+    await updateSettings({ "threads.userId": userId }).catch(() => undefined);
+  }
+
+  const tags = await getArticleTags(article.id).catch(() => [] as string[]);
+  const hashtags = tags.slice(0, 3).map((tag) => `#${tag.replace(/\s+/g, "")}`).join(" ");
+  const articleUrl = `https://hom2box.com/article.php?id=${article.id}`;
+  // Threads는 500자 제한 — 제목 + 요약 두 문장 + 링크 + 태그
+  const text = [article.title, "", (article.excerpt ?? "").slice(0, 220), "", `👉 자세히: ${articleUrl}`, hashtags]
+    .join("\n")
+    .trim()
+    .slice(0, 490);
+
+  const createRes = await fetch(`https://graph.threads.net/v1.0/${userId}/threads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ media_type: "TEXT", text, access_token: token }),
+  });
+  const container = (await createRes.json()) as { id?: string; error?: { message?: string } };
+  if (!container.id) throw new Error(`Threads 컨테이너 생성 실패: ${container.error?.message ?? "ID 없음"}`);
+
+  const publishRes = await fetch(`https://graph.threads.net/v1.0/${userId}/threads_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ creation_id: container.id, access_token: token }),
+  });
+  const published = (await publishRes.json()) as { id?: string; error?: { message?: string } };
+  if (!published.id) throw new Error(`Threads 발행 실패: ${published.error?.message ?? "ID 없음"}`);
+
+  const perma = (await (
+    await fetch(`https://graph.threads.net/v1.0/${published.id}?fields=permalink&access_token=${encodeURIComponent(token)}`)
+  ).json()) as { permalink?: string };
+  return { url: perma.permalink ?? `https://www.threads.net/post/${published.id}` };
+}
