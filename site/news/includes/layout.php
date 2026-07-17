@@ -51,6 +51,23 @@ a { text-decoration:none; color:inherit; }
 
 function render_foot(): void
 {
+    ?>
+<button id="h2b-top" type="button" aria-label="맨 위로" onclick="window.scrollTo({top:0,behavior:'smooth'})"
+        class="fixed bottom-6 right-6 z-50 flex h-12 w-12 flex-col items-center justify-center rounded-full bg-[<?= NEWS_PRIMARY ?>] text-white shadow-lg opacity-0 pointer-events-none translate-y-3 transition-all duration-200 hover:bg-[#0f3d82]">
+  <span class="material-symbols-outlined text-[20px] leading-none">keyboard_arrow_up</span>
+  <span class="text-[9px] font-extrabold leading-none tracking-tight">TOP</span>
+</button>
+<script>
+(function(){
+  var b=document.getElementById('h2b-top');
+  function t(){
+    if(window.scrollY>400){b.classList.remove('opacity-0','pointer-events-none','translate-y-3');}
+    else{b.classList.add('opacity-0','pointer-events-none','translate-y-3');}
+  }
+  window.addEventListener('scroll',t,{passive:true}); t();
+})();
+</script>
+    <?php
     echo "</body>\n</html>";
 }
 
