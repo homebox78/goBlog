@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import LoginPage from "@/pages/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/pages/DashboardPage";
+import KeywordBrainPage from "@/pages/KeywordBrainPage";
 import KeywordsPage from "@/pages/KeywordsPage";
 import KeywordDetailPage from "./pages/KeywordDetailPage";
 import ProductsPage from "@/pages/ProductsPage";
@@ -23,10 +24,12 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/keywords" element={<KeywordsPage />} />
+          {/* 키워드 페이지는 3D 두뇌 시각화로 대체. 상세 표는 /keywords/list로 보존 */}
+          <Route path="/keywords" element={<KeywordBrainPage />} />
+          <Route path="/keywords/list" element={<KeywordsPage />} />
           <Route path="/keywords/:id" element={<KeywordDetailPage />} />
-          {/* 트렌드는 키워드 페이지의 탭으로 통합 — 기존 링크 호환용 리다이렉트 */}
-          <Route path="/trends" element={<Navigate to="/keywords?tab=trends" replace />} />
+          {/* 트렌드는 키워드 표 페이지의 탭으로 통합 — 기존 링크 호환용 리다이렉트 */}
+          <Route path="/trends" element={<Navigate to="/keywords/list?tab=trends" replace />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/articles" element={<ArticlesPage />} />
           <Route path="/articles/:id" element={<ArticleDetailPage />} />
