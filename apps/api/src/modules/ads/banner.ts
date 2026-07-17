@@ -123,7 +123,7 @@ export async function generateProductBanner(
     </g>
   </svg>`;
 
-  const composites: sharp.OverlayOptions[] = [];
+  const composites: Array<{ input: Buffer; top: number; left: number }> = [];
   if (imgBuf) {
     try {
       const resized = await sharp(imgBuf)
