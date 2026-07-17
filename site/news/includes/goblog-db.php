@@ -62,14 +62,18 @@ function news_articles(): array
     }
 
     $db = goblog_db();
+    // 홈박스 뉴스는 자체 발행 채널 — goBlog가 '릴리즈'(publishAt 설정, 품질 통과)한 글이면
+    // 외부 플랫폼(WP·블로거) 발행 성공을 기다리지 않고 즉시 노출한다.
     $rows = $db->query(
-        "SELECT a.id, a.title, a.excerpt, a.qualityScore, k.category kwCategory, k.text kwText,
+        "SELECT a.id, a.title, a.excerpt, a.qualityScore, a.publishAt, k.category kwCategory, k.text kwText,
                 pj.platform, pj.publishedUrl, pj.finishedAt
-         FROM publish_jobs pj
-         JOIN articles a ON a.id = pj.articleId
+         FROM articles a
          LEFT JOIN keywords k ON k.id = a.keywordId
-         WHERE pj.publishedUrl IS NOT NULL AND pj.status = 'SUCCEEDED'
-         ORDER BY pj.finishedAt DESC",
+         LEFT JOIN publish_jobs pj
+                ON pj.articleId = a.id AND pj.status = 'SUCCEEDED' AND pj.publishedUrl IS NOT NULL
+         WHERE a.contentHtml IS NOT NULL
+           AND (pj.id IS NOT NULL
+                OR (a.publishAt IS NOT NULL AND a.status IN ('SCHEDULED', 'PUBLISHED')))",
     )->fetchAll();
 
     $byId = [];
@@ -83,13 +87,15 @@ function news_articles(): array
                 'quality' => (int) ($r['qualityScore'] ?? 0),
                 'section' => news_section($r['kwCategory']),
                 'kwText' => $r['kwText'],
-                'publishedAt' => $r['finishedAt'],
+                'publishedAt' => $r['finishedAt'] ?? $r['publishAt'],
                 'image' => null,
                 'platforms' => [],
             ];
         }
-        $byId[$id]['platforms'][$r['platform']] = $r['publishedUrl'];
-        if ($r['finishedAt'] > $byId[$id]['publishedAt']) $byId[$id]['publishedAt'] = $r['finishedAt'];
+        if (!empty($r['platform'])) {
+            $byId[$id]['platforms'][$r['platform']] = $r['publishedUrl'];
+            if ($r['finishedAt'] > $byId[$id]['publishedAt']) $byId[$id]['publishedAt'] = $r['finishedAt'];
+        }
     }
 
     if ($byId) {

@@ -10,7 +10,7 @@ if ($id <= 0) { http_response_code(404); exit('잘못된 요청입니다.'); }
 $db = goblog_db();
 $st = $db->prepare(
     "SELECT a.id, a.title, a.excerpt, a.contentHtml, a.adSource, a.keywordId, a.metaDescription,
-            k.category kwCategory, k.text kwText
+            a.status, a.publishAt, k.category kwCategory, k.text kwText
      FROM articles a
      LEFT JOIN keywords k ON k.id = a.keywordId
      WHERE a.id = ?",
@@ -28,10 +28,16 @@ if ($article) {
     $st->execute([$id]);
     $jobs = $st->fetchAll();
 }
-// 발행 성공한 글만 기사로 공개한다 (초안·검토중 글 노출 방지)
-if (!$article || !$jobs || empty($article['contentHtml'])) { http_response_code(404); exit('기사를 찾을 수 없습니다.'); }
+// 릴리즈(자체 발행)됐거나 외부 발행에 성공한 글만 공개한다 (초안·검토중 글 노출 방지)
+$released = $article
+    && !empty($article['publishAt'])
+    && in_array($article['status'], ['SCHEDULED', 'PUBLISHED'], true);
+if (!$article || (!$jobs && !$released) || empty($article['contentHtml'])) {
+    http_response_code(404);
+    exit('기사를 찾을 수 없습니다.');
+}
 
-$publishedAt = $jobs[0]['finishedAt'];
+$publishedAt = $jobs[0]['finishedAt'] ?? $article['publishAt'];
 foreach ($jobs as $j) if ($j['finishedAt'] > $publishedAt) $publishedAt = $j['finishedAt'];
 $section = news_section($article['kwCategory']);
 
