@@ -203,15 +203,18 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
         endforeach;
     };
     ?>
-    <div class="mt-6 rounded-xl border border-zinc-200 bg-gradient-to-r from-[<?= $P ?>]/[0.04] to-[#0a8f5b]/[0.04] py-3">
-      <div class="flex items-center gap-2 px-4 mb-2.5">
-        <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
-        <span class="material-symbols-outlined text-[20px] text-[<?= $P ?>]">calculate</span>
-        <span class="text-[16px] font-bold tracking-tight">자주 쓰는 계산기 <span class="text-xs font-medium text-zinc-400"><?= count(TOOLS) ?>종</span></span>
-        <a href="/tools.php" class="ml-auto text-xs text-zinc-400 hover:text-[<?= $P ?>] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
+    <div class="mt-7 overflow-hidden rounded-lg border border-zinc-200 bg-white">
+      <div class="flex items-center justify-between border-b border-zinc-100 px-4 sm:px-5 py-3">
+        <div class="flex items-center gap-2.5">
+          <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
+          <span class="material-symbols-outlined text-[19px] text-[<?= $P ?>]">calculate</span>
+          <span class="whitespace-nowrap text-[15.5px] font-bold tracking-tight">자주 쓰는 계산기</span>
+          <span class="flex-none whitespace-nowrap rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] font-bold text-zinc-500"><?= count(TOOLS) ?>종</span>
+        </div>
+        <a href="/tools.php" class="flex-none inline-flex items-center gap-0.5 whitespace-nowrap text-[12px] font-medium text-zinc-400 hover:text-[<?= $P ?>]">전체보기<span class="material-symbols-outlined text-[15px]">chevron_right</span></a>
       </div>
-      <div class="overflow-hidden">
-        <div class="h2b-mq py-0.5">
+      <div class="relative overflow-hidden py-3.5">
+        <div class="h2b-mq">
           <span class="inline-flex items-center"><?php $renderMq(); ?></span>
           <span class="inline-flex items-center" aria-hidden="true"><?php $renderMq(); ?></span>
         </div>
@@ -237,9 +240,9 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
             $wlink = !empty($w['detailLink']) ? $w['detailLink'] : '/welfare.php';
             $wext = !empty($w['detailLink']); ?>
             <a href="<?= nh($wlink) ?>"<?= $wext ? ' target="_blank" rel="noopener"' : '' ?> class="h2b-wf-item block rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-[#0a8f5b] transition-all group">
-              <div class="mb-1.5 flex items-center gap-1.5">
-                <span class="inline-flex items-center rounded bg-[#0a8f5b]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#0a8f5b]"><?= $w['source'] === 'CENTRAL' ? '중앙부처' : '지자체' ?></span>
-                <?php if (!empty($w['lifeCycle'])): ?><span class="text-[10.5px] text-zinc-400"><?= nh($w['lifeCycle']) ?></span><?php endif; ?>
+              <div class="mb-1.5 flex items-center gap-1.5 min-w-0">
+                <span class="inline-flex flex-none items-center rounded bg-[#0a8f5b]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#0a8f5b]"><?= $w['source'] === 'CENTRAL' ? '중앙부처' : '지자체' ?></span>
+                <?php if (!empty($w['lifeCycle'])): ?><span class="min-w-0 flex-1 truncate text-[10.5px] text-zinc-400"><?= nh($w['lifeCycle']) ?></span><?php endif; ?>
               </div>
               <div class="text-[14px] font-bold leading-snug text-zinc-900 group-hover:text-[#0a8f5b] line-clamp-2"><?= nh($w['name']) ?></div>
               <?php if (!empty($w['summary'])): ?><div class="mt-1.5 text-[12px] leading-relaxed text-zinc-500 line-clamp-2"><?= nh($w['summary']) ?></div><?php endif; ?>
@@ -251,7 +254,9 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
     </div>
     <style>
       /* per-view: 모바일 1개(100%) / sm 3개 / lg 4개 — gap 12px 반영한 calc basis */
-      .h2b-wf-track{display:flex;gap:12px;transition:transform .35s ease;will-change:transform;}
+      /* 가로만 클리핑(오프스크린 카드 숨김), 세로는 visible → 카드 하단 테두리·그림자 안 잘림 */
+      #h2b-wf{overflow-x:clip;overflow-y:visible;}
+      .h2b-wf-track{display:flex;gap:12px;align-items:stretch;transition:transform .35s ease;will-change:transform;}
       .h2b-wf-item{flex:0 0 100%;min-width:0;}
       @media (min-width:640px){.h2b-wf-item{flex:0 0 calc((100% - 24px) / 3);}}
       @media (min-width:1024px){.h2b-wf-item{flex:0 0 calc((100% - 36px) / 4);}}
