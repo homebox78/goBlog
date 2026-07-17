@@ -53,6 +53,9 @@ $image = $imgRow ? ($imgRow['webpUrl'] ?: $imgRow['originalUrl']) : null;
 
 $html = $article['contentHtml'];
 
+// 대표이미지는 목록 썸네일·og:image 용도 — 본문에 이미 들어있는 이미지면 상단에 다시 노출하지 않는다(중복 방지).
+$showFigure = $image !== null && strpos($html, $image) === false;
+
 // ── 제휴 배너 자동 삽입 ─────────────────────────────────────────────
 // 생성 단계에서 광고가 안 들어간 글(adSource null)에만, 글 키워드에 매칭된 상품 중
 // 제휴 트래킹 링크(link.coupang.com/coupa.ng/naver.me)가 있는 것을 골라 삽입한다.
@@ -200,7 +203,7 @@ footer { border-top:2px solid var(--ink); padding:20px 0 40px; font-size:12.5px;
 
   <!-- adsense-slot: article-top -->
 
-  <?php if ($image): ?><div class="figure"><img src="<?= nh($image) ?>" alt="<?= nh($article['title']) ?>"></div><?php endif; ?>
+  <?php if ($showFigure): ?><div class="figure"><img src="<?= nh($image) ?>" alt="<?= nh($article['title']) ?>"></div><?php endif; ?>
 
   <article class="content"><?= $html /* goBlog가 생성한 자체 HTML — 이스케이프하지 않음 */ ?></article>
 
