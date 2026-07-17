@@ -37,6 +37,12 @@ a { text-decoration:none; color:inherit; }
 @keyframes h2bticker { from { transform:translateX(0);} to { transform:translateX(-50%);} }
 .h2b-track { display:inline-flex; white-space:nowrap; animation:h2bticker 40s linear infinite; }
 .h2b-track:hover { animation-play-state:paused; }
+/* 속보 티커 일시정지/재생 (시안 동일 — 체크박스 CSS 토글, JS 불필요) */
+.h2b-pause { display:none; }
+.h2b-pause:checked ~ .h2b-bar .h2b-track { animation-play-state:paused !important; }
+.h2b-ico-play { display:none; }
+.h2b-pause:checked ~ label .h2b-ico-play { display:inline-flex; }
+.h2b-pause:checked ~ label .h2b-ico-pause { display:none; }
 </style>
 </head>
 <body class="bg-white text-zinc-900">
@@ -60,10 +66,12 @@ function render_ticker(array $items): void
     ?>
 <div class="border-b border-zinc-200 bg-white">
   <div class="mx-auto max-w-[1399px] flex items-stretch">
-    <span class="flex flex-none items-center gap-1 bg-[#b91c1c] px-3 text-white">
-      <span class="material-symbols-outlined text-[16px]">bolt</span><span class="whitespace-nowrap text-[12.5px] font-extrabold">속보</span>
-    </span>
-    <div class="min-w-0 flex-1 overflow-hidden py-2">
+    <input type="checkbox" id="h2btk" class="h2b-pause">
+    <label for="h2btk" title="클릭하면 멈춤/재생" class="flex flex-none cursor-pointer select-none items-center gap-1 bg-[#b91c1c] px-3 text-white">
+      <span class="h2b-ico-pause material-symbols-outlined text-[16px]">pause</span><span class="h2b-ico-play material-symbols-outlined text-[16px]">play_arrow</span>
+      <span class="whitespace-nowrap text-[12.5px] font-extrabold">속보</span>
+    </label>
+    <div class="h2b-bar min-w-0 flex-1 overflow-hidden py-2">
       <div class="h2b-track">
         <span class="inline-flex"><?php $span(); ?></span>
         <span class="inline-flex" aria-hidden="true"><?php $span(); ?></span>
