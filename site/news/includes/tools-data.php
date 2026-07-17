@@ -25,6 +25,13 @@ const TOOLS = [
     'naverblog' => ['name' => '네이버 블로그 수익 계산기', 'icon' => 'edit_note', 'category' => '크리에이터 수익', 'desc' => '일 방문자와 포스팅 수로 네이버 애드포스트·제휴·원고료 예상 월 수익을 계산합니다', 'kw' => '네이버 블로그 수익,애드포스트,블로그 방문자 수익,체험단 원고료,애드포스트 계산'],
     'coupang' => ['name' => '쿠팡 파트너스 수익 계산기', 'icon' => 'shopping_cart', 'category' => '크리에이터 수익', 'desc' => '월 클릭수·전환율·객단가로 쿠팡 파트너스 예상 커미션을 월·연 단위로 계산합니다', 'kw' => '쿠팡 파트너스,쿠팡 파트너스 수익,제휴 마케팅,쿠팡 커미션,파트너스 수수료'],
     'exchange' => ['name' => '환율 계산기', 'icon' => 'currency_exchange', 'category' => '금융·부동산', 'desc' => '실시간 매매기준율로 달러·유로·엔·위안 등 환전 금액을 계산합니다. 현찰/송금 스프레드와 환율우대까지 반영합니다.', 'kw' => '환율 계산기, 달러 환율, 환전 계산기, 환율우대, 원화 환전, 엔화 환율, 유로 환율'],
+    'incometax' => ['name' => '종합소득세 계산기', 'icon' => 'receipt_long', 'category' => '세금', 'desc' => '종합소득금액·필요경비·공제를 입력하면 2026년 8단계 누진세율로 종합소득세와 지방소득세, 납부(환급) 예상액을 계산합니다.', 'kw' => '종합소득세 계산기, 종소세 계산, 종합소득세율, 누진공제, 5월 종합소득세 신고, 프리랜서 세금'],
+    'yearend' => ['name' => '연말정산 환급액 계산기', 'icon' => 'fact_check', 'category' => '세금', 'desc' => '총급여와 공제 합계, 기납부세액을 입력하면 근로소득공제와 기본세율을 적용해 연말정산 환급액 또는 추가납부액을 계산합니다.', 'kw' => '연말정산 계산기, 연말정산 환급금, 13월의 월급, 근로소득공제, 연말정산 환급액 조회, 결정세액'],
+    'minwage' => ['name' => '최저임금 월급 계산기', 'icon' => 'savings', 'category' => '급여·노무', 'desc' => '시급과 주 근로시간을 입력하면 주휴수당을 포함한 일급·주급·월 환산액을 계산합니다. 2026년 최저시급 기준.', 'kw' => '최저임금 계산기, 2026 최저시급, 최저임금 월급, 주휴수당 포함 월급, 알바 월급 계산'],
+    'wageconv' => ['name' => '시급 ↔ 월급 환산기', 'icon' => 'sync_alt', 'category' => '급여·노무', 'desc' => '시급을 월급으로, 월급을 시급으로 환산합니다. 주 40시간·주휴 포함 월 소정근로시간 209시간 기준.', 'kw' => '시급 월급 계산기, 월급 시급 환산, 209시간, 시급 계산, 월급 환산'],
+    'rentyield' => ['name' => '임대수익률 계산기', 'icon' => 'real_estate_agent', 'category' => '금융·부동산', 'desc' => '매입가·보증금·월세·대출 조건으로 표면 수익률과 대출이자를 반영한 실질(레버리지) 수익률을 계산합니다.', 'kw' => '임대수익률 계산기, 월세 수익률, 상가 수익률, 오피스텔 수익률, 레버리지 수익률, 실질 수익률'],
+    'gifttax' => ['name' => '증여세 계산기', 'icon' => 'redeem', 'category' => '세금', 'desc' => '증여액과 관계(배우자·직계존비속·기타친족)를 선택하면 증여재산공제와 10~50% 누진세율로 예상 증여세를 계산합니다.', 'kw' => '증여세 계산기, 증여세율, 증여재산공제, 자녀 증여 한도, 배우자 증여 6억, 증여세 면제한도'],
+    'corptax' => ['name' => '법인세 계산기', 'icon' => 'corporate_fare', 'category' => '세금', 'desc' => '법인 과세표준을 입력하면 2026년 기준 9~24% 4단계 세율과 누진공제로 법인세와 지방소득세를 계산합니다.', 'kw' => '법인세 계산기, 법인세율, 법인세 과세표준, 법인 지방소득세, 법인세 신고, 1인 법인 세금'],
     'area' => ['name' => '평수 ↔ ㎡ 변환기', 'icon' => 'square_foot', 'category' => '생활·건강', 'desc' => '평과 제곱미터(㎡)를 서로 변환합니다. 부동산 면적 확인에 유용합니다.', 'kw' => '평수 계산기, 평 제곱미터 변환, 평수 환산'],
     'bmi' => ['name' => 'BMI 계산기', 'icon' => 'monitor_weight', 'category' => '생활·건강', 'desc' => '키와 몸무게로 체질량지수(BMI)와 비만도 단계를 계산합니다.', 'kw' => 'BMI 계산기, 체질량지수, 비만도, 정상체중'],
 ];
@@ -1041,6 +1048,338 @@ fxLoad();
         'basis' => ['매매기준율: open.er-api.com 실시간 환율(USD 기준 교차환율). 불러오기 실패 시 내장 근사값 사용', '현찰 살 때 ≈ 매매기준율 +1.75%, 현찰 팔 때 ≈ −1.75% (은행 평균 스프레드 근사)', '송금 보낼 때 ≈ +1.0%, 송금 받을 때 ≈ −1.0%', '환율우대는 매매기준율과의 차이(스프레드)에만 적용 — 우대 100%면 매매기준율과 동일', 'JPY·VND는 관행상 100단위로 표시(계산은 1단위 기준)', '실제 은행 고시환율·수수료와는 차이가 있을 수 있으니 참고용으로 사용'],
         'faq' => [['q' => '매매기준율과 현찰 살 때 환율은 왜 다른가요?', 'a' => '매매기준율은 은행 간 거래의 기준이 되는 도매 환율입니다. 개인이 현찰로 살 때는 지폐 보관·운송 비용 등이 붙어 매매기준율보다 약 1.75% 높고, 팔 때는 그만큼 낮습니다. 송금은 현찰보다 스프레드가 작아 약 ±1%입니다.'], ['q' => '환율우대 90%는 무슨 뜻인가요?', 'a' => '매매기준율과 실제 적용환율의 차이(스프레드)를 90% 깎아준다는 의미입니다. 예를 들어 현찰 살 때 스프레드가 24원이면, 90% 우대 시 2.4원만 붙습니다. 우대 100%면 매매기준율로 환전하는 셈입니다. 은행·카드사 앱마다 우대율이 다르니 확인하세요.'], ['q' => '표시되는 환율이 은행 앱과 조금 달라요.', 'a' => '이 계산기는 실시간 국제 환율(교차환율)에 은행 평균 스프레드를 적용한 근사치입니다. 은행마다 고시환율·수수료·우대 정책이 달라 실제 창구/앱 금액과 수십 원 차이가 날 수 있습니다. 정확한 금액은 거래 은행의 고시환율을 확인하세요.'], ['q' => '엔화 환율이 9원대로 나오는데 맞나요?', 'a' => '1엔당 환율이라 그렇습니다. 흔히 쓰는 \'100엔 = 약 900원\' 표기는 100엔 기준입니다. 시세정보 표에는 100엔 기준으로도 함께 표시됩니다.']],
         'related' => ['savings', 'loan', 'vat'],
+    ],
+    'incometax' => [
+        'body' => '<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">연간 종합소득금액 (만원)</label><input id="tx_income" type="text" inputmode="numeric" value="5,000" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">필요경비 (만원)</label><input id="tx_expense" type="text" inputmode="numeric" value="0" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">소득·인적공제 합계 (만원)</label><input id="tx_ded" type="text" inputmode="numeric" value="150" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">기납부세액 — 원천징수 등 (만원)</label><input id="tx_prepaid" type="text" inputmode="numeric" value="0" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+  </div>
+  <button onclick="calc()" class="w-full rounded-md bg-[#134a9c] text-white h-12 font-bold text-base hover:bg-[#0f3d82] mt-2">계산하기</button>
+  <div id="out" class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-sm hidden"></div>
+  <div class="rounded-lg border border-zinc-200 p-4 text-xs text-zinc-500">
+    <b class="text-zinc-700">2026년 종합소득세 세율표 (8단계)</b>
+    <table class="w-full text-left mt-2"><thead><tr class="text-zinc-400 border-b border-zinc-200"><th class="py-1">과세표준</th><th class="text-right">세율</th><th class="text-right">누진공제</th></tr></thead><tbody>
+    <tr class="border-b border-zinc-100"><td class="py-1">1,400만원 이하</td><td class="text-right">6%</td><td class="text-right">—</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">1,400만 ~ 5,000만원</td><td class="text-right">15%</td><td class="text-right">126만원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">5,000만 ~ 8,800만원</td><td class="text-right">24%</td><td class="text-right">576만원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">8,800만 ~ 1억5,000만원</td><td class="text-right">35%</td><td class="text-right">1,544만원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">1억5,000만 ~ 3억원</td><td class="text-right">38%</td><td class="text-right">1,994만원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">3억 ~ 5억원</td><td class="text-right">40%</td><td class="text-right">2,594만원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">5억 ~ 10억원</td><td class="text-right">42%</td><td class="text-right">3,594만원</td></tr>
+    <tr><td class="py-1">10억원 초과</td><td class="text-right">45%</td><td class="text-right">6,594만원</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<script>
+function won(n){return Math.round(n).toLocaleString(\'ko-KR\')+\'원\';}
+function calc(){
+  var income=nv(\'tx_income\')*10000, expense=nv(\'tx_expense\')*10000, ded=nv(\'tx_ded\')*10000, prepaid=nv(\'tx_prepaid\')*10000;
+  if(!income){alert(\'연간 종합소득금액을 입력하세요.\');return;}
+  var base=Math.max(0,income-expense-ded), rate, tax, prog;
+  if(base<=14000000){rate=\'6%\';prog=0;tax=base*0.06;}
+  else if(base<=50000000){rate=\'15%\';prog=1260000;tax=base*0.15-1260000;}
+  else if(base<=88000000){rate=\'24%\';prog=5760000;tax=base*0.24-5760000;}
+  else if(base<=150000000){rate=\'35%\';prog=15440000;tax=base*0.35-15440000;}
+  else if(base<=300000000){rate=\'38%\';prog=19940000;tax=base*0.38-19940000;}
+  else if(base<=500000000){rate=\'40%\';prog=25940000;tax=base*0.40-25940000;}
+  else if(base<=1000000000){rate=\'42%\';prog=35940000;tax=base*0.42-35940000;}
+  else{rate=\'45%\';prog=65940000;tax=base*0.45-65940000;}
+  tax=Math.max(0,tax);
+  var local=tax*0.1, fin=tax+local-prepaid;
+  var rows=[[\'종합소득금액\',won(income)],[\'필요경비\',\'-\'+won(expense)],[\'소득·인적공제\',\'-\'+won(ded)],[\'과세표준\',won(base)],[\'산출세액 (누진공제 \'+won(prog)+\' 반영)\',won(tax)],[\'지방소득세 (10%)\',won(local)],[\'기납부세액\',\'-\'+won(prepaid)]];
+  var h=\'<div class="text-center mb-4"><div class="text-sm text-zinc-500">\'+(fin<0?\'예상 환급세액\':\'예상 납부세액 (지방소득세 포함)\')+\'</div><div class="text-3xl font-extrabold text-[#134a9c] my-1">\'+won(Math.abs(fin))+\'</div><div class="text-sm text-zinc-600">과세표준 \'+won(base)+\' · 적용세율 \'+rate+\'</div></div><table class="w-full text-left"><tbody>\';
+  rows.forEach(function(r){h+=\'<tr class="border-b border-zinc-100 last:border-0"><td class="py-1.5 text-zinc-500">\'+r[0]+\'</td><td class="py-1.5 text-right font-bold text-zinc-800">\'+r[1]+\'</td></tr>\';});
+  h+=\'</tbody></table><div class="mt-3 text-xs text-zinc-400">※ 세액공제·감면(연금계좌·의료비 등) 미반영 개략 추정치입니다.</div>\';
+  var o=document.getElementById(\'out\');o.classList.remove(\'hidden\');o.innerHTML=h;
+}
+</script>',
+        'intro' => '<p>사업·프리랜서·임대·금융소득 등이 있는 분이 매년 5월에 신고하는 <b>종합소득세</b>를 미리 계산해 보는 도구입니다. 종합소득금액에서 필요경비와 소득·인적공제를 빼 과세표준을 구하고, 2026년 기준 8단계 초과누진세율(6~45%)과 구간별 누진공제액을 적용합니다.</p><p>산출세액에 지방소득세 10%를 더한 뒤 기납부세액(원천징수·중간예납)을 빼면 실제 납부액 또는 환급 예상액이 나옵니다.</p>',
+        'whenUse' => ['5월 종합소득세 신고 전 예상 세액을 미리 가늠할 때', '프리랜서·부업 소득의 원천징수(3.3%) 대비 환급 여부를 확인할 때', '필요경비·공제 규모에 따라 세금이 얼마나 달라지는지 비교할 때', '사업 소득이 늘었을 때 세율 구간(과세표준)이 어디에 걸리는지 확인할 때', '중간예납·원천징수로 미리 낸 세금과 최종 세액을 비교할 때'],
+        'basis' => ['2026년 기준 종합소득세 8단계 초과누진세율(6~45%)과 구간별 누진공제액을 적용합니다.', '과세표준 = 종합소득금액 − 필요경비 − 각종 소득·인적공제.', '산출세액 = 과세표준 × 세율 − 누진공제액. 여기에 지방소득세 10%가 더해집니다.', '기납부세액(원천징수·중간예납)을 빼면 실제 납부(또는 환급)액이 됩니다.', '금액 입력은 만원 단위입니다(예: 5,000 = 5,000만원).', '세액공제·감면(연금계좌·의료비 등)은 반영하지 않은 개략 추정치입니다. 정확한 세액은 홈택스 모의계산 또는 세무 전문가를 확인하세요.'],
+        'faq' => [['q' => '종합소득세 신고 대상은 누구인가요?', 'a' => '근로 외 사업·프리랜서·임대·금융소득 등이 있는 경우가 대상이며, 매년 5월에 신고·납부합니다.'], ['q' => '필요경비는 어떻게 정하나요?', 'a' => '실제 지출한 사업 관련 비용을 증빙으로 인정받거나, 업종별 단순·기준경비율로 추계할 수 있습니다.'], ['q' => '누진공제액이 무엇인가요?', 'a' => '구간별로 낮은 세율이 적용된 부분을 조정해주는 금액으로, 산출세액에서 빼면 실제 누진세액이 됩니다.']],
+        'related' => ['freelancer', 'vat', 'salary'],
+    ],
+    'yearend' => [
+        'body' => '<div class="space-y-4">
+  <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">연간 총급여 (만원)</label><input id="ye_salary" type="text" inputmode="numeric" value="5,000" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">소득·세액공제 합계 (만원)</label><input id="ye_ded" type="text" inputmode="numeric" value="300" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">기납부(원천징수)세액 (만원)</label><input id="ye_prepaid" type="text" inputmode="numeric" value="0" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+  </div>
+  <button onclick="calc()" class="w-full rounded-md bg-[#134a9c] text-white h-12 font-bold text-base hover:bg-[#0f3d82] mt-2">계산하기</button>
+  <div id="out" class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-sm hidden"></div>
+  <div class="rounded-lg border border-zinc-200 p-4 text-xs text-zinc-500">
+    <b class="text-zinc-700">근로소득공제 (총급여 구간별)</b>
+    <table class="w-full text-left mt-2"><thead><tr class="text-zinc-400 border-b border-zinc-200"><th class="py-1">총급여</th><th class="text-right">공제액</th></tr></thead><tbody>
+    <tr class="border-b border-zinc-100"><td class="py-1">500만원 이하</td><td class="text-right">70%</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">500만 ~ 1,500만원</td><td class="text-right">350만원 + 초과분의 40%</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">1,500만 ~ 4,500만원</td><td class="text-right">750만원 + 초과분의 15%</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">4,500만 ~ 1억원</td><td class="text-right">1,200만원 + 초과분의 5%</td></tr>
+    <tr><td class="py-1">1억원 초과</td><td class="text-right">1,475만원 + 초과분의 2%</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<script>
+function won(n){return Math.round(n).toLocaleString(\'ko-KR\')+\'원\';}
+function calc(){
+  var salary=nv(\'ye_salary\')*10000, ded=nv(\'ye_ded\')*10000, prepaid=nv(\'ye_prepaid\')*10000;
+  if(!salary){alert(\'연간 총급여를 입력하세요.\');return;}
+  var earnDed;
+  if(salary<=5000000)earnDed=salary*0.7;
+  else if(salary<=15000000)earnDed=3500000+(salary-5000000)*0.4;
+  else if(salary<=45000000)earnDed=7500000+(salary-15000000)*0.15;
+  else if(salary<=100000000)earnDed=12000000+(salary-45000000)*0.05;
+  else earnDed=14750000+(salary-100000000)*0.02;
+  var base=Math.max(0,salary-earnDed-ded), tax;
+  if(base<=14000000)tax=base*0.06;
+  else if(base<=50000000)tax=base*0.15-1260000;
+  else if(base<=88000000)tax=base*0.24-5760000;
+  else if(base<=150000000)tax=base*0.35-15440000;
+  else tax=base*0.38-19940000;
+  tax=Math.max(0,tax);
+  var settle=tax-prepaid;
+  var rows=[[\'총급여\',won(salary)],[\'근로소득공제\',\'-\'+won(earnDed)],[\'각종 소득·세액공제\',\'-\'+won(ded)],[\'과세표준\',won(base)],[\'결정세액\',won(tax)],[\'기납부세액\',\'-\'+won(prepaid)]];
+  var h=\'<div class="text-center mb-4"><div class="text-sm text-zinc-500">\'+(settle<=0?\'예상 환급액\':\'예상 추가납부액\')+\'</div><div class="text-3xl font-extrabold \'+(settle<=0?\'text-[#0a8f5b]\':\'text-[#dc2626]\')+\' my-1">\'+won(Math.abs(settle))+\'</div><div class="text-sm text-zinc-600">\'+(settle<=0?\'돌려받을 것으로 예상됩니다\':\'더 낼 것으로 예상됩니다\')+\'</div></div><table class="w-full text-left"><tbody>\';
+  rows.forEach(function(r){h+=\'<tr class="border-b border-zinc-100 last:border-0"><td class="py-1.5 text-zinc-500">\'+r[0]+\'</td><td class="py-1.5 text-right font-bold text-zinc-800">\'+r[1]+\'</td></tr>\';});
+  h+=\'</tbody></table><div class="mt-3 text-xs text-zinc-400">※ 세액공제(연금·의료·교육 등)를 단순 합산 가정한 추정치로, 실제 연말정산 결과와 다를 수 있습니다.</div>\';
+  var o=document.getElementById(\'out\');o.classList.remove(\'hidden\');o.innerHTML=h;
+}
+</script>',
+        'intro' => '<p>\'13월의 월급\'으로 불리는 <b>연말정산</b>의 환급액(또는 추가납부액)을 미리 추정해 보는 도구입니다. 총급여에서 구간별 근로소득공제와 각종 공제를 빼 과세표준을 구하고, 종합소득세 기본세율로 결정세액을 계산합니다.</p><p>결정세액이 한 해 동안 원천징수로 미리 낸 기납부세액보다 적으면 차액을 환급받고, 많으면 추가로 납부하게 됩니다.</p>',
+        'whenUse' => ['연말정산 시즌 전에 환급·추가납부 여부를 미리 확인할 때', '연금계좌·의료비 등 공제를 늘리면 세금이 얼마나 줄어드는지 비교할 때', '이직·연봉 인상 후 결정세액 변화를 가늠할 때', '매월 원천징수액(간이세액)이 적정한지 점검할 때'],
+        'basis' => ['총급여에서 근로소득공제와 각종 공제를 빼 과세표준을 구합니다.', '근로소득공제는 총급여 구간별(70%~2%) 법정 공제식을 적용합니다.', '종합소득세 기본세율(6~38% 구간)로 결정세액을 추정합니다.', '결정세액에서 기납부세액을 빼면 환급 또는 추가납부액이 됩니다.', '금액 입력은 만원 단위입니다.', '세액공제(연금·의료·교육 등)를 단순 합산 가정으로, 실제 연말정산 결과와 다를 수 있습니다.'],
+        'faq' => [['q' => '왜 13월의 월급이라 하나요?', 'a' => '미리 낸 원천징수 세금이 결정세액보다 많으면 차액을 환급받기 때문입니다.'], ['q' => '공제를 어떻게 늘리나요?', 'a' => '연금계좌·의료비·기부금·신용카드 사용 등 공제 항목을 챙기면 세액이 줄어듭니다.'], ['q' => '기납부세액은 어디서 확인하나요?', 'a' => '매월 급여명세서의 소득세 원천징수액 합계이며, 홈택스나 회사가 발급하는 근로소득 원천징수영수증에서도 확인할 수 있습니다.']],
+        'related' => ['salary', 'severance', 'freelancer'],
+    ],
+    'minwage' => [
+        'body' => '<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">시급 (원)</label><input id="mw_wage" type="text" inputmode="numeric" value="10,320" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">주 근로시간 (시간)</label><input id="mw_hours" type="number" min="1" max="52" step="1" value="40" class="w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+  </div>
+  <button onclick="calc()" class="w-full rounded-md bg-[#134a9c] text-white h-12 font-bold text-base hover:bg-[#0f3d82] mt-2">계산하기</button>
+  <div id="out" class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-sm hidden"></div>
+  <div class="rounded-lg border border-zinc-200 p-4 text-xs text-zinc-500">
+    <b class="text-zinc-700">주 근로시간별 월 환산액 (시급 10,320원, 주휴 포함)</b>
+    <table class="w-full text-left mt-2"><thead><tr class="text-zinc-400 border-b border-zinc-200"><th class="py-1">주 근로시간</th><th class="text-right">주휴시간</th><th class="text-right">월 환산액</th></tr></thead><tbody>
+    <tr class="border-b border-zinc-100"><td class="py-1">15시간</td><td class="text-right">3시간</td><td class="text-right">약 807,127원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">20시간</td><td class="text-right">4시간</td><td class="text-right">약 1,076,170원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">30시간</td><td class="text-right">6시간</td><td class="text-right">약 1,614,254원</td></tr>
+    <tr><td class="py-1">40시간</td><td class="text-right">8시간</td><td class="text-right">약 2,152,339원</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<script>
+function won(n){return Math.round(n).toLocaleString(\'ko-KR\')+\'원\';}
+function calc(){
+  var wage=nv(\'mw_wage\'), hrs=parseFloat(document.getElementById(\'mw_hours\').value)||0;
+  if(!wage||!hrs){alert(\'시급과 주 근로시간을 입력하세요.\');return;}
+  var weeklyPaid=hrs>=15?Math.min(hrs,40)/40*8:0;
+  var weekly=wage*(hrs+weeklyPaid);
+  var monthly=weekly*4.345;
+  var rows=[[\'시급\',won(wage)],[\'일급 (8시간)\',won(wage*8)],[\'주휴시간\',\'주 \'+(Math.round(weeklyPaid*10)/10)+\'시간\'+(weeklyPaid?\'\':\' (주 15시간 미만 — 주휴 없음)\')],[\'주급 (주휴 포함)\',won(weekly)],[\'월 환산 (× 4.345주)\',won(monthly)]];
+  var h=\'<div class="text-center mb-4"><div class="text-sm text-zinc-500">예상 월 환산액</div><div class="text-3xl font-extrabold text-[#134a9c] my-1">\'+won(monthly)+\'</div><div class="text-sm text-zinc-600">시급 \'+won(wage)+\' · 주 \'+hrs+\'시간 (주휴 포함)</div></div><table class="w-full text-left"><tbody>\';
+  rows.forEach(function(r){h+=\'<tr class="border-b border-zinc-100 last:border-0"><td class="py-1.5 text-zinc-500">\'+r[0]+\'</td><td class="py-1.5 text-right font-bold text-zinc-800">\'+r[1]+\'</td></tr>\';});
+  h+=\'</tbody></table><div class="mt-3 text-xs text-zinc-400">※ 실제 최저임금·수당은 매년 고시액과 근로형태에 따라 다릅니다.</div>\';
+  var o=document.getElementById(\'out\');o.classList.remove(\'hidden\');o.innerHTML=h;
+}
+</script>',
+        'intro' => '<p>시급과 주 근로시간만 입력하면 <b>주휴수당을 포함한</b> 일급·주급·월 환산액을 계산합니다. 주 15시간 이상 일하면 주휴시간이 비례 가산되어 월급이 눈에 띄게 달라집니다.</p><p>2026년 최저시급 예시값(10,320원)을 기본으로 제공하며, 실제 받는 시급을 입력해 아르바이트·단시간 근로의 월 수입을 가늠해 볼 수 있습니다.</p>',
+        'whenUse' => ['알바·단시간 근로의 주휴 포함 월급을 계산할 때', '내 시급이 최저임금 이상인지, 월급으로 얼마인지 확인할 때', '주 15시간 경계에서 주휴수당 발생 여부에 따른 차이를 비교할 때', '채용 공고의 월급이 최저임금 월 환산액(주 40시간 기준) 이상인지 검증할 때'],
+        'basis' => ['2026년 최저시급 예시 10,320원(실제 고시액 확인 필요)을 기본값으로 제공합니다.', '월 환산 시 주 15시간 이상이면 주휴시간을 비례 가산합니다(주휴시간 = 근로시간/40 × 8, 최대 8시간).', '월 환산액 = 시급 × (주 근로시간 + 주휴시간) × 4.345주.', '주 40시간 기준 월 소정근로시간은 약 209시간입니다.', '연장·야간·휴일근로 가산수당은 포함하지 않습니다.', '실제 최저임금·수당은 매년 고시액과 근로형태에 따라 다릅니다.'],
+        'faq' => [['q' => '주휴수당이 뭔가요?', 'a' => '주 15시간 이상 개근 시 유급으로 부여되는 하루치 임금입니다.'], ['q' => '월 209시간은 어떻게 나오나요?', 'a' => '(주 40시간 + 주휴 8시간) × 4.345주 ≈ 209시간입니다.'], ['q' => '주 15시간 미만이면 주휴수당이 없나요?', 'a' => '네. 1주 소정근로시간이 15시간 미만인 초단시간 근로자는 주휴수당 지급 대상에서 제외됩니다. 이 계산기도 15시간 미만 입력 시 주휴를 0으로 처리합니다.']],
+        'related' => ['weeklyholiday', 'salary', 'severance'],
+    ],
+    'wageconv' => [
+        'body' => '<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block text-sm font-bold text-zinc-700 mb-1.5">변환 방향</label>
+      <select id="wc_dir" class="w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30 bg-white">
+        <option value="h2m">시급 → 월급</option>
+        <option value="m2h">월급 → 시급</option>
+      </select>
+    </div>
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">금액 (원)</label><input id="wc_val" type="text" inputmode="numeric" value="10,320" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+  </div>
+  <button onclick="calc()" class="w-full rounded-md bg-[#134a9c] text-white h-12 font-bold text-base hover:bg-[#0f3d82] mt-2">환산하기</button>
+  <div id="out" class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-sm hidden"></div>
+  <div class="rounded-lg border border-zinc-200 p-4 text-xs text-zinc-500">
+    <b class="text-zinc-700">시급별 월급 환산표 (209시간 기준)</b>
+    <table class="w-full text-left mt-2"><thead><tr class="text-zinc-400 border-b border-zinc-200"><th class="py-1">시급</th><th class="text-right">월급</th></tr></thead><tbody>
+    <tr class="border-b border-zinc-100"><td class="py-1">10,000원</td><td class="text-right">2,090,000원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">10,320원 (2026 최저시급 예시)</td><td class="text-right">2,156,880원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">11,000원</td><td class="text-right">2,299,000원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">12,000원</td><td class="text-right">2,508,000원</td></tr>
+    <tr><td class="py-1">15,000원</td><td class="text-right">3,135,000원</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<script>
+function won(n){return Math.round(n).toLocaleString(\'ko-KR\')+\'원\';}
+function calc(){
+  var dir=document.getElementById(\'wc_dir\').value, val=nv(\'wc_val\'), H=209;
+  if(!val){alert(\'금액을 입력하세요.\');return;}
+  var out, outUnit, dirTxt;
+  if(dir===\'h2m\'){out=val*H;outUnit=\'원/월\';dirTxt=\'시급 → 월급\';}
+  else{out=val/H;outUnit=\'원/시\';dirTxt=\'월급 → 시급\';}
+  var rows=[[\'입력값\',won(val)+(dir===\'h2m\'?\' (시급)\':\' (월급)\')],[\'월 소정근로시간\',\'209시간 (주휴 포함)\'],[\'환산값\',won(out)+\' \'+(dir===\'h2m\'?\'/월\':\'/시\')]];
+  var h=\'<div class="text-center mb-4"><div class="text-sm text-zinc-500">환산 결과</div><div class="text-3xl font-extrabold text-[#134a9c] my-1">\'+won(out)+\'</div><div class="text-sm text-zinc-600">\'+dirTxt+\' · 월 소정근로 209시간 기준</div></div><table class="w-full text-left"><tbody>\';
+  rows.forEach(function(r){h+=\'<tr class="border-b border-zinc-100 last:border-0"><td class="py-1.5 text-zinc-500">\'+r[0]+\'</td><td class="py-1.5 text-right font-bold text-zinc-800">\'+r[1]+\'</td></tr>\';});
+  h+=\'</tbody></table><div class="mt-3 text-xs text-zinc-400">※ 연장·야간·휴일 수당은 포함하지 않은 기본 환산입니다.</div>\';
+  var o=document.getElementById(\'out\');o.classList.remove(\'hidden\');o.innerHTML=h;
+}
+</script>',
+        'intro' => '<p>시급을 월급으로, 월급을 시급으로 바로 바꿔 보는 도구입니다. 주 40시간 근무 기준 <b>월 소정근로시간 209시간</b>(주휴 포함)을 사용해 시급 × 209 = 월급, 월급 ÷ 209 = 시급으로 환산합니다.</p><p>채용 공고의 월급이 시급으로 얼마인지, 내 시급이면 월급이 얼마가 되는지 감을 잡을 때 유용합니다.</p>',
+        'whenUse' => ['채용 공고의 월급을 시급으로 환산해 최저임금과 비교할 때', '시급제에서 월급제로(또는 반대로) 전환 시 금액을 가늠할 때', '연봉·월급 협상에서 시간당 가치로 따져볼 때', '아르바이트 시급으로 풀타임 월급을 예상할 때'],
+        'basis' => ['주 40시간 기준 월 소정근로시간 209시간(주휴 포함)을 사용합니다.', '시급→월급 = 시급 × 209, 월급→시급 = 월급 ÷ 209.', '209시간 = (주 40시간 + 주휴 8시간) × 4.345주(반올림).', '연장·야간·휴일 수당은 포함하지 않은 기본 환산입니다.', '실제 근로시간·수당 구조에 따라 달라질 수 있습니다.'],
+        'faq' => [['q' => '왜 209시간인가요?', 'a' => '(40시간 + 주휴 8시간) × 4.345주를 반올림한 법정 월 소정근로시간입니다.'], ['q' => '월급에 주휴가 포함되나요?', 'a' => '월급제는 통상 주휴수당이 포함된 것으로 봅니다.'], ['q' => '주 40시간 미만 근무면 어떻게 계산하나요?', 'a' => '209시간은 주 40시간 전제입니다. 단시간 근로라면 최저임금 월급 계산기에서 실제 주 근로시간을 입력해 주휴 비례분까지 반영해 계산하세요.']],
+        'related' => ['salary', 'weeklyholiday', 'annualleave'],
+    ],
+    'rentyield' => [
+        'body' => '<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">매입가 (만원)</label><input id="ry_price" type="text" inputmode="numeric" value="30,000" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">보증금 (만원)</label><input id="ry_deposit" type="text" inputmode="numeric" value="5,000" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+  </div>
+  <div class="grid grid-cols-3 gap-3">
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">월세 (만원)</label><input id="ry_rent" type="text" inputmode="numeric" value="100" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">대출금 (만원)</label><input id="ry_loan" type="text" inputmode="numeric" value="0" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">대출 금리 (%)</label><input id="ry_rate" type="number" step="0.01" min="0" value="4.5" class="w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+  </div>
+  <button onclick="calc()" class="w-full rounded-md bg-[#134a9c] text-white h-12 font-bold text-base hover:bg-[#0f3d82] mt-2">계산하기</button>
+  <div id="out" class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-sm hidden"></div>
+  <div class="rounded-lg border border-zinc-200 p-4 text-xs text-zinc-500">
+    <b class="text-zinc-700">수익률 공식</b>
+    <table class="w-full text-left mt-2"><tbody>
+    <tr class="border-b border-zinc-100"><td class="py-1">표면 수익률</td><td class="text-right">연 임대수입 ÷ 매입가 × 100</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">실질 수익률</td><td class="text-right">(연 임대수입 − 대출이자) ÷ 실투자금 × 100</td></tr>
+    <tr><td class="py-1">실투자금</td><td class="text-right">매입가 − 보증금 − 대출금</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<script>
+function won(n){return Math.round(n).toLocaleString(\'ko-KR\')+\'원\';}
+function pct(n){return (Math.round(n*10)/10).toLocaleString(\'ko-KR\')+\'%\';}
+function calc(){
+  var price=nv(\'ry_price\')*10000, deposit=nv(\'ry_deposit\')*10000, rent=nv(\'ry_rent\')*10000, loan=nv(\'ry_loan\')*10000;
+  var loanRate=(parseFloat(document.getElementById(\'ry_rate\').value)||0)/100;
+  if(!price||!rent){alert(\'매입가와 월세를 입력하세요.\');return;}
+  var annualRent=rent*12;
+  var surfaceYield=price>0?annualRent/price*100:0;
+  var invest=price-deposit-loan;
+  var interest=loan*loanRate;
+  var netAnnual=annualRent-interest;
+  var netYield=invest>0?netAnnual/invest*100:0;
+  var rows=[[\'연 임대수입 (월세 × 12)\',won(annualRent)],[\'실투자금 (매입가−보증금−대출)\',won(invest)],[\'연 대출이자\',won(interest)],[\'표면 수익률\',pct(surfaceYield)],[\'실질 수익률 (레버리지)\',pct(netYield)]];
+  var h=\'<div class="text-center mb-4"><div class="text-sm text-zinc-500">실질 수익률 (레버리지)</div><div class="text-3xl font-extrabold text-[#134a9c] my-1">\'+pct(netYield)+\'</div><div class="text-sm text-zinc-600">표면 수익률 \'+pct(surfaceYield)+\'</div></div><table class="w-full text-left"><tbody>\';
+  rows.forEach(function(r){h+=\'<tr class="border-b border-zinc-100 last:border-0"><td class="py-1.5 text-zinc-500">\'+r[0]+\'</td><td class="py-1.5 text-right font-bold text-zinc-800">\'+r[1]+\'</td></tr>\';});
+  h+=\'</tbody></table>\'+(invest<=0?\'<div class="mt-3 rounded-md bg-[#dc2626]/10 text-[#dc2626] text-xs font-bold p-3">실투자금이 0 이하입니다. 보증금·대출금 합이 매입가를 넘으면 수익률 계산이 무의미합니다.</div>\':\'\')+\'<div class="mt-3 text-xs text-zinc-400">※ 취득세·중개보수·공실·수선비 등은 반영하지 않은 개략 수익률입니다.</div>\';
+  var o=document.getElementById(\'out\');o.classList.remove(\'hidden\');o.innerHTML=h;
+}
+</script>',
+        'intro' => '<p>오피스텔·상가·주택 월세 투자에서 가장 기본이 되는 <b>표면 수익률</b>과, 대출이자·실투자금을 반영한 <b>실질(레버리지) 수익률</b>을 함께 계산합니다.</p><p>같은 물건이라도 보증금과 대출을 활용하면 자기자본이 줄어 실질 수익률이 크게 달라집니다. 두 수익률을 비교하면 레버리지 효과와 위험을 동시에 가늠할 수 있습니다.</p>',
+        'whenUse' => ['오피스텔·상가 매물의 광고 수익률(표면)을 검증할 때', '대출을 끼면 실질 수익률이 얼마나 달라지는지 비교할 때', '보증금·월세 조건이 다른 매물 여러 개를 같은 기준으로 비교할 때', '금리 상승 시 수익률이 어떻게 변하는지 시뮬레이션할 때'],
+        'basis' => ['표면 수익률 = 연 임대수입 ÷ 매입가 × 100.', '실질 수익률 = (연 임대수입 − 대출이자) ÷ 실투자금 × 100.', '실투자금 = 매입가 − 보증금 − 대출금.', '연 임대수입 = 월세 × 12, 연 대출이자 = 대출금 × 금리.', '금액 입력은 만원 단위입니다.', '취득세·중개보수·공실·수선비 등은 반영하지 않은 개략 수익률입니다.'],
+        'faq' => [['q' => '표면과 실질 차이는?', 'a' => '표면은 비용 무시 총수익률, 실질은 대출이자 등 비용과 자기자본만 반영한 수익률입니다.'], ['q' => '레버리지가 왜 수익률을 올리나요?', 'a' => '자기자본(분모)이 줄기 때문입니다. 다만 금리 상승 시 위험도 커집니다.'], ['q' => '공실·세금까지 넣으면 어떻게 되나요?', 'a' => '실제 수익률은 공실률·취득세·재산세·수선비·중개보수를 빼면 표시값보다 낮아집니다. 보수적으로 보려면 연 임대수입에서 1~2개월치 월세와 연 유지비를 미리 차감해 입력해 보세요.']],
+        'related' => ['jeonsewolse', 'loan', 'acquisition'],
+    ],
+    'gifttax' => [
+        'body' => '<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">증여액 (만원)</label><input id="gt_amount" type="text" inputmode="numeric" value="10,000" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30"></div>
+    <div>
+      <label class="block text-sm font-bold text-zinc-700 mb-1.5">증여자와의 관계</label>
+      <select id="gt_rel" class="w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30 bg-white">
+        <option value="spouse">배우자 (공제 6억)</option>
+        <option value="lineal" selected>직계존비속 (공제 5천만)</option>
+        <option value="etc">기타친족 (공제 1천만)</option>
+      </select>
+    </div>
+  </div>
+  <button onclick="calc()" class="w-full rounded-md bg-[#134a9c] text-white h-12 font-bold text-base hover:bg-[#0f3d82] mt-2">계산하기</button>
+  <div id="out" class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-sm hidden"></div>
+  <div class="rounded-lg border border-zinc-200 p-4 text-xs text-zinc-500">
+    <b class="text-zinc-700">증여세율표 (5단계 누진)</b>
+    <table class="w-full text-left mt-2"><thead><tr class="text-zinc-400 border-b border-zinc-200"><th class="py-1">과세표준</th><th class="text-right">세율</th><th class="text-right">누진공제</th></tr></thead><tbody>
+    <tr class="border-b border-zinc-100"><td class="py-1">1억원 이하</td><td class="text-right">10%</td><td class="text-right">—</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">1억 ~ 5억원</td><td class="text-right">20%</td><td class="text-right">1,000만원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">5억 ~ 10억원</td><td class="text-right">30%</td><td class="text-right">6,000만원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">10억 ~ 30억원</td><td class="text-right">40%</td><td class="text-right">1억6,000만원</td></tr>
+    <tr><td class="py-1">30억원 초과</td><td class="text-right">50%</td><td class="text-right">4억6,000만원</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<script>
+function won(n){return Math.round(n).toLocaleString(\'ko-KR\')+\'원\';}
+function calc(){
+  var amount=nv(\'gt_amount\')*10000, rel=document.getElementById(\'gt_rel\').value;
+  if(!amount){alert(\'증여액을 입력하세요.\');return;}
+  var exempt=rel===\'spouse\'?600000000:rel===\'lineal\'?50000000:10000000;
+  var relTxt=rel===\'spouse\'?\'배우자\':rel===\'lineal\'?\'직계존비속\':\'기타친족\';
+  var base=Math.max(0,amount-exempt), tax, r;
+  if(base<=100000000){r=\'10%\';tax=base*0.1;}
+  else if(base<=500000000){r=\'20%\';tax=base*0.2-10000000;}
+  else if(base<=1000000000){r=\'30%\';tax=base*0.3-60000000;}
+  else if(base<=3000000000){r=\'40%\';tax=base*0.4-160000000;}
+  else{r=\'50%\';tax=base*0.5-460000000;}
+  tax=Math.max(0,tax);
+  var rows=[[\'증여액\',won(amount)],[\'증여재산공제 (\'+relTxt+\')\',\'-\'+won(exempt)],[\'과세표준\',won(base)],[\'산출세액\',won(tax)]];
+  var h=\'<div class="text-center mb-4"><div class="text-sm text-zinc-500">예상 증여세</div><div class="text-3xl font-extrabold text-[#134a9c] my-1">\'+won(tax)+\'</div><div class="text-sm text-zinc-600">증여액 \'+won(amount)+\' · 적용세율 \'+r+\'</div></div><table class="w-full text-left"><tbody>\';
+  rows.forEach(function(r2){h+=\'<tr class="border-b border-zinc-100 last:border-0"><td class="py-1.5 text-zinc-500">\'+r2[0]+\'</td><td class="py-1.5 text-right font-bold text-zinc-800">\'+r2[1]+\'</td></tr>\';});
+  h+=\'</tbody></table>\'+(base===0?\'<div class="mt-3 rounded-md bg-[#0a8f5b]/10 text-[#0a8f5b] text-xs font-bold p-3">증여액이 공제 한도 이내라 납부할 증여세가 없습니다. 다만 공제는 10년간 합산 적용되니 이전 증여 여부를 확인하세요.</div>\':\'\')+\'<div class="mt-3 text-xs text-zinc-400">※ 신고세액공제·세대생략 할증 등은 반영하지 않았습니다.</div>\';
+  var o=document.getElementById(\'out\');o.classList.remove(\'hidden\');o.innerHTML=h;
+}
+</script>',
+        'intro' => '<p>가족에게 현금·부동산 등을 증여할 때 내야 하는 <b>증여세</b>를 계산합니다. 배우자 6억, 직계존비속 5천만 원(미성년 2천만), 기타친족 1천만 원의 증여재산공제를 뺀 과세표준에 10~50% 5단계 누진세율을 적용합니다.</p><p>공제는 동일인 기준 10년간 합산해 한 번의 한도로 적용되므로, 증여 시점을 나누는 절세 전략을 검토할 때도 기준이 됩니다.</p>',
+        'whenUse' => ['자녀에게 현금·전세보증금을 지원하기 전 세금을 확인할 때', '배우자 명의 이전 시 6억 공제 범위 내인지 확인할 때', '10년 단위 분산 증여 전략의 세액 차이를 비교할 때', '부동산 증여와 매매(양도) 중 유리한 쪽을 검토할 때'],
+        'basis' => ['10년간 합산 증여재산공제: 배우자 6억, 직계존비속 5천만(미성년 2천만), 기타친족 1천만 원.', '과세표준 = 증여액 − 증여재산공제.', '증여세율은 10~50% 5단계 누진세율(누진공제 1천만~4억6천만 원)입니다.', '금액 입력은 만원 단위입니다(예: 10,000 = 1억원).', '신고세액공제·세대생략 할증 등은 반영하지 않았습니다. 국세청 홈택스를 확인하세요.'],
+        'faq' => [['q' => '누가 증여세를 내나요?', 'a' => '재산을 받은 수증자가 신고·납부합니다.'], ['q' => '공제는 매번 되나요?', 'a' => '동일인 기준 10년간 합산해 한 번의 한도로 적용됩니다.'], ['q' => '신고 기한은 언제까지인가요?', 'a' => '증여받은 날이 속하는 달의 말일부터 3개월 이내에 신고·납부해야 하며, 기한 내 신고하면 신고세액공제를 받을 수 있습니다.']],
+        'related' => ['acquisition', 'capitalgains', 'savings'],
+    ],
+    'corptax' => [
+        'body' => '<div class="space-y-4">
+  <div><label class="block text-sm font-bold text-zinc-700 mb-1.5">과세표준 (만원)</label><input id="ct_base" type="text" inputmode="numeric" value="20,000" class="money w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30" placeholder="예: 20,000 (= 2억원)"></div>
+  <button onclick="calc()" class="w-full rounded-md bg-[#134a9c] text-white h-12 font-bold text-base hover:bg-[#0f3d82] mt-2">계산하기</button>
+  <div id="out" class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-sm hidden"></div>
+  <div class="rounded-lg border border-zinc-200 p-4 text-xs text-zinc-500">
+    <b class="text-zinc-700">2026년 법인세율표 (4단계)</b>
+    <table class="w-full text-left mt-2"><thead><tr class="text-zinc-400 border-b border-zinc-200"><th class="py-1">과세표준</th><th class="text-right">세율</th><th class="text-right">누진공제</th></tr></thead><tbody>
+    <tr class="border-b border-zinc-100"><td class="py-1">2억원 이하</td><td class="text-right">9%</td><td class="text-right">—</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">2억 ~ 200억원</td><td class="text-right">19%</td><td class="text-right">2,000만원</td></tr>
+    <tr class="border-b border-zinc-100"><td class="py-1">200억 ~ 3,000억원</td><td class="text-right">21%</td><td class="text-right">4억2,000만원</td></tr>
+    <tr><td class="py-1">3,000억원 초과</td><td class="text-right">24%</td><td class="text-right">94억2,000만원</td></tr>
+    </tbody></table>
+  </div>
+</div>
+<script>
+function won(n){return Math.round(n).toLocaleString(\'ko-KR\')+\'원\';}
+function calc(){
+  var base=nv(\'ct_base\')*10000;
+  if(!base){alert(\'과세표준을 입력하세요.\');return;}
+  var tax, r;
+  if(base<=200000000){r=\'9%\';tax=base*0.09;}
+  else if(base<=20000000000){r=\'19%\';tax=base*0.19-20000000;}
+  else if(base<=300000000000){r=\'21%\';tax=base*0.21-420000000;}
+  else{r=\'24%\';tax=base*0.24-9420000000;}
+  var local=tax*0.1;
+  var rows=[[\'과세표준\',won(base)],[\'법인세 산출세액\',won(tax)],[\'지방소득세 (10%)\',won(local)],[\'합계\',won(tax+local)]];
+  var h=\'<div class="text-center mb-4"><div class="text-sm text-zinc-500">예상 법인세 (지방소득세 포함)</div><div class="text-3xl font-extrabold text-[#134a9c] my-1">\'+won(tax+local)+\'</div><div class="text-sm text-zinc-600">과세표준 \'+won(base)+\' · 적용세율 \'+r+\'</div></div><table class="w-full text-left"><tbody>\';
+  rows.forEach(function(r2){h+=\'<tr class="border-b border-zinc-100 last:border-0"><td class="py-1.5 text-zinc-500">\'+r2[0]+\'</td><td class="py-1.5 text-right font-bold text-zinc-800">\'+r2[1]+\'</td></tr>\';});
+  h+=\'</tbody></table><div class="mt-3 text-xs text-zinc-400">※ 세액공제·감면, 최저한세는 반영하지 않은 개략 추정치입니다.</div>\';
+  var o=document.getElementById(\'out\');o.classList.remove(\'hidden\');o.innerHTML=h;
+}
+</script>',
+        'intro' => '<p>법인의 각 사업연도 소득(과세표준)에 대해 부과되는 <b>법인세</b>를 계산합니다. 2026년 기준 2억 이하 9%, 2억~200억 19%, 200억~3,000억 21%, 3,000억 초과 24%의 4단계 세율과 구간별 누진공제를 적용합니다.</p><p>산출세액의 10%가 법인 지방소득세로 더해지므로, 실제 부담 세율은 표시 세율보다 약 10% 높습니다. 1인 법인·개인사업자 법인 전환 검토 시 세부담 비교에 활용하세요.</p>',
+        'whenUse' => ['법인 결산 전 예상 법인세를 가늠할 때', '개인사업자(종합소득세 6~45%)와 법인 전환(9~24%)의 세부담을 비교할 때', '1인 법인 설립 검토 시 이익 규모별 세금을 시뮬레이션할 때', '중간예납·가결산 시 대략의 세액을 확인할 때'],
+        'basis' => ['2026년 기준 법인세율: 2억 이하 9%, 2억~200억 19%, 200억~3,000억 21%, 3,000억 초과 24%.', '구간별 누진공제액(2,000만~94억2,000만 원)을 적용해 산출세액을 계산합니다.', '산출세액의 10%가 법인 지방소득세로 더해집니다.', '과세표준 = 각 사업연도 소득 − 이월결손금·비과세소득·소득공제.', '금액 입력은 만원 단위입니다(예: 20,000 = 2억원).', '세액공제·감면, 최저한세는 반영하지 않은 개략 추정치입니다.'],
+        'faq' => [['q' => '과세표준은 매출인가요?', 'a' => '아닙니다. 매출에서 비용을 뺀 각 사업연도 소득에서 이월결손금 등을 차감한 금액입니다.'], ['q' => '개인사업자와 뭐가 다른가요?', 'a' => '개인은 종합소득세(6~45%), 법인은 법인세(9~24%)로 세율 구조가 다릅니다.'], ['q' => '법인세 신고는 언제 하나요?', 'a' => '각 사업연도 종료일이 속하는 달의 말일부터 3개월 이내(12월 결산법인은 3월 말)에 신고·납부합니다.']],
+        'related' => ['vat', 'freelancer', 'salary'],
     ],
     'area' => [
         'body' => '<div class="space-y-4">

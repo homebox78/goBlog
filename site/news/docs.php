@@ -41,14 +41,6 @@ render_topbar();
 render_masthead();
 render_nav('문서도구', [], true);
 ?>
-<style>
-@media print {
-  body * { visibility: hidden !important; }
-  #docsheet, #docsheet * { visibility: visible !important; }
-  #docsheet { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; padding: 0 !important; }
-  @page { margin: 20mm; }
-}
-</style>
 
 <div class="min-h-screen bg-white">
 <?php if (!$isDetail): ?>
@@ -104,7 +96,7 @@ render_nav('문서도구', [], true);
           <div class="mb-4 flex items-center gap-1.5 text-[15px] font-bold"><span class="material-symbols-outlined text-[19px] text-[<?= $P ?>]">edit</span>정보 입력</div>
           <div id="docform" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
           <div class="mt-5 flex flex-col gap-2 sm:flex-row">
-            <button onclick="window.print()" class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-0 bg-[<?= $P ?>] px-4 h-11 text-[14px] font-bold text-white transition-colors hover:bg-[#0f3d82]"><span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>인쇄 · PDF 저장</button>
+            <button onclick="docPrint()" class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-0 bg-[<?= $P ?>] px-4 h-11 text-[14px] font-bold text-white transition-colors hover:bg-[#0f3d82]"><span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>인쇄 · PDF 저장</button>
             <button onclick="docReset()" class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 h-11 text-[14px] font-bold text-zinc-600 transition-colors hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">restart_alt</span>초기화</button>
           </div>
         </div>
@@ -156,6 +148,25 @@ render_nav('문서도구', [], true);
   </div>
 
   <script>
+  // 인쇄 · PDF — 미리보기 시트만 독립 A4 문서로 열어 인쇄(빈 페이지·여백 문제 방지)
+  function docPrint(){
+    var sheet = document.getElementById('docsheet');
+    var title = <?= json_encode($d['title']) ?>;
+    var w = window.open('', '_blank', 'width=820,height=1040');
+    if(!w){ alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.'); return; }
+    var css = '/assets/tailwind.css?v=<?= TW_CSS_VER ?>';
+    w.document.open();
+    w.document.write(
+      '<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+title+'</title>'+
+      '<link rel="stylesheet" href="'+css+'">'+
+      '<style>@page{size:A4;margin:16mm} html,body{margin:0;padding:0;background:#fff} '+
+      '#sheet{width:100%;max-width:100%;box-shadow:none;padding:0}</style>'+
+      '</head><body><div id="sheet" class="bg-white text-zinc-900">'+sheet.innerHTML+'</div>'+
+      '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){window.focus();window.print();},350)});window.onafterprint=function(){window.close();}<\/scr'+'ipt>'+
+      '</body></html>'
+    );
+    w.document.close();
+  }
   (function(){
     var view = <?= json_encode($doc) ?>;
     var vals = {};

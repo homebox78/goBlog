@@ -140,8 +140,7 @@ render_nav('계산기', [], true);
               <summary class="flex cursor-pointer list-none items-center gap-2.5 px-5 py-4 text-[14.5px] font-semibold">
                 <span class="flex-none font-bold text-[<?= $P ?>]">Q</span>
                 <span class="min-w-0 flex-1"><?= nh($f['q']) ?></span>
-                <span class="material-symbols-outlined flex-none text-[20px] text-zinc-400 group-open:hidden">add</span>
-                <span class="material-symbols-outlined hidden flex-none text-[20px] text-zinc-400 group-open:inline-flex">remove</span>
+                <span class="w-5 flex-none text-center text-[20px] font-light leading-none text-zinc-400"><span class="group-open:hidden">+</span><span class="hidden group-open:inline">−</span></span>
               </summary>
               <div class="flex gap-2.5 px-5 pb-4 text-[13.5px] leading-relaxed text-zinc-500"><span class="flex-none font-bold text-zinc-400">A</span><span><?= nh($f['a']) ?></span></div>
             </details>
