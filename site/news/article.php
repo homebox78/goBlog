@@ -199,7 +199,7 @@ render_head($article['title'] . ' — HOM2BOX 뉴스', $desc, $image ?: '');
       </div>
       <?php endif; ?>
 
-      <!-- adsense-slot: article-top -->
+      <?php render_ad("article-top"); ?>
 
       <?php if ($showFigure): ?>
       <figure class="my-6"><img src="<?= nh($image) ?>" alt="<?= nh($article['title']) ?>" class="block w-full rounded-lg object-cover"><figcaption class="mt-2 text-xs text-zinc-400">AI 생성 이미지</figcaption></figure>
@@ -207,7 +207,7 @@ render_head($article['title'] . ' — HOM2BOX 뉴스', $desc, $image ?: '');
 
       <article class="article-body pb-8"><?= $html /* goBlog 생성 HTML — 이스케이프 안 함 */ ?></article>
 
-      <!-- adsense-slot: article-bottom -->
+      <?php render_ad("article-bottom"); ?>
 
       <?php if ($related): ?>
       <section class="border-t-2 border-zinc-900 pt-6 pb-4">

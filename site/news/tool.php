@@ -71,7 +71,7 @@ render_nav('도구', [], true);
     });
     </script>
 
-    <!-- adsense-slot: tool-bottom -->
+    <?php render_ad("tool-bottom"); ?>
 
     <div class="mt-8">
       <div class="text-sm font-extrabold text-zinc-900 border-b-2 border-zinc-900 pb-2 mb-3">다른 계산기</div>

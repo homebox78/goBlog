@@ -10,6 +10,7 @@ import CharactersPage from "@/pages/CharactersPage";
 import ArticlesPage from "@/pages/ArticlesPage";
 import ArticleDetailPage from "@/pages/ArticleDetailPage";
 import SchedulePage from "@/pages/SchedulePage";
+import AdsPage from "@/pages/AdsPage";
 import SettingsPage from "@/pages/SettingsPage";
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/articles/:id" element={<ArticleDetailPage />} />
           <Route path="/characters" element={<CharactersPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/ads" element={<AdsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

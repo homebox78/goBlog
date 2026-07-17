@@ -73,7 +73,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
   <?php render_nav('홈', $bySection, !empty($press)); ?>
 
   <div class="mx-auto max-w-[1399px] px-6">
-    <!-- adsense-slot: 상단 970x90 -->
+    <?php render_ad("home-top"); ?>
 
     <?php if (!$articles): ?>
       <div class="py-24 text-center text-zinc-400">아직 발행된 기사가 없습니다.</div>
@@ -139,7 +139,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
             </div>
           </div>
         <?php endforeach; ?>
-        <!-- adsense-slot: 인피드 -->
+        <?php render_ad("home-infeed"); ?>
       </div>
 
       <!-- 사이드바 -->

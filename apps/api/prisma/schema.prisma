@@ -241,6 +241,26 @@ model Product {
 }
 
 /**
+ * 광고 슬롯 — 위치별 배너를 관리자에서 켜고/끄고 내용을 설정한다.
+ * type: ADSENSE(코드 붙여넣기) | IMAGE(직접 이미지+링크). position은 고정 키(코드에 정의).
+ */
+model AdSlot {
+  id          Int      @id @default(autoincrement())
+  position    String   @unique @db.VarChar(64) // home-top | home-sidebar | article-top ...
+  enabled     Boolean  @default(false)
+  type        String   @default("IMAGE") // ADSENSE | IMAGE
+  adsenseCode String?  @db.Text // 애드센스 등 스크립트/HTML 코드
+  imageUrl    String?  @db.Text // 직접 배너 이미지 URL
+  linkUrl     String?  @db.Text // 배너 클릭 링크
+  newTab      Boolean  @default(true)
+  sponsored   Boolean  @default(true) // rel=sponsored (제휴 배너)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@map("ad_slots")
+}
+
+/**
  * 정부 복지서비스(지원금) 풀 — 복지로(bokjiro) 오픈API 적재.
  * 중앙부처(CENTRAL)·지자체(LOCAL) 목록을 상시 보관하고, 이슈 키워드와 매칭해 지원금 안내 기사를 생성한다.
  */

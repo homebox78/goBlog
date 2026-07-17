@@ -147,6 +147,43 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
     <?php
 }
 
+/**
+ * 광고 슬롯 렌더 — ad_slots 테이블에서 position을 읽어 활성 시 배너/애드센스를 출력한다.
+ * 관리자에서 켜지 않았거나 내용이 없으면 아무것도 출력하지 않는다(빈 슬롯).
+ */
+function render_ad(string $position): void
+{
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        try {
+            $rows = goblog_db()->query("SELECT position, enabled, type, adsenseCode, imageUrl, linkUrl, newTab, sponsored FROM ad_slots WHERE enabled=1")->fetchAll();
+            foreach ($rows as $r) $cache[$r['position']] = $r;
+        } catch (Throwable) {
+            $cache = [];
+        }
+    }
+    $ad = $cache[$position] ?? null;
+    if (!$ad) return;
+
+    if ($ad['type'] === 'ADSENSE' && !empty($ad['adsenseCode'])) {
+        echo '<div class="my-5 flex justify-center">' . $ad['adsenseCode'] . '</div>';
+        return;
+    }
+    if ($ad['type'] === 'IMAGE' && !empty($ad['imageUrl'])) {
+        $img = '<img src="' . nh($ad['imageUrl']) . '" alt="광고" class="mx-auto max-w-full h-auto rounded-lg">';
+        $rel = $ad['sponsored'] ? 'sponsored nofollow noopener' : 'noopener';
+        $tgt = $ad['newTab'] ? ' target="_blank"' : '';
+        echo '<div class="my-5 flex justify-center">';
+        if (!empty($ad['linkUrl'])) {
+            echo '<a href="' . nh($ad['linkUrl']) . '" rel="' . $rel . '"' . $tgt . '>' . $img . '</a>';
+        } else {
+            echo $img;
+        }
+        echo '<span class="sr-only">광고</span></div>';
+    }
+}
+
 function render_footer(): void
 {
     ?>
