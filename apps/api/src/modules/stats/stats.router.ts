@@ -101,25 +101,31 @@ statsRouter.use(requireAuth);
 statsRouter.get(
   "/overview",
   asyncHandler(async (_req, res) => {
-    const [today] = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT COUNT(*) v, COUNT(DISTINCT ip) u FROM article_views WHERE DATE(viewedAt + ${KST}) = DATE(NOW() + ${KST})`,
-    );
-    const [month] = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT COUNT(*) v, COUNT(DISTINCT ip) u FROM article_views WHERE YEAR(viewedAt + ${KST}) = YEAR(NOW() + ${KST}) AND MONTH(viewedAt + ${KST}) = MONTH(NOW() + ${KST})`,
-    );
-    const [year] = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT COUNT(*) v, COUNT(DISTINCT ip) u FROM article_views WHERE YEAR(viewedAt + ${KST}) = YEAR(NOW() + ${KST})`,
-    );
-    const [all] = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT COUNT(*) v, COUNT(DISTINCT ip) u FROM article_views`,
-    );
+    // v: 조회수, u: 순방문(IP). 각 기간과 직전 동일 기간을 함께 구해 증감률을 낸다.
+    const one = async (filter: string) => {
+      const [r] = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT COUNT(*) v, COUNT(DISTINCT ip) u FROM article_views ${filter}`,
+      );
+      return { views: num(r.v), uniques: num(r.u) };
+    };
+    const D = `(viewedAt + ${KST})`;
+    const NOW = `(NOW() + ${KST})`;
+    const [today, yesterday, month, lastMonth, year, lastYear, all] = await Promise.all([
+      one(`WHERE DATE(${D}) = DATE(${NOW})`),
+      one(`WHERE DATE(${D}) = DATE(${NOW}) - INTERVAL 1 DAY`),
+      one(`WHERE YEAR(${D}) = YEAR(${NOW}) AND MONTH(${D}) = MONTH(${NOW})`),
+      one(`WHERE ${D} >= DATE_FORMAT(${NOW} - INTERVAL 1 MONTH, '%Y-%m-01') AND ${D} < DATE_FORMAT(${NOW}, '%Y-%m-01')`),
+      one(`WHERE YEAR(${D}) = YEAR(${NOW})`),
+      one(`WHERE YEAR(${D}) = YEAR(${NOW}) - 1`),
+      one(``),
+    ]);
     const subActive = await prisma.newsletterSubscriber.count({ where: { status: "ACTIVE" } });
     const subTotal = await prisma.newsletterSubscriber.count();
     res.json({
-      today: { views: num(today.v), uniques: num(today.u) },
-      month: { views: num(month.v), uniques: num(month.u) },
-      year: { views: num(year.v), uniques: num(year.u) },
-      all: { views: num(all.v), uniques: num(all.u) },
+      today: { ...today, prev: yesterday.views },
+      month: { ...month, prev: lastMonth.views },
+      year: { ...year, prev: lastYear.views },
+      all: { ...all, prev: null },
       subscribers: { active: subActive, total: subTotal },
     });
   }),

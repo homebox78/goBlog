@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Download, Search, Trash2, MailX, MailCheck } from "lucide-react";
+import { Download, Search, Trash2, MailX, MailCheck, ArrowUpDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Subscriber {
   id: number;
@@ -43,9 +47,7 @@ export default function SubscribersPage() {
 
   const patch = useMutation({
     mutationFn: (v: { id: number; status: string }) => api.patch(`/api/subscribers/${v.id}`, { status: v.status }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["subscribers"] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["subscribers"] }),
     onError: (e) => toast.error(e instanceof Error ? e.message : "실패"),
   });
   const del = useMutation({
@@ -75,13 +77,28 @@ export default function SubscribersPage() {
         <p className="text-sm text-muted-foreground">뉴스레터 구독자 목록 · 상태 관리 · CSV 내보내기</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <StatBox label="전체" value={c?.total} />
-        <StatBox label="구독중" value={c?.active} accent="text-emerald-600" />
-        <StatBox label="해지" value={c?.unsubscribed} accent="text-muted-foreground" />
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-3 gap-4">
+        <SummaryCard label="전체" value={c?.total} loading={isPending} />
+        <SummaryCard label="구독중" value={c?.active} loading={isPending} accent="text-emerald-600" />
+        <SummaryCard label="해지" value={c?.unsubscribed} loading={isPending} accent="text-muted-foreground" />
       </div>
 
+      {/* 툴바 */}
       <div className="flex flex-wrap items-center gap-2">
+        <Tabs
+          value={status || "all"}
+          onValueChange={(v) => {
+            setStatus(v === "all" ? "" : (v as "ACTIVE" | "UNSUBSCRIBED"));
+            setPage(1);
+          }}
+        >
+          <TabsList>
+            <TabsTrigger value="all">전체</TabsTrigger>
+            <TabsTrigger value="ACTIVE">구독중</TabsTrigger>
+            <TabsTrigger value="UNSUBSCRIBED">해지</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <form
           className="flex items-center gap-2"
           onSubmit={(e) => {
@@ -99,27 +116,7 @@ export default function SubscribersPage() {
               className="h-9 w-56 pl-8"
             />
           </div>
-          <Button type="submit" variant="secondary" size="sm">
-            검색
-          </Button>
         </form>
-        <div className="flex gap-1">
-          {(["", "ACTIVE", "UNSUBSCRIBED"] as const).map((s) => (
-            <button
-              key={s || "all"}
-              onClick={() => {
-                setStatus(s);
-                setPage(1);
-              }}
-              className={
-                "rounded-md border px-3 py-1.5 text-sm " +
-                (status === s ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground")
-              }
-            >
-              {s === "" ? "전체" : s === "ACTIVE" ? "구독중" : "해지"}
-            </button>
-          ))}
-        </div>
         <a href={`${API}/api/subscribers/export`} className="ml-auto">
           <Button variant="outline" size="sm">
             <Download className="size-4" /> CSV 내보내기
@@ -128,52 +125,55 @@ export default function SubscribersPage() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="px-0">
           {isPending ? (
-            <p className="py-16 text-center text-sm text-muted-foreground">불러오는 중...</p>
+            <div className="space-y-2 px-6 py-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
           ) : (data?.subscribers ?? []).length === 0 ? (
             <p className="py-16 text-center text-sm text-muted-foreground">구독자가 없습니다.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-xs text-muted-foreground">
-                  <Th onClick={() => toggleSort("email")} active={sort === "email"} order={order}>
-                    이메일
-                  </Th>
-                  <th className="px-4 py-2.5 font-medium">상태</th>
-                  <th className="px-4 py-2.5 font-medium">유입</th>
-                  <Th onClick={() => toggleSort("createdAt")} active={sort === "createdAt"} order={order}>
-                    구독일
-                  </Th>
-                  <th className="px-4 py-2.5 text-right font-medium">관리</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <SortBtn onClick={() => toggleSort("email")} active={sort === "email"} order={order}>
+                      이메일
+                    </SortBtn>
+                  </TableHead>
+                  <TableHead>상태</TableHead>
+                  <TableHead>유입</TableHead>
+                  <TableHead>
+                    <SortBtn onClick={() => toggleSort("createdAt")} active={sort === "createdAt"} order={order}>
+                      구독일
+                    </SortBtn>
+                  </TableHead>
+                  <TableHead className="text-right">관리</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {data!.subscribers.map((s) => (
-                  <tr key={s.id} className="border-b last:border-0 hover:bg-muted/40">
-                    <td className="px-4 py-2.5 font-medium">{s.email}</td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={
-                          "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold " +
-                          (s.status === "ACTIVE"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-muted text-muted-foreground")
-                        }
-                      >
-                        {s.status === "ACTIVE" ? "구독중" : "해지"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-muted-foreground">{s.source ?? "-"}</td>
-                    <td className="px-4 py-2.5 text-muted-foreground">
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{s.email}</TableCell>
+                    <TableCell>
+                      {s.status === "ACTIVE" ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">구독중</Badge>
+                      ) : (
+                        <Badge variant="secondary">해지</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{s.source ?? "-"}</TableCell>
+                    <TableCell className="text-muted-foreground">
                       {new Date(s.createdAt).toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" })}
-                    </td>
-                    <td className="px-4 py-2.5">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex justify-end gap-1">
                         {s.status === "ACTIVE" ? (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             title="해지 처리"
                             onClick={() => patch.mutate({ id: s.id, status: "UNSUBSCRIBED" })}
                           >
@@ -182,7 +182,7 @@ export default function SubscribersPage() {
                         ) : (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             title="재활성"
                             onClick={() => patch.mutate({ id: s.id, status: "ACTIVE" })}
                           >
@@ -191,7 +191,7 @@ export default function SubscribersPage() {
                         )}
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           title="삭제"
                           onClick={() => {
                             if (confirm(`${s.email} 구독자를 삭제할까요?`)) del.mutate(s.id);
@@ -200,11 +200,11 @@ export default function SubscribersPage() {
                           <Trash2 className="size-4 text-red-500" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -231,18 +231,30 @@ export default function SubscribersPage() {
   );
 }
 
-function StatBox({ label, value, accent }: { label: string; value?: number; accent?: string }) {
+function SummaryCard({
+  label,
+  value,
+  accent,
+  loading,
+}: {
+  label: string;
+  value?: number;
+  accent?: string;
+  loading: boolean;
+}) {
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className={"mt-1 text-2xl font-bold " + (accent ?? "")}>{(value ?? 0).toLocaleString()}</div>
-      </CardContent>
+      <CardHeader>
+        <CardDescription>{label}</CardDescription>
+        <CardTitle className={"text-2xl font-bold tabular-nums " + (accent ?? "")}>
+          {loading ? <Skeleton className="h-7 w-16" /> : (value ?? 0).toLocaleString()}
+        </CardTitle>
+      </CardHeader>
     </Card>
   );
 }
 
-function Th({
+function SortBtn({
   children,
   onClick,
   active,
@@ -254,11 +266,9 @@ function Th({
   order: "asc" | "desc";
 }) {
   return (
-    <th className="px-4 py-2.5 font-medium">
-      <button onClick={onClick} className="inline-flex items-center gap-1 hover:text-foreground">
-        {children}
-        {active && <span>{order === "asc" ? "▲" : "▼"}</span>}
-      </button>
-    </th>
+    <button onClick={onClick} className="inline-flex items-center gap-1 hover:text-foreground">
+      {children}
+      <ArrowUpDown className={"size-3 " + (active ? "text-foreground" : "text-muted-foreground/50")} />
+    </button>
   );
 }
