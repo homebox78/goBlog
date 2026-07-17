@@ -119,6 +119,33 @@ if ($ad) {
     $html = $disclosure . $html . $banner;
 }
 
+// ── 목차(TOC) 자동 생성 + h2 앵커 부여 ────────────────────────────
+// 본문 h2를 훑어 목차를 만들고 각 h2에 id="toc-N"을 심는다(스무스 스크롤 앵커).
+$toc = [];
+$html = preg_replace_callback('/<h2\b([^>]*)>(.*?)<\/h2>/is', function ($m) use (&$toc) {
+    $n = count($toc) + 1;
+    $toc[] = trim(strip_tags($m[2]));
+    $attrs = preg_replace('/\s*id\s*=\s*"[^"]*"/i', '', $m[1]); // 기존 id 제거 후 통일
+    return '<h2' . $attrs . ' id="toc-' . $n . '">' . $m[2] . '</h2>';
+}, $html);
+
+// ── FAQ 구조화 데이터(AEO/GEO) — 질문형 h2 + 바로 뒤 문단을 Q&A로 ──
+// AI 답변엔진·구글이 인용하기 쉬운 FAQPage 스키마를 본문 구조에서 자동 추출한다.
+$faq = [];
+if (preg_match_all('/<h2\b[^>]*>(.*?)<\/h2>(.*?)(?=<h2\b|$)/is', $html, $mm, PREG_SET_ORDER)) {
+    foreach ($mm as $seg) {
+        $q = trim(strip_tags($seg[1]));
+        if (!preg_match('/[?？]|인가요|나요|하나요|무엇|어떻게|얼마|될까|왜\b|차이/u', $q)) continue;
+        if (preg_match('/<p\b[^>]*>(.*?)<\/p>/is', $seg[2], $pm)) {
+            $a = trim(preg_replace('/\s+/u', ' ', strip_tags($pm[1])));
+            if (mb_strlen($a) >= 25) {
+                $faq[] = ['q' => $q, 'a' => mb_substr($a, 0, 320)];
+                if (count($faq) >= 6) break;
+            }
+        }
+    }
+}
+
 // 관련 기사 — 같은 섹션 최신 6 (자기 제외)
 $related = [];
 try {
@@ -170,13 +197,26 @@ echo json_encode([
     ['name' => '홈', 'url' => 'https://hom2box.com/'],
     ['name' => $section, 'url' => 'https://hom2box.com/category.php?cat=' . urlencode($section)],
     ['name' => $article['title']],
-]); ?>
+]);
+if ($faq) {
+    news_jsonld([
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => array_map(fn($f) => [
+            '@type' => 'Question',
+            'name' => $f['q'],
+            'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
+        ], $faq),
+    ]);
+}
+?>
 <style>
+html { scroll-behavior:smooth; }
 /* 생성 본문(contentHtml)의 인라인 폰트를 통일하고 이미지·표를 반응형으로 */
 .article-body, .article-body * { font-family:'Escoredream','Noto Sans KR',sans-serif !important; }
 .article-body img { max-width:100%; height:auto; border-radius:8px; }
 .article-body table { width:100%; border-collapse:collapse; display:block; overflow-x:auto; }
-.article-body h2 { font-size:22px; font-weight:800; margin:32px 0 12px; padding-top:22px; border-top:1px solid #f1f1f1; }
+.article-body h2 { font-size:22px; font-weight:800; margin:32px 0 12px; padding-top:22px; border-top:1px solid #f1f1f1; scroll-margin-top:80px; }
 .article-body h3 { font-size:18px; font-weight:700; margin:24px 0 10px; }
 .article-body p { font-size:16.5px; line-height:1.95; margin:14px 0; color:#222; }
 .article-body a { color:<?= NEWS_PRIMARY ?>; text-decoration:underline; }
@@ -206,15 +246,50 @@ echo json_encode([
             [$label, $color] = NEWS_PLATFORMS[$pf]; $u = array_column($jobs, null, 'platform')[$pf]['publishedUrl']; ?>
             <a href="<?= nh($u) ?>" target="_blank" rel="noopener" class="inline-flex items-center rounded-md px-2 py-0.5 text-[10.5px] font-bold text-white" style="background:<?= $color ?>"><?= nh($label) ?></a>
           <?php endforeach; ?>
-          <button type="button" onclick="if(navigator.share){navigator.share({title:document.title,url:location.href})}else{navigator.clipboard.writeText(location.href);this.querySelector('span').textContent='check'}" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">share</span></button>
+          <?php $shareUrl = 'https://hom2box.com/article.php?id=' . $id; ?>
+          <a href="mailto:?subject=<?= rawurlencode($article['title']) ?>&body=<?= rawurlencode($article['title'] . "\n" . $shareUrl) ?>" title="메일로 보내기" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">mail</span></a>
+          <div class="relative" id="h2bShare">
+            <button type="button" onclick="h2bShareToggle(event)" title="공유" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">share</span></button>
+            <div id="h2bShareMenu" class="hidden absolute right-0 top-11 z-50 w-44 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-xl">
+              <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">공유하기</div>
+              <button type="button" onclick="h2bCopy()" class="flex w-full items-center gap-2.5 border-0 bg-transparent px-3 py-2 text-left text-[13.5px] font-semibold text-zinc-700 hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px] text-zinc-400">content_copy</span>링크 복사</button>
+              <button type="button" onclick="h2bShareWin('https://twitter.com/intent/tweet?text='+encodeURIComponent(H2B_TITLE)+'&url='+encodeURIComponent(H2B_URL))" class="flex w-full items-center gap-2.5 border-0 bg-transparent px-3 py-2 text-left text-[13.5px] font-semibold text-zinc-700 hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px] text-zinc-400">share</span>X(트위터)</button>
+              <button type="button" onclick="h2bShareWin('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(H2B_URL))" class="flex w-full items-center gap-2.5 border-0 bg-transparent px-3 py-2 text-left text-[13.5px] font-semibold text-zinc-700 hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px] text-zinc-400">public</span>페이스북</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <?php if (!empty($article['excerpt'])): ?>
+      <?php if (!empty($article['excerpt'])):
+        // 요약 불릿 처리 — 생성기가 줄바꿈으로 구분한 다항목 요약이면 목록,
+        // 일반 산문(줄바꿈 없음)이면 한 덩어리. 한국어에서 '·'는 문장 내 나열 구분자라
+        // 여기서 나누지 않는다(줄바꿈/줄머리 불릿 기호만 경계로 인정).
+        $sumRaw = trim($article['excerpt']);
+        $sumLines = preg_split('/\r?\n+/u', $sumRaw, -1, PREG_SPLIT_NO_EMPTY);
+        $sumParts = array_map(fn($l) => ltrim(trim($l), '·•-* '), $sumLines);
+        $sumParts = array_values(array_filter($sumParts, fn($l) => $l !== ''));
+      ?>
       <div class="my-6 rounded-lg border-l-4 border-[<?= NEWS_PRIMARY ?>] bg-zinc-50 px-5 py-4">
-        <div class="mb-1.5 text-xs font-extrabold text-[<?= NEWS_PRIMARY ?>]">핵심 요약</div>
-        <div class="text-sm leading-loose text-zinc-700"><?= nh($article['excerpt']) ?></div>
+        <div class="mb-2 text-xs font-extrabold text-[<?= NEWS_PRIMARY ?>]">핵심 요약</div>
+        <?php if (count($sumParts) >= 2): ?>
+          <ul class="space-y-1.5 text-sm leading-relaxed text-zinc-700">
+            <?php foreach ($sumParts as $sp): ?>
+              <li class="flex gap-2"><span class="mt-0.5 text-[<?= NEWS_PRIMARY ?>] font-bold">·</span><span><?= nh($sp) ?></span></li>
+            <?php endforeach; ?>
+          </ul>
+        <?php else: ?>
+          <div class="text-sm leading-loose text-zinc-700"><?= nh($sumRaw) ?></div>
+        <?php endif; ?>
       </div>
+      <?php endif; ?>
+
+      <?php if (count($toc) >= 3): ?>
+      <nav class="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 text-xs text-zinc-500" aria-label="목차">
+        <span class="font-extrabold text-zinc-900">목차</span>
+        <?php $nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩']; foreach ($toc as $i => $t): ?>
+          <a href="#toc-<?= $i + 1 ?>" class="text-xs text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>] hover:underline"><?= $nums[$i] ?? ($i + 1) ?> <?= nh($t) ?></a>
+        <?php endforeach; ?>
+      </nav>
       <?php endif; ?>
 
       <?php render_ad("article-top"); ?>
@@ -224,6 +299,12 @@ echo json_encode([
       <?php endif; ?>
 
       <article class="article-body pb-8"><?= $html /* goBlog 생성 HTML — 이스케이프 안 함 */ ?></article>
+
+      <!-- 저자 소개 (E-E-A-T) -->
+      <div class="mt-8 flex items-center gap-3.5 rounded-lg border border-zinc-200 bg-zinc-50/50 px-5 py-4">
+        <div class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[<?= NEWS_PRIMARY ?>] text-[15px] font-extrabold text-white">H</div>
+        <div class="text-[13px] leading-relaxed text-zinc-500"><b class="text-zinc-900">HOM2BOX 편집국</b><br>매일 아침·저녁, 이슈·경제·IT·생활 분야의 자체 기사를 선별해 발행합니다. 일부 기사에는 제휴 링크가 포함될 수 있습니다.</div>
+      </div>
 
       <?php render_ad("article-bottom"); ?>
 
@@ -268,4 +349,18 @@ echo json_encode([
 
   <?php render_footer(); ?>
 </div>
+<div id="h2bToast" class="hidden fixed bottom-20 left-1/2 z-[60] -translate-x-1/2 items-center gap-1.5 rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg"><span class="material-symbols-outlined text-[16px]">check</span><span id="h2bToastMsg">링크가 복사되었습니다</span></div>
+<script>
+var H2B_URL = <?= json_encode($shareUrl, JSON_UNESCAPED_SLASHES) ?>;
+var H2B_TITLE = <?= json_encode($article['title'], JSON_UNESCAPED_UNICODE) ?>;
+function h2bShareToggle(e){ e.stopPropagation(); document.getElementById('h2bShareMenu').classList.toggle('hidden'); }
+document.addEventListener('click', function(e){
+  var w = document.getElementById('h2bShare');
+  if (w && !w.contains(e.target)) document.getElementById('h2bShareMenu').classList.add('hidden');
+});
+function h2bToast(msg){ var t=document.getElementById('h2bToast'); document.getElementById('h2bToastMsg').textContent=msg; t.classList.remove('hidden'); t.classList.add('flex'); clearTimeout(window._h2bT); window._h2bT=setTimeout(function(){t.classList.add('hidden');t.classList.remove('flex');},2000); }
+function h2bCopy(){ document.getElementById('h2bShareMenu').classList.add('hidden');
+  (navigator.clipboard ? navigator.clipboard.writeText(H2B_URL) : Promise.reject()).then(function(){h2bToast('링크가 복사되었습니다');}).catch(function(){ var ta=document.createElement('textarea'); ta.value=H2B_URL; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(_){} document.body.removeChild(ta); h2bToast('링크가 복사되었습니다'); }); }
+function h2bShareWin(u){ document.getElementById('h2bShareMenu').classList.add('hidden'); window.open(u,'_blank','noopener,width=600,height=520'); }
+</script>
 <?php render_foot();
