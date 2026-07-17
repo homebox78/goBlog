@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718b';
+const TW_CSS_VER = '20260718c';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -234,44 +234,15 @@ function render_ticker(array $items): void
 
 function render_topbar(): void
 {
-    $week = ['일', '월', '화', '수', '목', '금', '토'];
-    $today = date('Y년 n월 j일', time() + 9 * 3600) . ' (' . $week[(int) date('w', time() + 9 * 3600)] . ')';
-    ?>
-<div class="mx-auto max-w-[1399px] flex justify-between items-center px-6 py-2 text-xs text-zinc-500">
-  <span><?= nh($today) ?></span>
-  <div class="flex gap-3 sm:gap-4">
-    <a href="https://hom2box.com/wordpress/" target="_blank" class="hover:underline"><span class="sm:hidden font-bold">W</span><span class="hidden sm:inline">Wordpress</span></a>
-    <a href="https://hom2box.blogspot.com/" target="_blank" class="hover:underline"><span class="sm:hidden font-bold">B</span><span class="hidden sm:inline">BlogSpot</span></a>
-    <a href="https://blog.naver.com/coreselect" target="_blank" class="hover:underline"><span class="sm:hidden font-bold">N</span><span class="hidden sm:inline">Naver Blog</span></a>
-    <a href="https://hom2box.tistory.com" target="_blank" class="hover:underline"><span class="sm:hidden font-bold">T</span><span class="hidden sm:inline">Tistory</span></a>
-  </div>
-</div>
-    <?php
+    // 시안 개편: 날짜·채널 상단바는 제거(채널 링크는 푸터로) — 기존 페이지 호출 호환용 no-op
 }
 
-/** 로고 + 검색 */
+/** 시안 개편: 대형 로고+검색 매스트헤드 제거(로고·검색은 슬림 내비로 통합) — 호환용 no-op */
 function render_masthead(string $q = ''): void
 {
-    ?>
-<div class="border-t border-zinc-100">
-  <div class="mx-auto max-w-[1399px] flex flex-wrap justify-between items-center gap-3 px-6 pt-5 pb-4">
-    <div class="flex items-baseline gap-3">
-      <a href="/" class="flex items-center gap-2">
-        <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg>
-        <span class="text-[32px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[19px] font-bold text-zinc-500">뉴스</span>
-      </a>
-      <span class="hidden sm:inline text-[13px] text-zinc-400">매일 아침·저녁 발행 · 이슈 · 경제 · IT · 생활</span>
-    </div>
-    <form action="/search.php" method="get" class="flex items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 h-10 w-full sm:w-64 shadow-sm focus-within:ring-2 focus-within:ring-[<?= NEWS_PRIMARY ?>]/30">
-      <input name="q" value="<?= nh($q) ?>" placeholder="뉴스 검색" class="flex-1 border-0 outline-none bg-transparent text-sm placeholder:text-zinc-400">
-      <button type="submit" class="cursor-pointer border-0 bg-transparent p-0"><span class="material-symbols-outlined text-[20px] text-zinc-400 hover:text-[<?= NEWS_PRIMARY ?>]">search</span></button>
-    </form>
-  </div>
-</div>
-    <?php
 }
 
-/** 스티키 내비게이션 — 홈 + 분야 섹션 + 지원금 + 언론사 */
+/** 슬림 통합 내비 — 로고 + 탭 + 우측 검색 (시안 1단 sticky 바) + 하단 Market 스트립 */
 function render_nav(string $active, array $bySection = [], bool $hasPress = false): void
 {
     $tabs = [['홈', '/']];
@@ -284,15 +255,24 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
     $tabs[] = ['언론사', '/press.php'];
     $tabs[] = ['오피니언', '/opinion.php'];
     ?>
-<div class="sticky top-0 z-50 bg-white/95 backdrop-blur border-t-2 border-zinc-900 border-b border-zinc-200">
-  <div class="mx-auto max-w-[1399px] flex gap-1 px-4 overflow-x-auto">
-    <?php foreach ($tabs as [$name, $href]):
-        $on = $name === $active;
-        $cls = $on
-            ? 'px-4 py-3 text-[15px] font-extrabold whitespace-nowrap text-[' . NEWS_PRIMARY . '] border-b-2 border-[' . NEWS_PRIMARY . ']'
-            : 'px-4 py-3 text-[15px] font-bold whitespace-nowrap text-zinc-700 hover:text-[' . NEWS_PRIMARY . ']'; ?>
-      <a href="<?= nh($href) ?>" class="<?= $cls ?>"><?= nh($name) ?></a>
-    <?php endforeach; ?>
+<div class="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur">
+  <div class="mx-auto flex max-w-[1399px] items-center gap-4 px-4 sm:px-6">
+    <a href="/" class="flex flex-none items-center gap-1.5 py-2.5">
+      <svg width="26" height="26" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg>
+      <span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">뉴스</span>
+    </a>
+    <nav class="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+      <?php foreach ($tabs as [$name, $href]):
+          $on = $name === $active;
+          $cls = $on
+              ? 'flex-none whitespace-nowrap px-2.5 py-4 text-sm font-bold text-[' . NEWS_PRIMARY . '] border-b-[3px] border-[' . NEWS_PRIMARY . ']'
+              : 'flex-none whitespace-nowrap px-2.5 py-4 text-sm font-bold text-zinc-700 hover:text-[' . NEWS_PRIMARY . ']'; ?>
+        <a href="<?= nh($href) ?>" class="<?= $cls ?>"><?= nh($name) ?></a>
+      <?php endforeach; ?>
+    </nav>
+    <a href="/search.php" class="flex flex-none items-center gap-1 py-3 text-sm font-bold text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">
+      <span class="material-symbols-outlined text-[20px]">search</span><span class="hidden sm:inline">검색</span>
+    </a>
   </div>
 </div>
     <?php
