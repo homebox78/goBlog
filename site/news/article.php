@@ -52,7 +52,7 @@ $st->execute([$id]);
 $imgRow = $st->fetch();
 $image = $imgRow ? ($imgRow['webpUrl'] ?: $imgRow['originalUrl']) : null;
 
-$html = $article['contentHtml'];
+$html = strip_external_images($article['contentHtml']);
 
 // 대표이미지는 목록 썸네일·og:image 용도 — 본문에 이미 들어있는 이미지면 상단에 다시 노출하지 않는다(중복 방지).
 $showFigure = $image !== null && strpos($html, $image) === false;

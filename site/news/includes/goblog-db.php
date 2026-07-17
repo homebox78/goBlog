@@ -133,6 +133,27 @@ function news_articles(): array
     return $list;
 }
 
+/**
+ * 본문에서 외부 핫링크 이미지 제거 — 나무위키 등은 핫링크를 차단해 엑박이 뜨고 저작권 문제도 있다.
+ * 우리 도메인(hom2box.com) 이미지만 남긴다. figure로 감싼 경우 캡션까지 통째로 제거.
+ */
+function strip_external_images(string $html): string
+{
+    // ① 외부 이미지를 담은 <figure> 블록 통째 제거 (캡션 포함)
+    $html = preg_replace_callback('/<figure\b[^>]*>.*?<\/figure>/is', static function ($m) {
+        if (preg_match('/<img[^>]+src="([^"]+)"/i', $m[0], $im)) {
+            $src = $im[1];
+            if (preg_match('#^https?://#i', $src) && strpos($src, 'hom2box.com') === false) {
+                return '';
+            }
+        }
+        return $m[0];
+    }, $html) ?? $html;
+    // ② figure 밖의 외부 <img> 단독 태그 제거
+    $html = preg_replace('/<img\b[^>]*\bsrc="https?:\/\/(?![^"]*hom2box\.com)[^"]*"[^>]*>/i', '', $html) ?? $html;
+    return $html;
+}
+
 function news_date(string $dt): string
 {
     $t = strtotime($dt . ' UTC') ?: strtotime($dt);

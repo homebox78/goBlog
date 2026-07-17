@@ -43,6 +43,18 @@ export async function renderContentHtml(markdown: string): Promise<string> {
       '<blockquote style="font-size:11px;color:#8a909b;background:#f7f7f8;border-left:3px solid #d5d9e0;margin:18px 0;padding:9px 13px;border-radius:6px;line-height:1.55;">',
     );
 
+  // 외부 핫링크 이미지 제거 — 나무위키·위키 등 외부 이미지를 본문에 넣으면 핫링크 차단으로 엑박이 뜨고
+  // 저작권 문제도 생긴다. 우리 이미지(Gemini 생성·재호스팅)만 남긴다. (2026-07-17)
+  html = html
+    // 외부 이미지를 담은 <figure> 블록 통째 제거(캡션 포함)
+    .replace(/<figure\b[^>]*>[\s\S]*?<\/figure>/gi, (block) => {
+      const m = /<img[^>]+src="([^"]+)"/i.exec(block);
+      if (m && /^https?:\/\//i.test(m[1]) && !/hom2box\.com/i.test(m[1])) return "";
+      return block;
+    })
+    // figure 밖의 외부 <img> 단독 태그 제거
+    .replace(/<img\b[^>]*\bsrc="https?:\/\/(?![^"]*hom2box\.com)[^"]*"[^>]*>/gi, "");
+
   // 컨테이너로 감싸 기본 폰트·색·행간을 상속시킨다 (인라인 스타일이 없는 요소 대비)
   return `<div style="font-size:18px;line-height:1.9;color:#222;font-family:'Pretendard',-apple-system,'Malgun Gothic',sans-serif;word-break:keep-all;">${html}</div>`;
 }
