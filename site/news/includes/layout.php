@@ -7,6 +7,8 @@ if (!function_exists('nh')) {
 }
 
 const NEWS_PRIMARY = '#134a9c';
+// 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
+const TW_CSS_VER = '20260717a';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -77,8 +79,7 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <link rel="apple-touch-icon" href="/favicon/apple-touch-icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fastly.jsdelivr.net" crossorigin>
-<link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/assets/tailwind.css?v=<?= TW_CSS_VER ?>">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 <style>
 @font-face{font-family:'Escoredream';src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff');font-weight:400;font-display:swap;}
