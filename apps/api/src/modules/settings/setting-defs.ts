@@ -79,6 +79,11 @@ export const SETTING_DEFS: SettingDef[] = [
   // Instagram Graph API — 비즈니스/크리에이터 계정 + Facebook 앱 필요. 이미지·캡션 자동 발행 가능.
   { key: "instagram.businessAccountId", group: "platforms", label: "Instagram 비즈니스 계정 ID", secret: false },
   { key: "instagram.accessToken", group: "platforms", label: "Instagram 액세스 토큰", secret: true },
+
+  // 텔레그램 알림 — 일일 전체 운영 보고 + 발행 실패 즉시 알림 (@BotFather에서 봇 생성)
+  { key: "telegram.botToken", group: "notify", label: "텔레그램 봇 토큰", secret: true },
+  { key: "telegram.chatId", group: "notify", label: "텔레그램 Chat ID", secret: false },
+  { key: "telegram.dailyReportTime", group: "notify", label: "일일 보고 시각 (KST)", secret: false, defaultValue: "22:00" },
 ];
 
 export const SETTING_DEF_MAP = new Map(SETTING_DEFS.map((def) => [def.key, def]));

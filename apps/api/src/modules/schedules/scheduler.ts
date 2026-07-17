@@ -11,6 +11,7 @@ let analyticsJob: Cron | null = null;
 let imageSweepJob: Cron | null = null;
 let tistorySyncJob: Cron | null = null;
 let dripJob: Cron | null = null;
+let reportJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -577,6 +578,23 @@ export async function scheduleFromSettings(): Promise<void> {
       }
     });
     console.log("[scheduler] 드립 자동 발행 1회/일 (10:00 KST)");
+
+    // 텔레그램 일일 전체 운영 보고 — 설정 시각(기본 22:00 KST). 토큰 미설정이면 조용히 스킵.
+    const { getSettingValues } = await import("../settings/settings.service.js");
+    const reportTimeRaw = (await getSettingValues(["telegram.dailyReportTime"]))["telegram.dailyReportTime"] ?? "22:00";
+    const [rh, rm] = reportTimeRaw.split(":").map((v) => Number(v));
+    const reportCron = Number.isInteger(rh) && Number.isInteger(rm) ? `${rm} ${rh} * * *` : "0 22 * * *";
+    reportJob?.stop();
+    reportJob = new Cron(reportCron, { timezone: "Asia/Seoul", protect: true }, async () => {
+      try {
+        const { sendDailyReport } = await import("../notify/telegram.js");
+        const ok = await sendDailyReport();
+        console.log(`[scheduler] 텔레그램 일일 보고 ${ok ? "전송" : "스킵(미설정 또는 실패)"}`);
+      } catch (error) {
+        console.error("[scheduler] 일일 보고 실패:", (error as Error).message);
+      }
+    });
+    console.log(`[scheduler] 텔레그램 일일 운영 보고 (${reportTimeRaw} KST)`);
   } catch (error) {
     console.warn("[scheduler] 예약 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }

@@ -118,6 +118,13 @@ const GROUPS: Array<{ id: string; label: string; description: string; testEndpoi
     description: "WordPress·Blogger 발행 및 네이버·티스토리 작성 URL을 설정합니다.",
     testEndpoint: "/api/settings/test/platforms",
   },
+  {
+    id: "notify",
+    label: "알림 (텔레그램)",
+    description:
+      "매일 밤 goBlog 전체 운영 보고(콘텐츠·발행·제휴·성과·AI 비용)와 발행 실패 즉시 알림을 텔레그램으로 받습니다. @BotFather에서 봇을 만들어 토큰을 넣고, 봇에게 메시지 1개를 보낸 뒤 연결 테스트를 누르면 Chat ID를 찾아드립니다.",
+    testEndpoint: "/api/settings/test/telegram",
+  },
 ];
 
 export default function SettingsPage() {

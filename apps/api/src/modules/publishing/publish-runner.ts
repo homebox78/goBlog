@@ -96,6 +96,17 @@ export async function processQueue(): Promise<void> {
           },
         });
         await log(job.id, "ERROR", `${message}${canRetry ? ` (재시도 ${retry}/${MAX_RETRY})` : ""}`);
+        // 재시도 소진(FAILED 확정)만 텔레그램 즉시 알림 — 재시도 중 잡음은 보내지 않는다
+        if (!canRetry) {
+          try {
+            const { sendTelegram, tgEscape } = await import("../notify/telegram.js");
+            void sendTelegram(
+              `🚨 <b>발행 실패</b> [${job.platform}]\n${tgEscape(job.article.title.slice(0, 60))}\n사유: ${tgEscape(message.slice(0, 200))}`,
+            );
+          } catch {
+            // 알림 실패가 발행 루프를 깨면 안 된다
+          }
+        }
       }
     }
   } catch (error) {

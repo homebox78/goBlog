@@ -33,8 +33,8 @@ settingsRouter.put(
     const { values } = parseBody(updateSchema, req.body);
     await updateSettings(values);
 
-    // 수집 시간이 바뀌면 스케줄을 다시 잡는다
-    if ("keywords.collectTime" in values) {
+    // 수집 시간·보고 시각이 바뀌면 스케줄을 다시 잡는다
+    if ("keywords.collectTime" in values || "telegram.dailyReportTime" in values) {
       const { scheduleFromSettings } = await import("../schedules/scheduler.js");
       await scheduleFromSettings();
     }
@@ -78,5 +78,23 @@ settingsRouter.post(
   asyncHandler(async (req, res) => {
     const { testCoupang } = await import("../products/coupang.js");
     res.json(await testCoupang());
+  }),
+);
+
+settingsRouter.post(
+  "/test/telegram",
+  asyncHandler(async (req, res) => {
+    const { testTelegram } = await import("../notify/telegram.js");
+    res.json(await testTelegram());
+  }),
+);
+
+/** 일일 운영 보고 즉시 발송 (테스트·수동 트리거) */
+settingsRouter.post(
+  "/test/telegram-report",
+  asyncHandler(async (req, res) => {
+    const { sendDailyReport } = await import("../notify/telegram.js");
+    const ok = await sendDailyReport();
+    res.json({ ok, message: ok ? "운영 보고를 전송했습니다." : "전송 실패 — 봇 토큰·Chat ID를 확인해주세요." });
   }),
 );
