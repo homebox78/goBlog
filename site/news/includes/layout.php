@@ -5,10 +5,11 @@ declare(strict_types=1);
 if (!function_exists('nh')) {
     require_once __DIR__ . '/goblog-db.php';
 }
+require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718a';
+const TW_CSS_VER = '20260718b';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -295,6 +296,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
   </div>
 </div>
     <?php
+    render_market_strip();
 }
 
 /**
