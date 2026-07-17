@@ -42,6 +42,8 @@ $publishedAt = $jobs[0]['finishedAt'] ?? $article['publishAt'];
 foreach ($jobs as $j) if ($j['finishedAt'] > $publishedAt) $publishedAt = $j['finishedAt'];
 $section = news_section($article['kwCategory']);
 
+record_article_view($id); // 조회수·IP 통계 기록
+
 // 대표 이미지
 $st = $db->prepare(
     "SELECT webpUrl, originalUrl FROM media_assets

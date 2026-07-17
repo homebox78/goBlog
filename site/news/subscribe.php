@@ -13,8 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = '올바른 이메일 주소를 입력해주세요.';
     } else {
         try {
-            $st = goblog_db()->prepare('INSERT INTO newsletter_subscribers (email) VALUES (?) ON DUPLICATE KEY UPDATE status=\'ACTIVE\'');
-            $st->execute([mb_substr($email, 0, 190)]);
+            $src = mb_substr(trim((string) ($_POST['source'] ?? '')), 0, 40) ?: null;
+            $st = goblog_db()->prepare('INSERT INTO newsletter_subscribers (email, source) VALUES (?, ?) ON DUPLICATE KEY UPDATE status=\'ACTIVE\'');
+            $st->execute([mb_substr($email, 0, 190), $src]);
             $done = true;
         } catch (Throwable $e) {
             $error = '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';

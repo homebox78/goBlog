@@ -159,3 +159,36 @@ function news_date(string $dt): string
     $t = strtotime($dt . ' UTC') ?: strtotime($dt);
     return date('Y.m.d H:i', $t + 9 * 3600); // KST
 }
+
+/** 방문 IP — 프록시/CDN 뒤에 있어도 원 IP를 얻는다 */
+function client_ip(): string
+{
+    foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'] as $k) {
+        if (!empty($_SERVER[$k])) {
+            $ip = trim(explode(',', $_SERVER[$k])[0]);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) return $ip;
+        }
+    }
+    return '';
+}
+
+/** 기사 조회 1건 기록 — 명백한 봇은 제외, 실패해도 페이지엔 영향 없음 */
+function record_article_view(int $articleId): void
+{
+    if ($articleId <= 0) return;
+    $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|monitor|curl|wget|python-requests|headless/i', $ua)) return;
+    try {
+        $st = goblog_db()->prepare(
+            'INSERT INTO article_views (articleId, ip, userAgent, referer) VALUES (?, ?, ?, ?)',
+        );
+        $st->execute([
+            $articleId,
+            client_ip() ?: null,
+            mb_substr($ua, 0, 255),
+            mb_substr((string) ($_SERVER['HTTP_REFERER'] ?? ''), 0, 500) ?: null,
+        ]);
+    } catch (Throwable) {
+        // 조회 기록 실패는 조용히 무시 (기사 노출이 우선)
+    }
+}
