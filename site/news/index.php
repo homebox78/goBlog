@@ -3,6 +3,7 @@
 // 기존 이미지샵 홈은 /imgshop.php 로 보존되어 있다.
 declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
+require_once __DIR__ . '/includes/yna-rss.php';
 
 $articles = [];
 $loadError = null;
@@ -42,6 +43,13 @@ $bySection = [];
 foreach ($articles as $a) {
     if (isset($used[$a['id']])) continue;
     $bySection[$a['section']][] = $a;
+}
+
+// 연합뉴스 헤드라인 (아침·저녁 갱신, 분야별 5건 — 제목·원문 링크만 인용)
+$yna = [];
+try {
+    $yna = yna_headlines(5);
+} catch (Throwable) {
 }
 
 $todayKst = date('Y년 n월 j일', time() + 9 * 3600);
@@ -108,6 +116,20 @@ aside.rank li:last-child { border-bottom:0; }
 aside.rank a { display:flex; gap:10px; padding:10px 0; font-size:14px; line-height:1.5; }
 aside.rank a::before { content:counter(rk); font-family:'Noto Serif KR',serif; font-weight:800; font-size:17px; color:var(--accent); min-width:18px; }
 aside.rank .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.yna { border-top:2px solid var(--ink); padding:24px 0 10px; }
+.yna .head { display:flex; align-items:baseline; gap:10px; margin-bottom:16px; }
+.yna .head h3 { font-family:'Noto Serif KR',serif; font-size:22px; font-weight:800; }
+.yna .head .src { font-size:12px; color:var(--sub); }
+.yna .boxes { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+.yna .box { border:1px solid var(--line); border-top:2px solid #0f6dbd; padding:12px 14px; }
+.yna .box h4 { font-size:14.5px; font-weight:700; color:#0f6dbd; margin-bottom:8px; }
+.yna .box ul { list-style:none; }
+.yna .box li { border-bottom:1px solid #f0f0f0; }
+.yna .box li:last-child { border-bottom:0; }
+.yna .box a { display:block; padding:6px 0; font-size:13.5px; line-height:1.5; color:#333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.yna .box a:hover { color:var(--accent); text-decoration:underline; }
+@media (max-width:1000px){ .yna .boxes { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:520px){ .yna .boxes { grid-template-columns:1fr; } }
 footer { border-top:2px solid var(--ink); margin-top:20px; padding:22px 0 40px; font-size:12.5px; color:var(--sub); }
 footer .links { margin-bottom:10px; }
 footer .links a { margin-right:16px; color:var(--ink); font-weight:600; }
@@ -146,6 +168,7 @@ footer .links a { margin-right:16px; color:var(--ink); font-weight:600; }
     <?php foreach (NEWS_SECTIONS as $s): if (empty($bySection[$s])) continue; ?>
       <a href="#sec-<?= nh($s) ?>"><?= nh($s) ?></a>
     <?php endforeach; ?>
+    <?php if ($yna): ?><a href="#yna">연합뉴스</a><?php endif; ?>
   </div>
 </nav>
 
@@ -207,6 +230,27 @@ footer .links a { margin-right:16px; color:var(--ink); font-weight:600; }
   </div>
 
 <?php endif; ?>
+
+  <?php if ($yna): ?>
+  <section class="yna" id="yna">
+    <div class="head">
+      <h3>연합뉴스 헤드라인</h3>
+      <span class="src">아침·저녁 갱신 · 출처: 연합뉴스 — 제목을 누르면 원문으로 이동합니다</span>
+    </div>
+    <div class="boxes">
+      <?php foreach ($yna as $cat): ?>
+        <div class="box">
+          <h4><?= nh($cat['label']) ?></h4>
+          <ul>
+            <?php foreach ($cat['items'] as $it): ?>
+              <li><a href="<?= nh($it['link']) ?>" target="_blank" rel="noopener nofollow" title="<?= nh($it['title']) ?>"><?= nh($it['title']) ?></a></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  </section>
+  <?php endif; ?>
 </main>
 
 <footer>
