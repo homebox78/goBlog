@@ -94,3 +94,45 @@ adsRouter.post(
     res.json({ url: `${mediaPublicUrl().replace(/\/$/, "")}/${fileName}` });
   }),
 );
+
+/** 배너 생성용 상품 검색 — 트래킹 링크 있는 상품(쿠팡·네이버) 우선 */
+adsRouter.get(
+  "/products",
+  asyncHandler(async (req, res) => {
+    const q = String(req.query.q ?? "").trim();
+    const products = await prisma.product.findMany({
+      where: {
+        status: { not: "DISABLED" },
+        AND: [
+          {
+            OR: [
+              { productUrl: { contains: "link.coupang.com" } },
+              { productUrl: { contains: "coupa.ng" } },
+              { productUrl: { contains: "naver.me" } },
+            ],
+          },
+          ...(q ? [{ OR: [{ name: { contains: q } }, { brand: { contains: q } }] }] : []),
+        ],
+      },
+      orderBy: { matchedAt: "desc" },
+      take: 20,
+      select: { id: true, name: true, source: true, price: true, imageUrl: true },
+    });
+    res.json({ products });
+  }),
+);
+
+const genSchema = z.object({
+  productId: z.number().int(),
+  format: z.enum(["wide", "box", "card"]).default("box"),
+});
+
+/** 상품으로 배너 이미지 자동 생성 → 이미지 URL + 상품 링크 반환 */
+adsRouter.post(
+  "/generate-banner",
+  asyncHandler(async (req, res) => {
+    const { productId, format } = parseBody(genSchema, req.body);
+    const { generateProductBanner } = await import("./banner.js");
+    res.json(await generateProductBanner(productId, format));
+  }),
+);
