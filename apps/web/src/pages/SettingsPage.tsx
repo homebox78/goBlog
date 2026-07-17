@@ -18,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import CharactersPage from "./CharactersPage";
 
 interface SettingView {
   key: string;
@@ -292,13 +291,7 @@ export default function SettingsPage() {
               {group.label}
             </TabsTrigger>
           ))}
-          <TabsTrigger value="characters">캐릭터</TabsTrigger>
         </TabsList>
-
-        {/* 캐릭터 관리 — 상단 저장 버튼은 API 키 설정용이며 이 탭과 무관합니다 */}
-        <TabsContent value="characters">
-          <CharactersPage />
-        </TabsContent>
 
         {GROUPS.map((group) => (
           <TabsContent key={group.id} value={group.id}>

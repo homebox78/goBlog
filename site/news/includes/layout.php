@@ -81,11 +81,11 @@ function render_topbar(): void
     ?>
 <div class="mx-auto max-w-[1399px] flex justify-between items-center px-6 py-2 text-xs text-zinc-500">
   <span><?= nh($today) ?></span>
-  <div class="flex gap-4">
-    <a href="https://hom2box.com/wordpress/" target="_blank" class="hover:underline">Wordpress</a>
-    <a href="https://hom2box.blogspot.com/" target="_blank" class="hover:underline">BlogSpot</a>
-    <a href="https://blog.naver.com/coreselect" target="_blank" class="hover:underline">Naver Blog</a>
-    <a href="https://hom2box.tistory.com" target="_blank" class="hover:underline">Tistory</a>
+  <div class="flex gap-3 sm:gap-4">
+    <a href="https://hom2box.com/wordpress/" target="_blank" class="hover:underline"><span class="sm:hidden font-bold">W</span><span class="hidden sm:inline">Wordpress</span></a>
+    <a href="https://hom2box.blogspot.com/" target="_blank" class="hover:underline"><span class="sm:hidden font-bold">B</span><span class="hidden sm:inline">BlogSpot</span></a>
+    <a href="https://blog.naver.com/coreselect" target="_blank" class="hover:underline"><span class="sm:hidden font-bold">N</span><span class="hidden sm:inline">Naver Blog</span></a>
+    <a href="https://hom2box.tistory.com" target="_blank" class="hover:underline"><span class="sm:hidden font-bold">T</span><span class="hidden sm:inline">Tistory</span></a>
   </div>
 </div>
     <?php

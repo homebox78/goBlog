@@ -61,7 +61,6 @@ interface GeneratedContent {
     altText: string;
     caption?: string;
     position?: number;
-    characters?: string[];
   }>;
   claimsToVerify: string[];
   // 인스타그램 캐러셀용 — 3장 슬라이드 각 짧은 제목 + 캡션(요약본). 이미지는 블로그 3장을 그대로 사용.
@@ -71,7 +70,6 @@ interface GeneratedContent {
   };
 }
 
-const VALID_CHARACTER_KEYS = ["girl", "boy", "man_20s", "woman_20s", "man_middle", "woman_middle"];
 
 const LANGUAGE_NAME: Record<string, string> = {
   ko: "한국어",
@@ -618,11 +616,10 @@ export async function generateArticle(
           : null,
         imagePrompts: [
           {
-            prompt: "이미지 생성 프롬프트 (영어). **실제 사람이 찍은 사진(photorealistic candid photo, shot on a real camera)처럼** 묘사한다 — 3D 렌더·일러스트·CGI 금지. 구체적인 장면·순간·행동을 자연스럽게(예: 'a Korean woman in her 30s checking her phone at a sunlit kitchen table, candid photo'). 밝고 긍정적, 등장인물은 한국인만(외국인 금지). 이미지 속 글자·로고·브랜드 없이. 특정 제품 클로즈업 대신 장면/분위기. 사람이 등장하는 장면이면 아래 characters에 등장 인물을 지정",
+            prompt: "이미지 생성 프롬프트 (영어). **실제 사람이 찍은 사진(photorealistic candid photo, shot on a real camera)처럼** 묘사한다 — 3D 렌더·일러스트·CGI 금지. **기사 내용·주제에 딱 맞는 구체적인 장면·순간·행동**을 자연스럽게 묘사하고, 인물이 등장하면 기사 맥락에 어울리는 사람(나이·성별·상황)을 그때그때 다르게 설정한다(예: 청년 정책 글이면 20대, 노년 글이면 60~70대). 예: 'a Korean woman in her 30s checking her phone at a sunlit kitchen table, candid photo'. 밝고 긍정적, 등장인물은 한국인만(외국인 금지). 이미지 속 글자·로고·브랜드 없이. 특정 제품 클로즈업 대신 장면/분위기.",
             altText: "한국어 대체 텍스트",
             caption: "캡션",
             position: "본문 [IMAGE:n]의 n (정확히 1, 2, 3 세 장)",
-            characters: "등장 인물 키 배열 (사람 없으면 빈 배열). 가능한 값: girl(여자아이), boy(남자아이), man_20s(20대남), woman_20s(20대여), man_middle(중년남), woman_middle(중년여)",
           },
         ],
         claimsToVerify: ["발행 전 확인이 필요한 주장·수치"],
@@ -844,19 +841,14 @@ export async function generateArticle(
       },
       // 이미지는 정확히 3장, 모두 본문(CONTENT)에 삽입. 첫 번째(position 1)가 대표(썸네일)로 쓰인다.
       media: {
-        create: imagePrompts.slice(0, 3).map((prompt, index) => {
-          const characters = (prompt.characters ?? [])
-            .filter((key) => VALID_CHARACTER_KEYS.includes(key))
-            .join(",");
-          return {
-            kind: "CONTENT",
-            prompt: prompt.prompt,
-            altText: prompt.altText || null,
-            caption: prompt.caption || null,
-            position: index + 1,
-            characterKeys: characters || null,
-          };
-        }),
+        // 캐릭터 레퍼런스 제거(2026-07-17): characterKeys를 더 이상 저장하지 않는다 — 기사별로 다른 인물 생성.
+        create: imagePrompts.slice(0, 3).map((prompt, index) => ({
+          kind: "CONTENT",
+          prompt: prompt.prompt,
+          altText: prompt.altText || null,
+          caption: prompt.caption || null,
+          position: index + 1,
+        })),
       },
     },
   });

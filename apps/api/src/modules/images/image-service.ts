@@ -61,7 +61,10 @@ async function generateOneImage(prompt: string, fileBase: string, characterKeys:
   const model = values["gemini.imageModel"] || "gemini-2.5-flash-image";
   if (!apiKey) throw new HttpError(400, "Gemini API Key가 설정되지 않았습니다.");
 
-  const references = await loadCharacterReferences(characterKeys);
+  // 캐릭터 레퍼런스 기능 제거(2026-07-17, 사용자 지시): 고정 인물 참조를 쓰면 썸네일 인물이 다 같아
+  // 기사 느낌이 약해진다. 이제 기사 내용에 맞는 인물을 매번 새로 생성한다. (한국인·무브랜드·무텍스트 등 스타일은 유지)
+  void characterKeys;
+  const references: Array<{ mimeType: string; data: string }> = [];
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const STYLE_GUIDE =
