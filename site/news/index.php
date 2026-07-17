@@ -281,6 +281,9 @@ footer .links a { margin-right:16px; color:var(--ink); font-weight:600; }
   <div class="wrap">
     <div class="links">
       <a href="/">HOM2BOX 뉴스</a>
+      <a href="/about.php">소개</a>
+      <a href="/privacy.php">개인정보처리방침</a>
+      <a href="/contact.php">문의</a>
       <a href="/imgshop.php">AI 이미지샵</a>
     </div>
     <p>일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다.</p>

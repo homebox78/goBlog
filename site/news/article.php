@@ -230,6 +230,12 @@ footer { border-top:2px solid var(--ink); padding:20px 0 40px; font-size:12.5px;
 
 <footer>
   <div class="wrap">
+    <p style="margin-bottom:10px;">
+      <a href="/" style="color:#111;font-weight:600;margin-right:14px;">HOM2BOX 뉴스</a>
+      <a href="/about.php" style="color:#111;font-weight:600;margin-right:14px;">소개</a>
+      <a href="/privacy.php" style="color:#111;font-weight:600;margin-right:14px;">개인정보처리방침</a>
+      <a href="/contact.php" style="color:#111;font-weight:600;">문의</a>
+    </p>
     <p>일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다.</p>
     <p>© <?= date('Y') ?> HOM2BOX 뉴스</p>
   </div>
