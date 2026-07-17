@@ -42,6 +42,35 @@ render_nav('도구', [], true);
       });
     </script>
 
+    <!-- 이메일 구독 유도 -->
+    <div class="mt-6 rounded-xl border border-[<?= $P ?>]/30 bg-[<?= $P ?>]/[0.04] p-5">
+      <div class="flex items-start gap-3">
+        <span class="inline-flex items-center justify-center w-10 h-10 flex-none rounded-lg bg-[<?= $P ?>]/10 text-[<?= $P ?>]"><span class="material-symbols-outlined text-[22px]">mail</span></span>
+        <div class="min-w-0 flex-1">
+          <div class="text-[15.5px] font-extrabold">결과를 이메일로 받아보시겠어요?</div>
+          <p class="mt-1 text-[13px] text-zinc-500 leading-relaxed">구독하시면 기사 및 계산 결과를 이메일로 받아보실 수 있고, 유용한 정보도 함께 받아보실 수 있습니다.</p>
+          <form id="subForm" class="mt-3 flex flex-col sm:flex-row gap-2">
+            <input id="subEmail" type="email" required placeholder="이메일 주소" class="flex-1 rounded-md border border-zinc-300 px-3 h-11 text-sm outline-none focus:ring-2 focus:ring-[<?= $P ?>]/30">
+            <button type="submit" class="rounded-md bg-[<?= $P ?>] text-white px-5 h-11 text-sm font-bold hover:bg-[#0f3d82] whitespace-nowrap">무료 구독</button>
+          </form>
+          <div id="subMsg" class="mt-2 text-[13px] font-bold hidden"></div>
+          <p class="mt-2 text-[11px] text-zinc-400">언제든 해지할 수 있습니다. <a href="/privacy.php" class="underline">개인정보처리방침</a></p>
+        </div>
+      </div>
+    </div>
+    <script>
+    document.getElementById('subForm').addEventListener('submit',function(e){
+      e.preventDefault();
+      var email=document.getElementById('subEmail').value.trim();
+      var msg=document.getElementById('subMsg');
+      var fd=new FormData(); fd.append('email',email); fd.append('ajax','1');
+      fetch('/subscribe.php',{method:'POST',headers:{'X-Requested-With':'fetch'},body:fd})
+        .then(function(r){return r.json();})
+        .then(function(d){msg.classList.remove('hidden');msg.textContent=(d.ok?'✅ ':'⚠️ ')+d.msg;msg.style.color=d.ok?'#0a8f5b':'#dc2626';if(d.ok)document.getElementById('subForm').reset();})
+        .catch(function(){msg.classList.remove('hidden');msg.textContent='⚠️ 일시적인 오류가 발생했습니다.';msg.style.color='#dc2626';});
+    });
+    </script>
+
     <!-- adsense-slot: tool-bottom -->
 
     <div class="mt-8">

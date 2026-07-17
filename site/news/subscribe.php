@@ -6,6 +6,7 @@ require_once __DIR__ . '/includes/layout.php';
 
 $done = false;
 $error = '';
+$isAjax = isset($_POST['ajax']) || (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim((string) ($_POST['email'] ?? ''));
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -18,6 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $e) {
             $error = '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
         }
+    }
+    if ($isAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => $done, 'msg' => $done ? '구독 신청이 완료되었습니다. 감사합니다!' : $error], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }
 
