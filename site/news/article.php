@@ -131,8 +131,8 @@ if ($ad) {
 $toc = [];
 $html = preg_replace_callback('/<h2\b([^>]*)>(.*?)<\/h2>/is', function ($m) use (&$toc) {
     $n = count($toc) + 1;
-    // 목차 라벨에서는 이모지·기호를 제거한다(본문 h2 원문은 그대로 유지)
-    $label = strip_tags($m[2]);
+    // 목차 라벨: 태그 제거 + HTML 엔티티 디코드(&quot; 등이 그대로 노출되지 않게) + 이모지 제거
+    $label = html_entity_decode(strip_tags($m[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $label = preg_replace('/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{2190}-\x{21FF}\x{FE00}-\x{FE0F}\x{1F1E6}-\x{1F1FF}\x{2B50}\x{2705}\x{2714}\x{2611}]/u', '', $label);
     $toc[] = trim(preg_replace('/\s+/u', ' ', $label));
     $attrs = preg_replace('/\s*id\s*=\s*"[^"]*"/i', '', $m[1]); // 기존 id 제거 후 통일
@@ -144,10 +144,10 @@ $html = preg_replace_callback('/<h2\b([^>]*)>(.*?)<\/h2>/is', function ($m) use 
 $faq = [];
 if (preg_match_all('/<h2\b[^>]*>(.*?)<\/h2>(.*?)(?=<h2\b|$)/is', $html, $mm, PREG_SET_ORDER)) {
     foreach ($mm as $seg) {
-        $q = trim(strip_tags($seg[1]));
+        $q = html_entity_decode(trim(strip_tags($seg[1])), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         if (!preg_match('/[?？]|인가요|나요|하나요|무엇|어떻게|얼마|될까|왜\b|차이/u', $q)) continue;
         if (preg_match('/<p\b[^>]*>(.*?)<\/p>/is', $seg[2], $pm)) {
-            $a = trim(preg_replace('/\s+/u', ' ', strip_tags($pm[1])));
+            $a = html_entity_decode(trim(preg_replace('/\s+/u', ' ', strip_tags($pm[1]))), ENT_QUOTES | ENT_HTML5, 'UTF-8');
             if (mb_strlen($a) >= 25) {
                 $faq[] = ['q' => $q, 'a' => mb_substr($a, 0, 320)];
                 if (count($faq) >= 6) break;

@@ -24,6 +24,7 @@ const TOOLS = [
     'tiktok' => ['name' => '틱톡 수익 계산기', 'icon' => 'music_note', 'category' => '크리에이터 수익', 'desc' => '팔로워·조회수·참여율로 틱톡 크리에이티비티 프로그램 수익과 협찬 단가를 추정합니다', 'kw' => '틱톡 수익,틱톡 크리에이터 펀드,크리에이티비티 프로그램,틱톡 협찬 단가,틱톡 조회수 수익'],
     'naverblog' => ['name' => '네이버 블로그 수익 계산기', 'icon' => 'edit_note', 'category' => '크리에이터 수익', 'desc' => '일 방문자와 포스팅 수로 네이버 애드포스트·제휴·원고료 예상 월 수익을 계산합니다', 'kw' => '네이버 블로그 수익,애드포스트,블로그 방문자 수익,체험단 원고료,애드포스트 계산'],
     'coupang' => ['name' => '쿠팡 파트너스 수익 계산기', 'icon' => 'shopping_cart', 'category' => '크리에이터 수익', 'desc' => '월 클릭수·전환율·객단가로 쿠팡 파트너스 예상 커미션을 월·연 단위로 계산합니다', 'kw' => '쿠팡 파트너스,쿠팡 파트너스 수익,제휴 마케팅,쿠팡 커미션,파트너스 수수료'],
+    'exchange' => ['name' => '환율 계산기', 'icon' => 'currency_exchange', 'category' => '금융·부동산', 'desc' => '실시간 매매기준율로 달러·유로·엔·위안 등 환전 금액을 계산합니다. 현찰/송금 스프레드와 환율우대까지 반영합니다.', 'kw' => '환율 계산기, 달러 환율, 환전 계산기, 환율우대, 원화 환전, 엔화 환율, 유로 환율'],
     'area' => ['name' => '평수 ↔ ㎡ 변환기', 'icon' => 'square_foot', 'category' => '생활·건강', 'desc' => '평과 제곱미터(㎡)를 서로 변환합니다. 부동산 면적 확인에 유용합니다.', 'kw' => '평수 계산기, 평 제곱미터 변환, 평수 환산'],
     'bmi' => ['name' => 'BMI 계산기', 'icon' => 'monitor_weight', 'category' => '생활·건강', 'desc' => '키와 몸무게로 체질량지수(BMI)와 비만도 단계를 계산합니다.', 'kw' => 'BMI 계산기, 체질량지수, 비만도, 정상체중'],
 ];
@@ -932,6 +933,114 @@ function calc(){
         'basis' => ['월 커미션 = 월 클릭 수 × 전환율 × 평균 객단가 × 수수료율', '표준 수수료는 대부분 카테고리 3% (일부 카테고리는 상이할 수 있어 입력값으로 조정 가능)', '클릭 후 24시간 이내 구매(또는 24시간 내 장바구니에 담은 상품의 구매)만 실적으로 인정', '월 실적은 익월 초 확정되며, 확정 후 익익월 15일경 지급 — 최소 지급액 1만원 미만은 다음 달로 이월', '세후 금액은 사업소득 3.3%(소득세 3%+지방소득세 0.3%) 원천징수 가정', '자기 구매, 부정 클릭 유도는 실적에서 제외되며 계정 제재 사유', '시나리오 표는 클릭 수 ×0.5/×1/×2, 전환율 ×0.5/×1/×1.5 조합의 월 커미션 비교', '모든 결과는 예상 추정치이며 실제 정산액은 반품·취소 반영 후 확정됨'],
         'faq' => [['q' => '수수료율 3%는 모든 상품에 동일하게 적용되나요?', 'a' => '대부분의 카테고리는 3%가 적용되지만 일부 카테고리는 수수료율이 다를 수 있습니다. 정확한 카테고리별 요율은 쿠팡 파트너스 운영정책에서 확인할 수 있으며, 계산기에서 수수료율을 직접 조정해 비교하면 됩니다. 반품·취소된 주문은 실적에서 차감됩니다.'], ['q' => '수익은 언제 지급되나요?', 'a' => '매월 1일~말일 실적이 다음 달 초에 확정되고, 확정된 금액은 그다음 달(익익월) 15일경 등록 계좌로 지급됩니다. 예를 들어 3월 실적은 5월 중순에 입금됩니다. 확정 금액이 1만원 미만이면 지급되지 않고 다음 달로 이월됩니다.'], ['q' => '링크 클릭 후 언제까지 구매해야 실적으로 잡히나요?', 'a' => '클릭 후 24시간 이내에 구매가 완료되어야 실적으로 인정됩니다. 24시간 안에 장바구니에 담은 상품이라면 이후 구매 시에도 인정되는 구조입니다. 다른 파트너스 링크를 나중에 클릭하면 마지막 클릭 기준으로 실적이 귀속됩니다.'], ['q' => '전환율은 보통 어느 정도로 잡아야 하나요?', 'a' => '구매 의도가 강한 상품 리뷰·비교 콘텐츠는 3~5%, 일반 정보성 글에 링크만 넣은 경우 1% 안팎이 통용되는 수준입니다. 처음이라면 보수적으로 1~3%를 넣고, 실제 파트너스 리포트의 클릭·주문 데이터가 쌓이면 본인 수치로 바꿔 계산하는 것이 정확합니다.'], ['q' => '쿠팡 파트너스 수익에 세금은 어떻게 되나요?', 'a' => '지급 시 사업소득으로 3.3%(소득세 3%+지방소득세 0.3%)가 원천징수됩니다. 다른 소득과 합산해 다음 해 5월 종합소득세 신고를 해야 하며, 수익이 지속·반복적으로 발생하면 사업자등록 대상이 될 수 있습니다. 연 수익이 커지면 세무 상담을 받는 것이 안전합니다.'], ['q' => '파트너스 활동 시 꼭 지켜야 할 표기 의무가 있나요?', 'a' => '링크를 게시한 콘텐츠에는 \'이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다\' 같은 대가성 문구를 반드시 표기해야 합니다. 공정위 추천·보증 심사지침에 따른 의무이며, 미표기 시 계정 제재와 법적 문제가 생길 수 있습니다.']],
         'related' => ['naverblog', 'freelancer', 'vat', 'adsense'],
+    ],
+    'exchange' => [
+        'body' => '<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block text-sm font-bold text-zinc-700 mb-1.5">통화</label>
+      <select id="fx_cur" onchange="fxLoad()" class="w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30 bg-white">
+        <option value="USD">🇺🇸 미국 USD</option>
+        <option value="EUR">🇪🇺 유럽연합 EUR</option>
+        <option value="JPY">🇯🇵 일본 JPY(100엔)</option>
+        <option value="CNY">🇨🇳 중국 CNY</option>
+        <option value="GBP">🇬🇧 영국 GBP</option>
+        <option value="AUD">🇦🇺 호주 AUD</option>
+        <option value="CAD">🇨🇦 캐나다 CAD</option>
+        <option value="HKD">🇭🇰 홍콩 HKD</option>
+        <option value="CHF">🇨🇭 스위스 CHF</option>
+        <option value="VND">🇻🇳 베트남 VND(100동)</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-bold text-zinc-700 mb-1.5">환율우대</label>
+      <select id="fx_pref" onchange="fxCalc()" class="w-full rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30 bg-white">
+        <option value="0">우대 없음</option>
+        <option value="0.3">30%</option><option value="0.4">40%</option><option value="0.5">50%</option>
+        <option value="0.6">60%</option><option value="0.7">70%</option><option value="0.8">80%</option>
+        <option value="0.9">90%</option><option value="1">100%(매매기준율)</option>
+      </select>
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm font-bold text-zinc-700 mb-1.5">금액</label>
+    <div class="flex gap-2">
+      <input id="fx_amt" type="text" inputmode="numeric" value="100" class="money flex-1 rounded-md border border-zinc-300 px-3 h-11 text-base outline-none focus:ring-2 focus:ring-[#134a9c]/30">
+      <select id="fx_dir" onchange="fxCalc()" class="rounded-md border border-zinc-300 px-2 h-11 text-sm outline-none bg-white">
+        <option value="f2k">외화 → 원화</option>
+        <option value="k2f">원화 → 외화</option>
+      </select>
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm font-bold text-zinc-700 mb-1.5">거래 유형</label>
+    <div id="fx_types" class="grid grid-cols-3 gap-1.5">
+      <button type="button" data-t="cash_buy" class="fx-t rounded-md border border-[#134a9c] bg-[#134a9c]/5 text-[#134a9c] px-2 py-2 text-[13px] font-bold">현찰 살 때</button>
+      <button type="button" data-t="cash_sell" class="fx-t rounded-md border border-zinc-200 text-zinc-600 px-2 py-2 text-[13px] font-semibold">현찰 팔 때</button>
+      <button type="button" data-t="wire_send" class="fx-t rounded-md border border-zinc-200 text-zinc-600 px-2 py-2 text-[13px] font-semibold">송금 보낼 때</button>
+      <button type="button" data-t="wire_recv" class="fx-t rounded-md border border-zinc-200 text-zinc-600 px-2 py-2 text-[13px] font-semibold">송금 받을 때</button>
+      <button type="button" data-t="base" class="fx-t rounded-md border border-zinc-200 text-zinc-600 px-2 py-2 text-[13px] font-semibold">매매기준율</button>
+    </div>
+  </div>
+  <button onclick="fxCalc()" class="w-full rounded-md bg-[#134a9c] text-white h-12 font-bold text-base hover:bg-[#0f3d82]">환전 금액 계산</button>
+  <div id="fx_out" class="rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-sm hidden"></div>
+  <div id="fx_rates" class="rounded-lg border border-zinc-200 p-4 text-xs text-zinc-500"></div>
+</div>
+<script>
+// 폴백 매매기준율(원/외화 1단위) — 실시간 API 실패 시 사용. JPY·VND는 100단위 표시지만 내부는 1단위.
+var FX_MID={USD:1385,EUR:1500,JPY:9.1,CNY:192,GBP:1760,AUD:920,CAD:1010,HKD:177,CHF:1560,VND:0.055};
+var FX_UNIT={JPY:100,VND:100};
+var fxType=\'cash_buy\', fxUpdated=\'\';
+function fxUnit(c){return FX_UNIT[c]||1;}
+function fxSpread(mid,t){if(t===\'cash_buy\')return mid*1.0175;if(t===\'cash_sell\')return mid*0.9825;if(t===\'wire_send\')return mid*1.01;if(t===\'wire_recv\')return mid*0.99;return mid;}
+function fxEff(mid,t,pref){var r=fxSpread(mid,t);return mid+(r-mid)*(1-pref);}
+function fxCur(){return document.getElementById(\'fx_cur\').value;}
+function won(n){return Math.round(n).toLocaleString(\'ko-KR\');}
+function fxLoad(){
+  var cur=fxCur();
+  fetch(\'https://open.er-api.com/v6/latest/USD\').then(function(r){return r.json();}).then(function(d){
+    if(d&&d.rates&&d.rates.KRW&&d.rates[cur]){FX_MID[cur]=d.rates.KRW/d.rates[cur];if(d.time_last_update_utc)fxUpdated=new Date(d.time_last_update_utc).toLocaleString(\'ko-KR\');}
+    fxCalc();
+  }).catch(function(){fxCalc();});
+}
+document.getElementById(\'fx_types\').addEventListener(\'click\',function(e){
+  var b=e.target.closest(\'.fx-t\');if(!b)return;fxType=b.dataset.t;
+  document.querySelectorAll(\'.fx-t\').forEach(function(x){x.className=\'fx-t rounded-md border border-zinc-200 text-zinc-600 px-2 py-2 text-[13px] font-semibold\';});
+  b.className=\'fx-t rounded-md border border-[#134a9c] bg-[#134a9c]/5 text-[#134a9c] px-2 py-2 text-[13px] font-bold\';
+  fxCalc();
+});
+function fxRatesTable(mid,cur){
+  var u=fxUnit(cur),lbl=u>1?(\'(\'+u+(cur===\'JPY\'?\'엔\':\'동\')+\')\'):\'\';
+  var rows=[[\'현찰 살 때\',fxSpread(mid,\'cash_buy\')],[\'현찰 팔 때\',fxSpread(mid,\'cash_sell\')],[\'송금 보낼 때\',fxSpread(mid,\'wire_send\')],[\'송금 받을 때\',fxSpread(mid,\'wire_recv\')],[\'매매기준율\',mid]];
+  var h=\'<div class="flex items-center justify-between mb-2"><b class="text-zinc-700">시세정보 \'+cur+\' \'+lbl+\'</b><span class="text-[11px] text-zinc-400">\'+(fxUpdated?(\'기준 \'+fxUpdated):\'실시간\')+\'</span></div><table class="w-full text-left"><tbody>\';
+  rows.forEach(function(x){h+=\'<tr class="border-b border-zinc-100 last:border-0"><td class="py-1">\'+x[0]+\'</td><td class="py-1 text-right font-bold text-zinc-800">\'+won(x[1]*u)+\' 원</td></tr>\';});
+  h+=\'</tbody></table>\';
+  document.getElementById(\'fx_rates\').innerHTML=h;
+}
+function fxCalc(){
+  var cur=fxCur(),mid=FX_MID[cur]||0,pref=parseFloat(document.getElementById(\'fx_pref\').value)||0;
+  var amt=nv(\'fx_amt\'),dir=document.getElementById(\'fx_dir\').value;
+  var eff=fxEff(mid,fxType,pref);
+  fxRatesTable(mid,cur);
+  if(!amt||!eff){return;}
+  var o=document.getElementById(\'fx_out\');o.classList.remove(\'hidden\');
+  var tname={cash_buy:\'현찰 살 때\',cash_sell:\'현찰 팔 때\',wire_send:\'송금 보낼 때\',wire_recv:\'송금 받을 때\',base:\'매매기준율\'}[fxType];
+  var prefTxt=pref>0?(\' · 우대 \'+(pref>=1?\'100%\':Math.round(pref*100)+\'%\')):\'\';
+  if(dir===\'f2k\'){
+    var krw=amt*eff;
+    o.innerHTML=\'<div class="text-center"><div class="text-sm text-zinc-500">\'+amt.toLocaleString(\'ko-KR\')+\' \'+cur+\' 환전 시</div><div class="text-3xl font-extrabold text-[#134a9c] my-1">\'+won(krw)+\' 원</div><div class="text-sm text-zinc-600">적용 환율 \'+eff.toFixed(2)+\' 원/\'+cur+\' <span class="text-zinc-400">(\'+tname+prefTxt+\')</span></div></div>\';
+  }else{
+    var fx=amt/eff;
+    o.innerHTML=\'<div class="text-center"><div class="text-sm text-zinc-500">\'+won(amt)+\' 원 환전 시</div><div class="text-3xl font-extrabold text-[#134a9c] my-1">\'+fx.toLocaleString(\'ko-KR\',{maximumFractionDigits:2})+\' \'+cur+\'</div><div class="text-sm text-zinc-600">적용 환율 \'+eff.toFixed(2)+\' 원/\'+cur+\' <span class="text-zinc-400">(\'+tname+prefTxt+\')</span></div></div>\';
+  }
+}
+fxLoad();
+</script>',
+        'intro' => '<p>실시간 매매기준율을 불러와 달러·유로·엔·위안 등 외화를 원화로(또는 원화를 외화로) 환전할 때 금액을 계산합니다.</p><p>현찰 살 때·팔 때, 송금 보낼 때·받을 때의 스프레드와 <b>환율우대</b>까지 반영해 실제 은행 창구·앱 환전에 가까운 금액을 보여줍니다.</p>',
+        'whenUse' => ['해외여행 전 환전 금액과 우대율별 차이를 비교할 때', '해외송금 보낼 때/받을 때 실수령액을 가늠할 때', '달러·엔화 투자 전 원화 환산액을 확인할 때', '해외직구 결제액을 원화로 환산할 때'],
+        'basis' => ['매매기준율: open.er-api.com 실시간 환율(USD 기준 교차환율). 불러오기 실패 시 내장 근사값 사용', '현찰 살 때 ≈ 매매기준율 +1.75%, 현찰 팔 때 ≈ −1.75% (은행 평균 스프레드 근사)', '송금 보낼 때 ≈ +1.0%, 송금 받을 때 ≈ −1.0%', '환율우대는 매매기준율과의 차이(스프레드)에만 적용 — 우대 100%면 매매기준율과 동일', 'JPY·VND는 관행상 100단위로 표시(계산은 1단위 기준)', '실제 은행 고시환율·수수료와는 차이가 있을 수 있으니 참고용으로 사용'],
+        'faq' => [['q' => '매매기준율과 현찰 살 때 환율은 왜 다른가요?', 'a' => '매매기준율은 은행 간 거래의 기준이 되는 도매 환율입니다. 개인이 현찰로 살 때는 지폐 보관·운송 비용 등이 붙어 매매기준율보다 약 1.75% 높고, 팔 때는 그만큼 낮습니다. 송금은 현찰보다 스프레드가 작아 약 ±1%입니다.'], ['q' => '환율우대 90%는 무슨 뜻인가요?', 'a' => '매매기준율과 실제 적용환율의 차이(스프레드)를 90% 깎아준다는 의미입니다. 예를 들어 현찰 살 때 스프레드가 24원이면, 90% 우대 시 2.4원만 붙습니다. 우대 100%면 매매기준율로 환전하는 셈입니다. 은행·카드사 앱마다 우대율이 다르니 확인하세요.'], ['q' => '표시되는 환율이 은행 앱과 조금 달라요.', 'a' => '이 계산기는 실시간 국제 환율(교차환율)에 은행 평균 스프레드를 적용한 근사치입니다. 은행마다 고시환율·수수료·우대 정책이 달라 실제 창구/앱 금액과 수십 원 차이가 날 수 있습니다. 정확한 금액은 거래 은행의 고시환율을 확인하세요.'], ['q' => '엔화 환율이 9원대로 나오는데 맞나요?', 'a' => '1엔당 환율이라 그렇습니다. 흔히 쓰는 \'100엔 = 약 900원\' 표기는 100엔 기준입니다. 시세정보 표에는 100엔 기준으로도 함께 표시됩니다.']],
+        'related' => ['savings', 'loan', 'vat'],
     ],
     'area' => [
         'body' => '<div class="space-y-4">
