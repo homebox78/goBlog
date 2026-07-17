@@ -341,11 +341,30 @@ export async function testWordpress(): Promise<TestResult> {
   );
 
   const data = (await res.json().catch(() => null)) as
-    | { name?: string; message?: string }
+    | { name?: string; message?: string; code?: string; roles?: string[] }
     | null;
   if (!res.ok) {
+    // 인증 실패 = 십중팔구 '일반 로그인 비밀번호'를 넣은 경우 (REST는 애플리케이션 비밀번호만 인증)
+    if (res.status === 401 || data?.code === "rest_not_logged_in") {
+      return {
+        ok: false,
+        message: "WordPress 인증 실패 — 애플리케이션 비밀번호가 필요합니다",
+        detail:
+          "일반 로그인 비밀번호로는 REST API 발행이 되지 않습니다. wp-admin → 사용자 → 프로필 → 맨 아래 '애플리케이션 비밀번호'에서 새 비밀번호를 발급(24자, 예: abcd EFGH ijkl …)한 뒤 그 값을 붙여넣으세요. 사용자 권한은 '작성자' 이상이어야 합니다.",
+      };
+    }
     return { ok: false, message: `WordPress API 오류 (HTTP ${res.status})`, detail: data?.message };
   }
 
-  return { ok: true, message: `WordPress 연결 성공 (${data?.name ?? "사용자"})` };
+  // 인증은 됐지만 발행 권한이 없는 역할이면 발행 단계에서 rest_cannot_create가 난다 → 미리 경고
+  const roles = data?.roles ?? [];
+  const canPublish = roles.some((r) => ["administrator", "editor", "author"].includes(r));
+  if (roles.length && !canPublish) {
+    return {
+      ok: false,
+      message: `WordPress 연결됨 — 그러나 이 사용자(${roles.join(", ")})는 발행 권한이 없습니다`,
+      detail: "발행하려면 사용자 권한이 '작성자(author)' 이상이어야 합니다. wp-admin에서 역할을 올려주세요.",
+    };
+  }
+  return { ok: true, message: `WordPress 연결 성공 (${data?.name ?? "사용자"}${roles.length ? ` · ${roles.join(",")}` : ""})` };
 }

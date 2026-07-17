@@ -194,8 +194,17 @@ export async function publishToWordpress(article: {
       ...(categoryIds.length ? { categories: categoryIds } : {}),
     }),
   });
-  const post = (await res.json()) as { link?: string; message?: string };
+  const post = (await res.json()) as { link?: string; message?: string; code?: string };
   if (!res.ok || !post.link) {
+    // 인증 실패(401/권한없음)는 대개 '일반 로그인 비밀번호'를 넣은 경우다.
+    // WordPress REST는 일반 비밀번호로 인증되지 않고, 반드시 '애플리케이션 비밀번호'(24자)가 필요하다.
+    if (res.status === 401 || post.code === "rest_not_logged_in" || post.code === "rest_cannot_create") {
+      throw new Error(
+        "WordPress 인증 실패 — 일반 로그인 비밀번호가 아니라 '애플리케이션 비밀번호'를 발급해 입력해야 합니다. " +
+          "wp-admin → 사용자 → 프로필 → 맨 아래 '애플리케이션 비밀번호'에서 새로 발급(24자)한 뒤, " +
+          "설정의 WordPress 비밀번호란에 그 값을 붙여넣으세요. (해당 사용자 권한은 '작성자' 이상이어야 함)",
+      );
+    }
     throw new Error(`WordPress 발행 실패: ${post.message ?? `HTTP ${res.status}`}`);
   }
   return { url: post.link };
