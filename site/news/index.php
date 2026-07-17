@@ -72,7 +72,7 @@ body { font-family:'Noto Sans KR',-apple-system,'Malgun Gothic',sans-serif; colo
 a { color:inherit; text-decoration:none; }
 a:hover .t, a:hover.t { text-decoration:underline; }
 img { max-width:100%; display:block; }
-.wrap { max-width:1140px; margin:0 auto; padding:0 16px; }
+.wrap { max-width:1399px; margin:0 auto; padding:0 16px; }
 .topbar { border-bottom:1px solid var(--line); font-size:12px; color:var(--sub); }
 .topbar .wrap { display:flex; justify-content:space-between; padding-top:8px; padding-bottom:8px; }
 .topbar a { margin-left:14px; color:var(--sub); }
@@ -124,7 +124,8 @@ aside.rank .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:ve
 .yna .head h3 { font-family:'Noto Serif KR',serif; font-size:22px; font-weight:800; }
 .yna .head .src { font-size:12px; color:var(--sub); }
 .yna .boxes { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
-.yna .box { border:1px solid var(--line); border-top:2px solid #0f6dbd; padding:12px 14px; }
+/* min-width:0 — 제목이 nowrap이라 그리드 아이템 최소폭이 제목 길이가 돼 컨테이너를 뚫던 문제 방지 */
+.yna .box { border:1px solid var(--line); border-top:2px solid #0f6dbd; padding:12px 14px; min-width:0; }
 .yna .box h4 { font-size:14.5px; font-weight:700; color:#0f6dbd; margin-bottom:8px; }
 .yna .box ul { list-style:none; }
 .yna .box li { border-bottom:1px solid #f0f0f0; }
