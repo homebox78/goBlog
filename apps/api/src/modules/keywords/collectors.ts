@@ -10,12 +10,12 @@ export interface IssueItem {
 
 const parser = new XMLParser({ ignoreAttributes: false });
 
-async function fetchText(url: string, headers?: Record<string, string>): Promise<string | null> {
+async function fetchOnce(url: string, userAgent: string, headers?: Record<string, string>): Promise<string | null> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15000);
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (goBlog collector)", ...headers },
+      headers: { "User-Agent": userAgent, ...headers },
       signal: controller.signal,
     });
     clearTimeout(timer);
@@ -24,6 +24,14 @@ async function fetchText(url: string, headers?: Record<string, string>): Promise
   } catch {
     return null;
   }
+}
+
+async function fetchText(url: string, headers?: Record<string, string>): Promise<string | null> {
+  // UA 취향이 매체마다 반대다: 매경은 풀 브라우저 UA 필요(축약 403), 한경(Cloudflare)은 축약 UA만 통과
+  // → 풀 UA 실패 시 축약 UA로 1회 재시도
+  const full =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+  return (await fetchOnce(url, full, headers)) ?? (await fetchOnce(url, "Mozilla/5.0", headers));
 }
 
 function cleanTitle(value: unknown): string {
@@ -128,18 +136,53 @@ export async function collectNaverNews(): Promise<IssueItem[]> {
 }
 
 /**
- * 연합뉴스 RSS 12분야 — 헤드라인을 글감(키워드 후보)으로 수집한다.
+ * 언론사 RSS — 헤드라인을 글감(키워드 후보)으로 수집한다.
  * ⚠️ 제목만 소재로 쓴다(본문 수집 안 함). 글은 goBlog가 그라운딩+AI로 자체 작성하므로 저작권 문제 없음.
+ * 프로그램(방송 클립) 피드는 제목이 문장형 노이즈가 많아 글감 소스에서 제외했다.
  */
-const YNA_FEEDS = [
-  "news", "politics", "economy", "industry", "society", "local",
-  "international", "culture", "health", "entertainment", "sports", "opinion",
-] as const;
+const PRESS_SOURCES: Array<{ source: string; urls: string[] }> = [
+  {
+    source: "YNA_NEWS",
+    urls: [
+      "news", "politics", "economy", "industry", "society", "local",
+      "international", "culture", "health", "entertainment", "sports", "opinion",
+    ].map((c) => `https://www.yna.co.kr/rss/${c}.xml`),
+  },
+  {
+    source: "JTBC_NEWS",
+    urls: [
+      "https://news-ex.jtbc.co.kr/v1/get/rss/newsflesh",
+      "https://news-ex.jtbc.co.kr/v1/get/rss/issue",
+      ...["politics", "economy", "society", "international", "culture", "entertainment", "sports", "weather"]
+        .map((c) => `https://news-ex.jtbc.co.kr/v1/get/rss/section/${c}`),
+    ],
+  },
+  {
+    source: "SBS_NEWS",
+    urls: [
+      "https://news.sbs.co.kr/news/headlineRssFeed.do?plink=RSSREADER",
+      "https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER",
+      "https://news.sbs.co.kr/news/newsflashRssFeed.do?plink=RSSREADER",
+      ...["01", "02", "03", "07", "08", "14", "09"]
+        .map((s) => `https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=${s}&plink=RSSREADER`),
+    ],
+  },
+  {
+    // 증권 전문 피드 — 재테크·금융 글감 (매경은 실제 브라우저 UA 필요)
+    source: "FINANCE_NEWS",
+    urls: [
+      "https://www.hankyung.com/feed/finance",
+      "https://www.sedaily.com/rss/finance",
+      "https://www.mk.co.kr/rss/50200011/",
+      "https://news.bizwatch.co.kr/rss/service/market",
+      "http://www.fnnews.com/rss/r20/fn_realnews_stock.xml",
+      "https://mbnmoney.mbn.co.kr/rss/news/stock",
+    ],
+  },
+];
 
-export async function collectYnaNews(): Promise<IssueItem[]> {
-  const results = await Promise.all(
-    YNA_FEEDS.map((cat) => fetchText(`https://www.yna.co.kr/rss/${cat}.xml`)),
-  );
+async function collectPressFeed(source: string, urls: string[]): Promise<IssueItem[]> {
+  const results = await Promise.all(urls.map((url) => fetchText(url)));
   const items: IssueItem[] = [];
   for (const xml of results) {
     if (!xml) continue;
@@ -150,14 +193,14 @@ export async function collectYnaNews(): Promise<IssueItem[]> {
       const raw = doc.rss?.channel?.item;
       const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
       for (const item of list.slice(0, 10)) {
-        // 통신사 관용구 제거: [속보]·(종합)·(2보)·(포토) 등 — 키워드 후보로서의 잡음
+        // 언론 관용구 제거: [속보]·(종합)·(2보)·[단독] 등 — 키워드 후보로서의 잡음
         const title = cleanTitle(item.title)
           .replace(/\[[^\]]{1,8}\]/g, "")
           .replace(/\((?:종합|상보|속보|\d보|포토|영상|게시판|사진)[^)]*\)/g, "")
           .replace(/\s+/g, " ")
           .trim();
         if (title.length > 4) {
-          items.push({ title, source: "YNA_NEWS", publishedAt: cleanTitle(item.pubDate) || undefined });
+          items.push({ title, source, publishedAt: cleanTitle(item.pubDate) || undefined });
         }
       }
     } catch {
@@ -167,21 +210,29 @@ export async function collectYnaNews(): Promise<IssueItem[]> {
   return items;
 }
 
+export async function collectPressNews(): Promise<Record<string, IssueItem[]>> {
+  const results = await Promise.all(
+    PRESS_SOURCES.map(async ({ source, urls }) => [source, await collectPressFeed(source, urls)] as const),
+  );
+  return Object.fromEntries(results);
+}
+
 /** 모든 소스에서 오늘의 이슈를 수집한다. */
 export async function collectDailyIssues(): Promise<{
   issues: IssueItem[];
   sources: Record<string, number>;
 }> {
-  const [trends, news, naver, yna] = await Promise.all([
+  const [trends, news, naver, press] = await Promise.all([
     collectGoogleTrends(),
     collectGoogleNews(),
     collectNaverNews(),
-    collectYnaNews(),
+    collectPressNews(),
   ]);
 
+  const pressItems = Object.values(press).flat();
   const seen = new Set<string>();
   const issues: IssueItem[] = [];
-  for (const item of [...trends, ...news, ...naver, ...yna]) {
+  for (const item of [...trends, ...news, ...naver, ...pressItems]) {
     const key = item.title.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -194,7 +245,7 @@ export async function collectDailyIssues(): Promise<{
       GOOGLE_TRENDS: trends.length,
       GOOGLE_NEWS: news.length,
       NAVER_NEWS: naver.length,
-      YNA_NEWS: yna.length,
+      ...Object.fromEntries(Object.entries(press).map(([k, v]) => [k, v.length])),
     },
   };
 }

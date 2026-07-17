@@ -264,8 +264,11 @@ export async function generateArticle(
   const length = options.length ?? Number(settings["anthropic.defaultLength"] ?? 2000) ?? 2000;
 
   // 실시간 그라운딩 — 생성 시점의 최신 뉴스를 주입해 학습 데이터의 옛 사실(상장·출시·발표 등) 오류를 막는다.
-  const { fetchRecentNews } = await import("./grounding.js");
-  const recentNews = await fetchRecentNews(topic).catch(() => []);
+  // 상위 뉴스는 서로 다른 매체 최대 3곳의 **본문 발췌**까지 붙여 사실 밀도(수치·일정·조건)를 높인다.
+  // (저작권: 다중 출처에서 사실만 추출·자체 표현으로 재작성 — 아래 프롬프트가 표현 복사를 금지한다)
+  const { fetchRecentNews, enrichWithBodies } = await import("./grounding.js");
+  const recentNewsRaw = await fetchRecentNews(topic).catch(() => []);
+  const recentNews = await enrichWithBodies(recentNewsRaw).catch(() => recentNewsRaw);
   // 백과사전 그라운딩 — 드라마·영화·예능·인물처럼 '사실'을 지어내면 안 되는 주제는 위키백과 개요를 근거로 준다.
   // (2026-07-15 참교육 사고: 그라운딩 없이 줄거리·인물·결말을 통째로 창작해 발행됨)
   const { needsEncyclopedia, fetchEncyclopedia } = await import("./encyclopedia.js");
@@ -331,6 +334,7 @@ export async function generateArticle(
       "",
       "[⚠️ 최신 사실 — 학습 데이터보다 우선. 반드시 준수]",
       "- 아래 userPayload의 recentNews(최신 뉴스)는 '지금 시점'의 사실이다. 네 학습 데이터의 옛 정보와 충돌하면 무조건 recentNews를 따른다.",
+      "- recentNews의 excerpt(원문 본문 발췌)는 **사실·수치·일정·조건 확인용**이다. ⚠️ 문장·표현·문단 구조를 그대로 옮기는 것은 절대 금지 — 여러 출처의 사실을 종합해 완전히 네 자신의 문장과 구성으로 쓴다. 특정 기사 한 편의 요약·재구성이 되어서는 안 된다.",
       "- 상장·출시·발표·인수·수치·순위처럼 시점에 민감한 사실은 recentNews에 근거해서만 단정한다. recentNews에 근거가 없으면 '아직 확정되지 않았다'는 식으로 단정하지 말고, '최신 상황은 공식 발표를 확인'처럼 열어둔다.",
       "- 특히 '~는 아직 안 했다 / 미정 / 예정'처럼 부정·미확정으로 단정하는 것은 매우 위험하다(이미 일어난 일을 안 일어난 것처럼 쓰는 오류). recentNews에 반대 사실이 있으면 절대 그렇게 쓰지 않는다.",
       recentNews.length === 0
