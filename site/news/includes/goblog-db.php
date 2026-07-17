@@ -111,6 +111,18 @@ function news_articles(): array
 
     $list = array_values($byId);
     usort($list, fn($a, $b) => strcmp($b['publishedAt'], $a['publishedAt']));
+
+    // 사실상 같은 제목(재생성 글 등)은 최신 1건만 노출
+    $seenTitle = [];
+    $deduped = [];
+    foreach ($list as $a) {
+        $norm = preg_replace('/[^0-9a-z가-힣]+/u', '', mb_strtolower($a['title']));
+        if (isset($seenTitle[$norm])) continue;
+        $seenTitle[$norm] = true;
+        $deduped[] = $a;
+    }
+    $list = $deduped;
+
     file_put_contents($cacheFile, json_encode($list, JSON_UNESCAPED_UNICODE), LOCK_EX);
     return $list;
 }

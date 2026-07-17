@@ -12,17 +12,37 @@ try {
     $loadError = $e->getMessage();
 }
 
+// 한 기사는 페이지 전체에서 한 번만 노출한다 (중복 노출 방지).
+// 우선순위: 헤드라인 → 서브리드(최신) → 주요기사(품질 상위) → 섹션 그리드(나머지)
+$used = [];
+
 $withImage = array_values(array_filter($articles, fn($a) => !empty($a['image'])));
 $headline = $withImage[0] ?? ($articles[0] ?? null);
-$headlineId = $headline['id'] ?? 0;
-$subLeads = array_slice(array_values(array_filter($articles, fn($a) => $a['id'] !== $headlineId)), 0, 6);
+if ($headline) $used[$headline['id']] = true;
+
+$subLeads = [];
+foreach ($articles as $a) {
+    if (isset($used[$a['id']])) continue;
+    $subLeads[] = $a;
+    $used[$a['id']] = true;
+    if (count($subLeads) >= 6) break;
+}
+
+$ranked = [];
+$byQuality = $articles;
+usort($byQuality, fn($a, $b) => ($b['quality'] <=> $a['quality']) ?: strcmp($b['publishedAt'], $a['publishedAt']));
+foreach ($byQuality as $a) {
+    if (isset($used[$a['id']])) continue;
+    $ranked[] = $a;
+    $used[$a['id']] = true;
+    if (count($ranked) >= 10) break;
+}
 
 $bySection = [];
-foreach ($articles as $a) $bySection[$a['section']][] = $a;
-
-$ranked = $articles;
-usort($ranked, fn($a, $b) => ($b['quality'] <=> $a['quality']) ?: strcmp($b['publishedAt'], $a['publishedAt']));
-$ranked = array_slice($ranked, 0, 10);
+foreach ($articles as $a) {
+    if (isset($used[$a['id']])) continue;
+    $bySection[$a['section']][] = $a;
+}
 
 $todayKst = date('Y년 n월 j일', time() + 9 * 3600);
 $weekKo = ['일', '월', '화', '수', '목', '금', '토'];
