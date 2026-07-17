@@ -54,7 +54,7 @@ function tool_body(string $id): string
         case 'salary':
             return <<<HTML
 <div class="space-y-4">
-  <div><label class="$lab">연봉 (원)</label><input id="sal" type="number" inputmode="numeric" placeholder="예: 40000000" class="$inp"></div>
+  <div><label class="$lab">연봉 (원)</label><input id="sal" type="text" inputmode="numeric" placeholder="예: 40,000,000" class="$inp money"></div>
   <div><label class="$lab">부양 가족 수 (본인 포함)</label><input id="fam" type="number" value="1" min="1" class="$inp"></div>
   <button onclick="calc()" class="$btn">계산하기</button>
 </div>
@@ -62,7 +62,7 @@ function tool_body(string $id): string
 <script>
 function won(n){return Math.round(n).toLocaleString('ko-KR')+'원';}
 function calc(){
-  var y=+document.getElementById('sal').value||0, fam=Math.max(1,+document.getElementById('fam').value||1);
+  var y=nv('sal'), fam=Math.max(1,+document.getElementById('fam').value||1);
   if(!y){return;}
   var m=y/12;
   // 2026 기준 근로자 부담 요율(간이): 국민연금 4.5%, 건강보험 3.545%, 장기요양 건보의 12.95%, 고용보험 0.9%
@@ -92,7 +92,7 @@ HTML;
         case 'loan':
             return <<<HTML
 <div class="space-y-4">
-  <div><label class="$lab">대출 원금 (원)</label><input id="pr" type="number" placeholder="예: 100000000" class="$inp"></div>
+  <div><label class="$lab">대출 원금 (원)</label><input id="pr" type="text" inputmode="numeric" placeholder="예: 100,000,000" class="$inp money"></div>
   <div class="grid grid-cols-2 gap-3">
     <div><label class="$lab">연 금리 (%)</label><input id="rate" type="number" step="0.01" placeholder="4.5" class="$inp"></div>
     <div><label class="$lab">기간 (개월)</label><input id="mon" type="number" placeholder="360" class="$inp"></div>
@@ -103,7 +103,7 @@ HTML;
 <script>
 function won(n){return Math.round(n).toLocaleString('ko-KR')+'원';}
 function calc(){
-  var P=+document.getElementById('pr').value||0, r=(+document.getElementById('rate').value||0)/100/12, n=+document.getElementById('mon').value||0;
+  var P=nv('pr'), r=(+document.getElementById('rate').value||0)/100/12, n=+document.getElementById('mon').value||0;
   if(!P||!n){return;}
   var m = r>0 ? P*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1) : P/n;
   var total=m*n, interest=total-P;
@@ -124,7 +124,7 @@ HTML;
     <label class="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-zinc-300 h-11 cursor-pointer"><input type="radio" name="ty" value="deposit" checked>예금(목돈 예치)</label>
     <label class="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-zinc-300 h-11 cursor-pointer"><input type="radio" name="ty" value="install">적금(매월 납입)</label>
   </div>
-  <div><label class="$lab">금액 (원, 예금=예치금 / 적금=월납입액)</label><input id="amt" type="number" placeholder="예: 300000" class="$inp"></div>
+  <div><label class="$lab">금액 (원, 예금=예치금 / 적금=월납입액)</label><input id="amt" type="text" inputmode="numeric" placeholder="예: 300,000" class="$inp money"></div>
   <div class="grid grid-cols-2 gap-3">
     <div><label class="$lab">연 금리 (%)</label><input id="rate" type="number" step="0.01" placeholder="3.5" class="$inp"></div>
     <div><label class="$lab">기간 (개월)</label><input id="mon" type="number" placeholder="12" class="$inp"></div>
@@ -136,7 +136,7 @@ HTML;
 function won(n){return Math.round(n).toLocaleString('ko-KR')+'원';}
 function calc(){
   var ty=document.querySelector('input[name=ty]:checked').value;
-  var a=+document.getElementById('amt').value||0, r=(+document.getElementById('rate').value||0)/100, n=+document.getElementById('mon').value||0;
+  var a=nv('amt'), r=(+document.getElementById('rate').value||0)/100, n=+document.getElementById('mon').value||0;
   if(!a||!n){return;}
   var principal, interest;
   if(ty==='deposit'){ principal=a; interest=a*r*(n/12); }
@@ -157,7 +157,7 @@ HTML;
         case 'vat':
             return <<<HTML
 <div class="space-y-4">
-  <div><label class="$lab">금액 (원)</label><input id="amt" type="number" placeholder="예: 1100000" class="$inp"></div>
+  <div><label class="$lab">금액 (원)</label><input id="amt" type="text" inputmode="numeric" placeholder="예: 1,100,000" class="$inp money"></div>
   <div class="flex gap-2">
     <label class="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-zinc-300 h-11 cursor-pointer"><input type="radio" name="mode" value="supply" checked>공급가액 기준</label>
     <label class="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-zinc-300 h-11 cursor-pointer"><input type="radio" name="mode" value="total">합계금액 기준</label>
@@ -168,7 +168,7 @@ HTML;
 <script>
 function won(n){return Math.round(n).toLocaleString('ko-KR')+'원';}
 function calc(){
-  var a=+document.getElementById('amt').value||0, mode=document.querySelector('input[name=mode]:checked').value;
+  var a=nv('amt'), mode=document.querySelector('input[name=mode]:checked').value;
   if(!a){return;}
   var supply, vat, total;
   if(mode==='supply'){ supply=a; vat=a*0.1; total=a*1.1; }

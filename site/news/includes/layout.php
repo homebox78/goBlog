@@ -122,7 +122,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
     }
     $tabs[] = ['지원금', '/welfare.php'];
     $tabs[] = ['계산기', '/tools.php'];
-    if ($hasPress) $tabs[] = ['언론사', '/#sec-yna'];
+    $tabs[] = ['언론사', '/press.php'];
     $tabs[] = ['오피니언', '/opinion.php'];
     ?>
 <div class="sticky top-0 z-50 bg-white/95 backdrop-blur border-t-2 border-zinc-900 border-b border-zinc-200">

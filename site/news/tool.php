@@ -31,6 +31,16 @@ render_nav('도구', [], true);
     <div class="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
       <?= tool_body($id) ?>
     </div>
+    <script>
+      // 금액 인풋 자동 천단위 콤마 (class="money"). 계산 시엔 nv(id)로 콤마 제거 후 숫자화.
+      function nv(id){var el=document.getElementById(id);return el?(parseFloat((el.value||'').replace(/[^0-9.]/g,''))||0):0;}
+      document.addEventListener('input',function(e){
+        if(e.target.classList && e.target.classList.contains('money')){
+          var v=e.target.value.replace(/[^0-9]/g,'');
+          e.target.value = v ? parseInt(v,10).toLocaleString('ko-KR') : '';
+        }
+      });
+    </script>
 
     <!-- adsense-slot: tool-bottom -->
 
