@@ -745,6 +745,18 @@ export async function generateArticle(
   const adSource = product ? product.source : null;
   const adProduct = product ? product.name : null;
 
+  // 관련 정부 지원금 안내 — 키워드에 매칭되는 복지서비스가 있으면 본문 하단에 안내 블록을 붙인다.
+  // (복지로 데이터 적재 필요. 없으면 조용히 스킵. 광고가 아닌 정보 제공이라 상품 배너와 별개로 항상 시도)
+  if (keyword?.text) {
+    try {
+      const { findWelfareForKeyword, buildWelfareBlock } = await import("../welfare/welfare-service.js");
+      const welfare = await findWelfareForKeyword(keyword.text);
+      if (welfare) contentMarkdown += `\n\n${buildWelfareBlock(welfare)}`;
+    } catch {
+      // 복지 매칭 실패가 글 생성을 막지 않는다
+    }
+  }
+
   // SEO 태그 = 본문 최하단 해시태그 20~30개 (검색·발견성). 중복 제거 후 붙인다.
   const tags = [
     ...new Set(

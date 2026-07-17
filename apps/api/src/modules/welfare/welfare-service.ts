@@ -137,6 +137,97 @@ export async function fetchWelfareDetail(id: number): Promise<Record<string, unk
   return detail;
 }
 
+const WELFARE_STOP = new Set([
+  "방법", "신청", "조건", "정리", "총정리", "얼마", "대상", "안내", "완전", "최신", "정보", "혜택", "지원", "지원금",
+  "가이드", "후기", "비교", "추천", "관련", "보조금", "사업", "서비스", "제도", "급여", "수급", "자격", "혜택",
+]);
+
+function welfareTokens(text: string): string[] {
+  return (text ?? "")
+    .replace(/\d{4}/g, " ")
+    .replace(/[^\w가-힣\s]/g, " ")
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2 && !WELFARE_STOP.has(t) && !/^\d/.test(t));
+}
+
+/**
+ * 키워드에 어울리는 복지서비스 1건을 찾는다 (기사 하단 '관련 지원금' 안내용).
+ * 키워드 토큰이 서비스명/요약에 겹치는 것만 — 무관한 글에 억지로 붙이지 않는다. 전국(중앙) 우선.
+ */
+export async function findWelfareForKeyword(keywordText: string): Promise<{
+  id: number;
+  name: string;
+  summary: string | null;
+  source: string;
+  dept: string | null;
+  region: string | null;
+  target: string | null;
+  applyMethod: string | null;
+  detailLink: string | null;
+} | null> {
+  const tokens = welfareTokens(keywordText).slice(0, 6);
+  if (tokens.length === 0) return null;
+
+  // 후보를 SQL LIKE로 좁힌 뒤(전량 로드 방지) 토큰 겹침으로 최선 선택
+  const candidates = await prisma.welfareService.findMany({
+    where: { OR: tokens.map((t) => ({ name: { contains: t } })) },
+    take: 80,
+    select: {
+      id: true, name: true, summary: true, source: true, dept: true, region: true,
+      target: true, applyMethod: true, detailLink: true,
+    },
+  });
+  if (candidates.length === 0) return null;
+
+  let best: (typeof candidates)[number] | null = null;
+  let bestScore = 0;
+  for (const c of candidates) {
+    const hay = `${c.name} ${c.summary ?? ""}`;
+    let score = tokens.reduce((n, t) => n + (hay.includes(t) ? 1 : 0), 0);
+    if (c.source === "CENTRAL") score += 0.5; // 전국 공통을 살짝 우선
+    // 3글자 이상 특정 토큰이 서비스명에 겹치면 가산(기초연금·에너지바우처 등 특정성 높은 단일 매칭 구제)
+    if (tokens.some((t) => t.length >= 3 && c.name.includes(t))) score += 1;
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  // 채택 기준 2점: 일반어 2개 겹침 OR 특정 토큰(3글자+) 단독 겹침. 우연한 일반어 1개 겹침은 배제.
+  return best && bestScore >= 2 ? best : null;
+}
+
+/** 기사 하단에 붙일 '관련 정부 지원금' 안내 HTML 블록 */
+export function buildWelfareBlock(w: {
+  name: string;
+  summary: string | null;
+  source: string;
+  dept: string | null;
+  region: string | null;
+  target: string | null;
+  applyMethod: string | null;
+  detailLink: string | null;
+}): string {
+  const provider = w.source === "CENTRAL" ? w.dept ?? "정부" : w.region ?? "지자체";
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const rows: string[] = [];
+  if (w.target) rows.push(`<li style="margin:4px 0;"><strong>지원 대상</strong> · ${esc(w.target.slice(0, 60))}</li>`);
+  if (w.applyMethod) rows.push(`<li style="margin:4px 0;"><strong>신청 방법</strong> · ${esc(w.applyMethod.slice(0, 40))}</li>`);
+  const link = w.detailLink
+    ? `<a href="${esc(w.detailLink)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;background:#0a8f5b;color:#fff;padding:9px 18px;border-radius:8px;font-weight:700;text-decoration:none;">복지로에서 자세히 보기 →</a>`
+    : "";
+  return [
+    `<div style="border:1px solid #cdeadd;background:#f2fdf6;border-radius:12px;padding:18px 20px;margin:26px 0;">`,
+    `<div style="font-size:13px;font-weight:700;color:#0a8f5b;margin-bottom:6px;">💰 이 주제와 관련된 정부 지원금</div>`,
+    `<div style="font-size:17px;font-weight:800;color:#1a1a1a;margin-bottom:6px;">${esc(w.name)}</div>`,
+    w.summary ? `<div style="font-size:14px;color:#444;line-height:1.6;">${esc(w.summary.slice(0, 140))}</div>` : "",
+    rows.length ? `<ul style="margin:10px 0 0;padding-left:18px;font-size:13.5px;color:#333;">${rows.join("")}</ul>` : "",
+    `<div style="font-size:12px;color:#888;margin-top:8px;">제공: ${esc(provider)} · 출처: 복지로(bokjiro.go.kr)</div>`,
+    link,
+    `</div>`,
+  ].join("");
+}
+
 /** 연결 테스트 — 목록 1건 조회 */
 export async function testWelfare(): Promise<{ ok: boolean; message: string }> {
   try {
