@@ -16,6 +16,7 @@ import { publishRouter } from "./modules/publishing/publish.router.js";
 import { mediaDir } from "./modules/images/image-service.js";
 import { extensionRouter } from "./modules/extension/extension.router.js";
 import { charactersRouter } from "./modules/characters/characters.router.js";
+import { subscribersRouter, statsRouter } from "./modules/stats/stats.router.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 export function createApp() {
@@ -67,6 +68,8 @@ export function createApp() {
   app.use("/api/publish-jobs", publishRouter);
   app.use("/api/characters", charactersRouter);
   app.use("/api/extension", extensionRouter);
+  app.use("/api/subscribers", subscribersRouter);
+  app.use("/api/stats", statsRouter);
   app.use("/media", express.static(mediaDir(), { maxAge: "7d" }));
 
   app.use(notFoundHandler);

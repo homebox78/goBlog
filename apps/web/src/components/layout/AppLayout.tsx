@@ -13,6 +13,8 @@ import {
   Moon,
   ShoppingBag,
   Megaphone,
+  BarChart3,
+  Mail,
   Sun,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -32,6 +34,8 @@ const NAV_ITEMS = [
   { to: "/articles", label: "글 관리", icon: FileText },
   { to: "/schedule", label: "스케줄", icon: CalendarClock },
   { to: "/ads", label: "광고 관리", icon: Megaphone },
+  { to: "/stats", label: "통계", icon: BarChart3 },
+  { to: "/subscribers", label: "구독자", icon: Mail },
   { to: "/settings", label: "설정", icon: Settings },
 ];
 

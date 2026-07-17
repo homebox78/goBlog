@@ -157,12 +157,10 @@ model KeywordTrend {
 
 /**
  * 네이버 블로그 검색 상위 글의 AI 브리핑 인용수 스냅샷 (append-only).
- *
  * 네이버는 블로그 검색 결과에 블로거의 누적 AI 브리핑 인용수 배지("403만 인용")를 노출한다.
  * 우리 키워드로 블로그 탭을 매일 1회 긁어 (키워드 × 상위 글) 인용수를 쌓으면
  * ① 어떤 글·블로거가 AI에 잘 인용되는지 벤치마크할 수 있고
  * ② 같은 글의 인용수 증가 추이를 시계열로 볼 수 있다.
- *
  * 인용수는 글이 아니라 '블로거(채널)' 누적치라, citedCount는 blogId 기준으로 해석해야 한다.
  * (키워드, 날짜, 글URL) 유니크 — 하루 여러 번 돌려도 같은 날은 덮어쓴다.
  */
@@ -192,7 +190,6 @@ model BlogCitation {
 
 /**
  * 인용 학습 결과 — AI 브리핑에 인용된 글들을 실제로 읽고 뽑아낸 인사이트.
- *
  * 네이버 공식 5원칙은 원론이라 프롬프트에 그대로 넣어도 글이 안 바뀐다.
  * 대신 그 키워드에서 진짜 인용되는 글들의 말투·구조·정보 담는 방식·빈 각도를 뽑아
  * 글 생성 프롬프트에 주입한다. (data = CitationInsightData)
@@ -213,25 +210,25 @@ model CitationInsight {
  * 등록 시 오늘의 키워드와 매칭해 두면, 그 키워드의 자동 글에 상품 배너가 삽입된다.
  */
 model Product {
-  id               Int      @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   source           String // COUPANG | BRANDCONNECT
-  externalKey      String?  @db.VarChar(64) // 크롤 업서트 키 — 쿠팡: "productId:vendorItemId" (수동 등록은 null)
+  externalKey      String?   @db.VarChar(64) // 크롤 업서트 키 — 쿠팡: "productId:vendorItemId" (수동 등록은 null)
   name             String
   brand            String?
   price            Int?
   originPrice      Int? // 할인 전 가격 (배너 취소선·할인율 표기용)
-  imageUrl         String?  @db.Text
-  productUrl       String   @db.Text
-  description      String?  @db.Text
+  imageUrl         String?   @db.Text
+  productUrl       String    @db.Text
+  description      String?   @db.Text
   categoryName     String? // 쿠팡 파트너스 카테고리 (뷰티·가전디지털…) — 상품 페이지 필터용
   ratingCount      Int? // 리뷰 수 — 매칭 후보가 여럿일 때 신뢰도 높은 상품 우선
-  isRocket         Boolean  @default(false)
-  status           String   @default("ACTIVE") // ACTIVE | USED | DISABLED
+  isRocket         Boolean   @default(false)
+  status           String    @default("ACTIVE") // ACTIVE | USED | DISABLED
   matchedKeywordId Int?
   matchedAt        DateTime? // 키워드에 매칭된 시각 (미매칭→매칭 전환 시 갱신, 알림·뱃지용)
-  matchedKeyword   Keyword? @relation(fields: [matchedKeywordId], references: [id], onDelete: SetNull)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  matchedKeyword   Keyword?  @relation(fields: [matchedKeywordId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@unique([source, externalKey])
   @@index([status])
@@ -265,28 +262,28 @@ model AdSlot {
  * 중앙부처(CENTRAL)·지자체(LOCAL) 목록을 상시 보관하고, 이슈 키워드와 매칭해 지원금 안내 기사를 생성한다.
  */
 model WelfareService {
-  id           Int       @id @default(autoincrement())
-  source       String // CENTRAL | LOCAL
-  servId       String    @db.VarChar(64) // 복지로 서비스 ID (상세조회·업서트 키)
-  name         String    @db.VarChar(300) // 서비스명
-  summary      String?   @db.Text // 서비스 요약(servDgst)
-  dept         String? // 소관부처(중앙) 또는 담당부서(지자체)
-  region       String? // 시도(지자체만)
-  sido         String? // 시도 코드/명 (지자체 필터용)
-  lifeCycle    String? // 생애주기 (영유아·아동·청소년·청년·중장년·노년·임신출산)
-  target       String? // 대상 특성 (저소득·장애인·한부모 등)
-  theme        String? // 관심주제 (신체건강·생활지원·서민금융 등)
-  applyMethod  String? // 신청 방법
-  supportType  String? // 지원 형태 (현금·현물·서비스 등)
-  detailLink   String?   @db.Text // 복지로 상세 페이지 링크
-  detail       Json? // 상세조회 결과 캐시 (지원대상·지원내용·신청방법 원문 — 기사 생성용)
-  detailAt     DateTime? // 상세 캐시 시각
+  id               Int       @id @default(autoincrement())
+  source           String // CENTRAL | LOCAL
+  servId           String    @db.VarChar(64) // 복지로 서비스 ID (상세조회·업서트 키)
+  name             String    @db.VarChar(300) // 서비스명
+  summary          String?   @db.Text // 서비스 요약(servDgst)
+  dept             String? // 소관부처(중앙) 또는 담당부서(지자체)
+  region           String? // 시도(지자체만)
+  sido             String? // 시도 코드/명 (지자체 필터용)
+  lifeCycle        String? // 생애주기 (영유아·아동·청소년·청년·중장년·노년·임신출산)
+  target           String? // 대상 특성 (저소득·장애인·한부모 등)
+  theme            String? // 관심주제 (신체건강·생활지원·서민금융 등)
+  applyMethod      String? // 신청 방법
+  supportType      String? // 지원 형태 (현금·현물·서비스 등)
+  detailLink       String?   @db.Text // 복지로 상세 페이지 링크
+  detail           Json? // 상세조회 결과 캐시 (지원대상·지원내용·신청방법 원문 — 기사 생성용)
+  detailAt         DateTime? // 상세 캐시 시각
   matchedKeywordId Int?
-  matchedAt    DateTime?
-  matchedKeyword Keyword? @relation(fields: [matchedKeywordId], references: [id], onDelete: SetNull)
-  usedAt       DateTime? // 이 서비스로 기사를 생성한 시각 (도배 방지)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  matchedAt        DateTime?
+  matchedKeyword   Keyword?  @relation(fields: [matchedKeywordId], references: [id], onDelete: SetNull)
+  usedAt           DateTime? // 이 서비스로 기사를 생성한 시각 (도배 방지)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@unique([source, servId])
   @@index([source])
@@ -296,16 +293,18 @@ model WelfareService {
   @@map("welfare_services")
 }
 
-/** 대량 매칭 히스토리 — 붙여넣은 상품 목록에서 키워드와 매칭된 상품을 누적 저장(무한스크롤·중복제거). */
+/**
+ * 대량 매칭 히스토리 — 붙여넣은 상품 목록에서 키워드와 매칭된 상품을 누적 저장(무한스크롤·중복제거).
+ */
 model BulkMatchHit {
-  id          Int      @id @default(autoincrement())
-  source      String // COUPANG | BRANDCONNECT
-  name        String   @db.VarChar(191) // 유니크 인덱스 대상이라 길이 제한 (bulk-match는 120자 이하만 수집)
-  keyword     String   @db.VarChar(191)
-  score       Int      @default(0)
-  usedAt      DateTime? // 스케줄러가 이 매칭으로 글을 자동 생성한 시각 (소진 처리)
-  articleId   Int? // 생성된 글 ID (히스토리에서 바로가기)
-  createdAt   DateTime @default(now())
+  id        Int       @id @default(autoincrement())
+  source    String // COUPANG | BRANDCONNECT
+  name      String    @db.VarChar(191) // 유니크 인덱스 대상이라 길이 제한 (bulk-match는 120자 이하만 수집)
+  keyword   String    @db.VarChar(191)
+  score     Int       @default(0)
+  usedAt    DateTime? // 스케줄러가 이 매칭으로 글을 자동 생성한 시각 (소진 처리)
+  articleId Int? // 생성된 글 ID (히스토리에서 바로가기)
+  createdAt DateTime  @default(now())
 
   @@unique([source, name], name: "source_name")
   @@index([source, createdAt])
@@ -362,19 +361,19 @@ enum ArticleStatus {
 }
 
 model Article {
-  id              Int               @id @default(autoincrement())
+  id              Int                @id @default(autoincrement())
   keywordId       Int?
   siteId          Int?
   title           String
   slug            String?
-  language        String            @default("ko")
-  articleType     String            @default("guide")
-  status          ArticleStatus     @default(DRAFT)
+  language        String             @default("ko")
+  articleType     String             @default("guide")
+  status          ArticleStatus      @default(DRAFT)
   metaTitle       String?
-  metaDescription String?           @db.Text
-  excerpt         String?           @db.Text
-  contentMarkdown String?           @db.LongText
-  contentHtml     String?           @db.LongText
+  metaDescription String?            @db.Text
+  excerpt         String?            @db.Text
+  contentMarkdown String?            @db.LongText
+  contentHtml     String?            @db.LongText
   qualityScore    Int?
   qualityReport   Json?
   adSource        String? // 삽입된 제휴 광고 플랫폼: COUPANG | BRANDCONNECT (없으면 null)
@@ -382,10 +381,10 @@ model Article {
   extensionDoneAt DateTime? // 확장에서 '발행완료' 버튼을 눌러 대기목록에서 숨긴 시각 (반자동 수동 체크)
   instagram       Json? // 인스타그램 캐러셀용: { slides:[{position,title,summary}x3], caption, hashtags:[...] } (이미지는 블로그 3장 재사용)
   publishAt       DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  keyword         Keyword?          @relation(fields: [keywordId], references: [id], onDelete: SetNull)
-  site            Site?             @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  keyword         Keyword?           @relation(fields: [keywordId], references: [id], onDelete: SetNull)
+  site            Site?              @relation(fields: [siteId], references: [id], onDelete: SetNull)
   versions        ArticleVersion[]
   sources         ArticleSource[]
   schemas         ArticleSchema[]
@@ -484,22 +483,22 @@ model ArticleTag {
 }
 
 model MediaAsset {
-  id          Int      @id @default(autoincrement())
-  articleId   Int?
-  kind        String   @default("CONTENT") // FEATURED | CONTENT
-  prompt      String?  @db.Text
-  altText     String?
-  caption     String?
-  fileName    String?
-  originalUrl String?  @db.Text
-  webpUrl     String?  @db.Text
-  width       Int?
-  height      Int?
-  bytes       Int?
-  position    Int?
+  id            Int      @id @default(autoincrement())
+  articleId     Int?
+  kind          String   @default("CONTENT") // FEATURED | CONTENT
+  prompt        String?  @db.Text
+  altText       String?
+  caption       String?
+  fileName      String?
+  originalUrl   String?  @db.Text
+  webpUrl       String?  @db.Text
+  width         Int?
+  height        Int?
+  bytes         Int?
+  position      Int?
   characterKeys String? // 이 이미지에 등장하는 레퍼런스 캐릭터 키 (콤마 구분)
-  createdAt   DateTime @default(now())
-  article     Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  article       Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
 
   @@index([articleId])
   @@map("media_assets")
@@ -654,4 +653,33 @@ model SearchQueryDaily {
   @@unique([date, articleId, query])
   @@index([articleId])
   @@map("search_query_daily")
+}
+
+/// 뉴스레터 구독자 — 공개 사이트 subscribe.php가 직접 INSERT(원시 SQL)하고,
+/// 관리자 구독자 관리 화면이 이 모델로 조회·관리한다.
+model NewsletterSubscriber {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(190)
+  status    String   @default("ACTIVE") @db.VarChar(20) // ACTIVE | UNSUBSCRIBED
+  source    String?  @db.VarChar(40)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("newsletter_subscribers")
+}
+
+/// 기사 조회 로그 — 공개 사이트 article.php가 조회마다 INSERT(원시 SQL).
+/// 관리자 통계 화면이 일/월/년 집계·정렬에 사용한다.
+model ArticleView {
+  id        BigInt   @id @default(autoincrement())
+  articleId Int
+  ip        String?  @db.VarChar(45)
+  userAgent String?  @db.VarChar(255)
+  referer   String?  @db.VarChar(500)
+  viewedAt  DateTime @default(now())
+
+  @@index([articleId])
+  @@index([viewedAt])
+  @@map("article_views")
 }

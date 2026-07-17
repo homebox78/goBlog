@@ -11,6 +11,8 @@ import ArticlesPage from "@/pages/ArticlesPage";
 import ArticleDetailPage from "@/pages/ArticleDetailPage";
 import SchedulePage from "@/pages/SchedulePage";
 import AdsPage from "@/pages/AdsPage";
+import StatsPage from "@/pages/StatsPage";
+import SubscribersPage from "@/pages/SubscribersPage";
 import SettingsPage from "@/pages/SettingsPage";
 
 export default function App() {
@@ -30,6 +32,8 @@ export default function App() {
           <Route path="/characters" element={<CharactersPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/ads" element={<AdsPage />} />
+          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/subscribers" element={<SubscribersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
