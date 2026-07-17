@@ -150,6 +150,15 @@ export default function KeywordDashboardPage() {
     setOpenKw(k);
     setOpenId(k.id);
   };
+  // 행에 마우스만 올려도 상세를 미리 받아둔다 → 클릭 시 모달이 즉시 채워짐
+  const prefetch = (k: Kw) => {
+    if (k.id == null) return;
+    qc.prefetchQuery({
+      queryKey: ["kd-detail", k.id],
+      queryFn: () => api.get(`/api/keywords/${k.id}/detail`),
+      staleTime: 60_000,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -232,7 +241,7 @@ export default function KeywordDashboardPage() {
               </TableHeader>
               <TableBody>
                 {view.map((k) => (
-                  <TableRow key={k.key} className="cursor-pointer" onClick={() => open(k)}>
+                  <TableRow key={k.key} className="cursor-pointer" onClick={() => open(k)} onMouseEnter={() => prefetch(k)}>
                     <TableCell>
                       <div className="font-medium">{k.key}</div>
                       {k.category && <div className="text-xs text-muted-foreground">{k.category}</div>}
@@ -316,6 +325,7 @@ function DetailModal({
     queryKey: ["kd-detail", id],
     queryFn: () => api.get<KeywordDetail>(`/api/keywords/${id}/detail`),
     enabled: id != null,
+    staleTime: 60_000,
   });
 
   const d = detail.data;
@@ -343,29 +353,27 @@ function DetailModal({
           <p className="py-8 text-center text-sm text-muted-foreground">
             이 키워드는 인용/트렌드 기록에서 왔습니다. 추천·저장 목록의 키워드만 상세 지표가 제공됩니다.
           </p>
-        ) : detail.isPending ? (
-          <div className="space-y-3 py-2">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-40 w-full" />
-          </div>
         ) : (
           <div className="space-y-5">
-            {/* 지표 */}
+            {/* 지표 — 목록에서 가진 값으로 즉시 표시, 상세 로드되면 보강 */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <Metric label="네이버 검색량" value={d?.metrics?.naverMonthlySearches} />
-              <Metric label="구글 검색량" value={d?.metrics?.googleMonthlySearches} />
-              <Metric label="CPC" value={d?.metrics?.googleCpcKrw} suffix="원" />
-              <Metric label="문서 수" value={d?.metrics?.totalDocs} />
-              <Metric label="경쟁도" value={d?.metrics?.competitionScore} />
+              <Metric label="네이버 검색량" value={d?.metrics?.naverMonthlySearches ?? kw?.naver} />
+              <Metric label="구글 검색량" value={d?.metrics?.googleMonthlySearches ?? kw?.google} />
+              <Metric label="점수" value={kw?.final ?? null} />
               <Metric label="AI 인용" value={kw?.cited ?? null} suffix="회" />
+              <Metric label="문서 수" value={d?.metrics?.totalDocs} loading={detail.isPending} />
+              <Metric label="경쟁도" value={d?.metrics?.competitionScore} loading={detail.isPending} />
             </div>
 
-            {/* 추이 차트 */}
+            {/* 추이 차트 — 상세 대기 부분만 로딩 */}
             <div>
               <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-                <TrendingUp className="size-4" /> 순위 추이 {d?.trend?.summary ? <span className="text-xs font-normal text-muted-foreground">· {d.trend.summary}</span> : null}
+                <TrendingUp className="size-4" /> 순위 추이
+                {d?.trend?.summary ? <span className="text-xs font-normal text-muted-foreground">· {d.trend.summary}</span> : null}
               </div>
-              {series.length >= 2 ? (
+              {detail.isPending ? (
+                <Skeleton className="h-40 w-full" />
+              ) : series.length >= 2 ? (
                 <ChartContainer config={chartConfig} className="h-40 w-full">
                   <LineChart data={series} margin={{ left: 4, right: 8, top: 6 }}>
                     <CartesianGrid vertical={false} />
@@ -382,12 +390,14 @@ function DetailModal({
               )}
             </div>
 
-            {/* AI 인용 */}
+            {/* AI 인용 — 상세 대기 부분만 로딩 */}
             <div>
               <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
                 <Quote className="size-4" /> AI·검색 인용 {d?.citations?.length ? `(${d.citations.length})` : ""}
               </div>
-              {d?.citations && d.citations.length > 0 ? (
+              {detail.isPending ? (
+                <Skeleton className="h-24 w-full" />
+              ) : d?.citations && d.citations.length > 0 ? (
                 <div className="max-h-52 space-y-1.5 overflow-y-auto">
                   {d.citations.slice(0, 20).map((c, i) => (
                     <a
@@ -414,7 +424,7 @@ function DetailModal({
               )}
             </div>
 
-            {/* 액션 */}
+            {/* 액션 — 즉시 */}
             <div className="flex flex-wrap gap-2 border-t pt-4">
               <Button
                 variant={status === "SAVED" ? "secondary" : "default"}
@@ -450,11 +460,25 @@ function DetailModal({
   );
 }
 
-function Metric({ label, value, suffix }: { label: string; value: number | null | undefined; suffix?: string }) {
+function Metric({
+  label,
+  value,
+  suffix,
+  loading,
+}: {
+  label: string;
+  value: number | null | undefined;
+  suffix?: string;
+  loading?: boolean;
+}) {
   return (
     <div className="rounded-lg border bg-muted/40 px-3 py-2">
       <div className="text-[11px] text-muted-foreground">{label}</div>
-      <div className="font-semibold tabular-nums">{value == null ? "—" : value.toLocaleString() + (suffix ?? "")}</div>
+      {loading ? (
+        <Skeleton className="mt-1 h-4 w-12" />
+      ) : (
+        <div className="font-semibold tabular-nums">{value == null ? "—" : value.toLocaleString() + (suffix ?? "")}</div>
+      )}
     </div>
   );
 }
