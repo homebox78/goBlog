@@ -23,6 +23,30 @@ function news_canonical(): string
     return 'https://hom2box.com' . $path . ($qs ? '?' . $qs : '');
 }
 
+/** JSON-LD 스크립트 태그 출력 (검색엔진·AI 인용용 구조화 데이터) */
+function news_jsonld(array $data): void
+{
+    echo '<script type="application/ld+json">'
+        . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        . "</script>\n";
+}
+
+/**
+ * BreadcrumbList 구조화 데이터.
+ * @param array $crumbs [['name'=>'홈','url'=>'https://...'], ... 마지막 항목은 url 생략 가능]
+ */
+function news_breadcrumb_ld(array $crumbs): void
+{
+    $items = [];
+    $i = 1;
+    foreach ($crumbs as $c) {
+        $li = ['@type' => 'ListItem', 'position' => $i++, 'name' => $c['name']];
+        if (!empty($c['url'])) $li['item'] = $c['url'];
+        $items[] = $li;
+    }
+    news_jsonld(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $items]);
+}
+
 function render_head(string $title, string $desc = '', string $ogImage = '', string $canonical = ''): void
 {
     $canonical = $canonical !== '' ? $canonical : news_canonical();
@@ -51,6 +75,9 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32.png">
 <link rel="apple-touch-icon" href="/favicon/apple-touch-icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fastly.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 <style>

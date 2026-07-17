@@ -22,6 +22,29 @@ uksort($groups, function ($a, $b) use ($catOrder) {
 });
 
 render_head('실용 계산기 모음 — HOM2BOX 뉴스', '연봉 실수령액·4대보험·퇴직금·대출·양도세·유튜브/애드센스 수익 등 자주 쓰는 계산기 ' . count(TOOLS) . '종을 무료로 제공합니다.');
+news_breadcrumb_ld([
+    ['name' => '홈', 'url' => 'https://hom2box.com/'],
+    ['name' => '계산기'],
+]);
+$toolIds = array_keys(TOOLS);
+news_jsonld([
+    '@context' => 'https://schema.org',
+    '@type' => 'CollectionPage',
+    'name' => '실용 계산기 모음',
+    'url' => 'https://hom2box.com/tools.php',
+    'inLanguage' => 'ko',
+    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+    'mainEntity' => [
+        '@type' => 'ItemList',
+        'numberOfItems' => count($toolIds),
+        'itemListElement' => array_map(fn($id, $i) => [
+            '@type' => 'ListItem',
+            'position' => $i + 1,
+            'url' => 'https://hom2box.com/tool.php?id=' . urlencode((string) $id),
+            'name' => TOOLS[$id]['name'],
+        ], $toolIds, array_keys($toolIds)),
+    ],
+]);
 render_ticker($ticker);
 render_topbar();
 render_masthead();

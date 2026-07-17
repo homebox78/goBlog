@@ -98,6 +98,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
   <?php render_nav('홈', $bySection, !empty($press)); ?>
 
   <div class="mx-auto max-w-[1399px] px-6">
+    <h1 class="sr-only">HOM2BOX 뉴스 — 매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스</h1>
     <?php render_ad("home-top"); ?>
 
     <?php if (!$articles): ?>

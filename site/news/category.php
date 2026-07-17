@@ -43,6 +43,28 @@ $items = array_slice($all, 0, $PER);
 $nextOffset = count($all) > $PER ? $PER : null;
 
 render_head("$cat 기사 — HOM2BOX 뉴스", "$cat 분야 최신 기사 모음 — HOM2BOX 편집국 자체 기사.");
+news_breadcrumb_ld([
+    ['name' => '홈', 'url' => 'https://hom2box.com/'],
+    ['name' => $cat],
+]);
+news_jsonld([
+    '@context' => 'https://schema.org',
+    '@type' => 'CollectionPage',
+    'name' => "$cat 기사",
+    'url' => 'https://hom2box.com/category.php?cat=' . urlencode($cat),
+    'inLanguage' => 'ko',
+    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+    'mainEntity' => [
+        '@type' => 'ItemList',
+        'numberOfItems' => count($items),
+        'itemListElement' => array_map(fn($c, $i) => [
+            '@type' => 'ListItem',
+            'position' => $i + 1,
+            'url' => 'https://hom2box.com/article.php?id=' . (int) $c['id'],
+            'name' => $c['title'],
+        ], $items, array_keys($items)),
+    ],
+]);
 render_ticker(array_slice($all, 0, 6));
 render_topbar();
 render_masthead();

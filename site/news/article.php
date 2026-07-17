@@ -166,6 +166,11 @@ echo json_encode([
     ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 ?></script>
+<?php news_breadcrumb_ld([
+    ['name' => '홈', 'url' => 'https://hom2box.com/'],
+    ['name' => $section, 'url' => 'https://hom2box.com/category.php?cat=' . urlencode($section)],
+    ['name' => $article['title']],
+]); ?>
 <style>
 /* 생성 본문(contentHtml)의 인라인 폰트를 통일하고 이미지·표를 반응형으로 */
 .article-body, .article-body * { font-family:'Escoredream','Noto Sans KR',sans-serif !important; }

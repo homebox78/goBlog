@@ -30,6 +30,24 @@ if (!empty($full['faq'])) {
 
 render_head($t['name'] . ' — HOM2BOX 뉴스', $t['desc'] . ' 무료 온라인 계산기.');
 if ($faqLd) echo '<script type="application/ld+json">' . $faqLd . '</script>';
+news_breadcrumb_ld([
+    ['name' => '홈', 'url' => 'https://hom2box.com/'],
+    ['name' => '계산기', 'url' => 'https://hom2box.com/tools.php'],
+    ['name' => $t['name']],
+]);
+// 계산기 자체를 WebApplication으로 — AI/검색이 '무료 온라인 도구'로 인식
+news_jsonld([
+    '@context' => 'https://schema.org',
+    '@type' => 'WebApplication',
+    'name' => $t['name'],
+    'url' => 'https://hom2box.com/tool.php?id=' . $id,
+    'applicationCategory' => 'FinanceApplication',
+    'operatingSystem' => 'All (웹 브라우저)',
+    'inLanguage' => 'ko',
+    'description' => $t['desc'],
+    'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'KRW'],
+    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+]);
 render_ticker($ticker);
 render_topbar();
 render_masthead();
