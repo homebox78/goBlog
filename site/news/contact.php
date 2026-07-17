@@ -1,5 +1,39 @@
 <?php
 declare(strict_types=1);
+
+// ── 문의 접수 (모달 ajax) ──────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_once __DIR__ . '/includes/goblog-db.php';
+    header('Content-Type: application/json; charset=utf-8');
+    $msg = trim((string) ($_POST['message'] ?? ''));
+    $email = trim((string) ($_POST['email'] ?? ''));
+    if (mb_strlen($msg) < 5) {
+        echo json_encode(['ok' => false, 'msg' => '문의 내용을 5자 이상 입력해주세요.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['ok' => false, 'msg' => '이메일 형식이 올바르지 않습니다.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    try {
+        $st = goblog_db()->prepare(
+            'INSERT INTO inquiries (category, name, email, subject, message, ip) VALUES (?, ?, ?, ?, ?, ?)',
+        );
+        $st->execute([
+            mb_substr(trim((string) ($_POST['category'] ?? '')), 0, 30) ?: null,
+            mb_substr(trim((string) ($_POST['name'] ?? '')), 0, 60) ?: null,
+            $email ?: null,
+            mb_substr(trim((string) ($_POST['subject'] ?? '')), 0, 200) ?: null,
+            mb_substr($msg, 0, 5000),
+            client_ip() ?: null,
+        ]);
+        echo json_encode(['ok' => true, 'msg' => '문의가 접수되었습니다. 확인 후 회신드리겠습니다.'], JSON_UNESCAPED_UNICODE);
+    } catch (Throwable) {
+        echo json_encode(['ok' => false, 'msg' => '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
+
 require_once __DIR__ . '/includes/legal-layout.php';
 
 // 공개 문의 이메일 — 필요 시 이 값만 바꾸면 됩니다.
