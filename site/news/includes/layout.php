@@ -121,6 +121,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
         $tabs[] = [$s, '/category.php?cat=' . urlencode($s)];
     }
     $tabs[] = ['지원금', '/welfare.php'];
+    $tabs[] = ['계산기', '/tools.php'];
     if ($hasPress) $tabs[] = ['언론사', '/#sec-yna'];
     $tabs[] = ['오피니언', '/opinion.php'];
     ?>

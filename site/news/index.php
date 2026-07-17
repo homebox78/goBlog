@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
 require_once __DIR__ . '/includes/press-rss.php';
 require_once __DIR__ . '/includes/layout.php';
+require_once __DIR__ . '/includes/tools-data.php';
 
 $articles = [];
 try {
@@ -93,6 +94,23 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
           <a href="/article.php?id=<?= (int) $h['id'] ?>" class="flex gap-3.5 items-center py-3 border-b border-zinc-100 group">
             <div class="flex-1 text-[15px] font-bold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($h['title']) ?></div>
             <?php if (!empty($h['image'])): ?><div class="w-[88px] h-[60px] rounded-md flex-none bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($h['image']) ?>')"></div><?php endif; ?>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+
+    <!-- 계산기 도구 배너 -->
+    <div class="mt-6 rounded-xl border border-zinc-200 bg-gradient-to-r from-[<?= $P ?>]/[0.04] to-[#0a8f5b]/[0.04] p-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-[20px] text-[<?= $P ?>]">calculate</span>
+        <span class="text-[15px] font-extrabold">자주 쓰는 계산기</span>
+        <a href="/tools.php" class="ml-auto text-xs text-zinc-400 hover:text-[<?= $P ?>] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <?php foreach (TOOLS as $tid => $tt): ?>
+          <a href="/tool.php?id=<?= nh($tid) ?>" class="flex flex-col items-center gap-1.5 rounded-lg border border-zinc-200 bg-white py-3 hover:border-[<?= $P ?>] hover:shadow-sm transition-all group">
+            <span class="material-symbols-outlined text-[24px] text-[<?= $P ?>]"><?= nh($tt['icon']) ?></span>
+            <span class="text-[12px] font-bold text-zinc-700 group-hover:text-[<?= $P ?>] text-center px-1 leading-tight"><?= nh(str_replace([' 계산기', ' ↔ ㎡ 변환기'], ['', ' 변환'], $tt['name'])) ?></span>
           </a>
         <?php endforeach; ?>
       </div>
