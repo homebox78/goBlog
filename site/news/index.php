@@ -226,12 +226,12 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
     <div class="mt-6">
       <div class="flex items-center gap-2 mb-3">
         <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
-        <span class="material-symbols-outlined text-[20px] text-[#0a8f5b]">volunteer_activism</span>
+        <span class="material-symbols-outlined text-[20px] text-[#134a9c]">volunteer_activism</span>
         <span class="text-[16px] font-bold tracking-tight">정부 지원금·복지 소식</span>
         <div class="ml-auto flex items-center gap-1.5">
-          <button type="button" id="h2b-wf-prev" class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 hover:border-[#0a8f5b] hover:text-[#0a8f5b] disabled:opacity-30 disabled:cursor-default disabled:hover:border-zinc-200 disabled:hover:text-zinc-400"><span class="material-symbols-outlined text-[16px]">chevron_left</span></button>
-          <button type="button" id="h2b-wf-next" class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 hover:border-[#0a8f5b] hover:text-[#0a8f5b] disabled:opacity-30 disabled:cursor-default disabled:hover:border-zinc-200 disabled:hover:text-zinc-400"><span class="material-symbols-outlined text-[16px]">chevron_right</span></button>
-          <a href="/welfare.php" class="ml-1 text-xs text-zinc-400 hover:text-[#0a8f5b] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
+          <button type="button" id="h2b-wf-prev" class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 hover:border-[#134a9c] hover:text-[#134a9c] disabled:opacity-30 disabled:cursor-default disabled:hover:border-zinc-200 disabled:hover:text-zinc-400"><span class="material-symbols-outlined text-[16px]">chevron_left</span></button>
+          <button type="button" id="h2b-wf-next" class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 hover:border-[#134a9c] hover:text-[#134a9c] disabled:opacity-30 disabled:cursor-default disabled:hover:border-zinc-200 disabled:hover:text-zinc-400"><span class="material-symbols-outlined text-[16px]">chevron_right</span></button>
+          <a href="/welfare.php" class="ml-1 text-xs text-zinc-400 hover:text-[#134a9c] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
         </div>
       </div>
       <div id="h2b-wf" class="overflow-hidden">
@@ -239,12 +239,12 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
           <?php foreach ($welfare as $w):
             $wlink = !empty($w['detailLink']) ? $w['detailLink'] : '/welfare.php';
             $wext = !empty($w['detailLink']); ?>
-            <a href="<?= nh($wlink) ?>"<?= $wext ? ' target="_blank" rel="noopener"' : '' ?> class="h2b-wf-item block rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-[#0a8f5b] transition-all group">
+            <a href="<?= nh($wlink) ?>"<?= $wext ? ' target="_blank" rel="noopener"' : '' ?> class="h2b-wf-item block rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-[#134a9c] transition-all group">
               <div class="mb-1.5 flex items-center gap-1.5 min-w-0">
-                <span class="inline-flex flex-none items-center rounded bg-[#0a8f5b]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#0a8f5b]"><?= $w['source'] === 'CENTRAL' ? '중앙부처' : '지자체' ?></span>
+                <span class="inline-flex flex-none items-center rounded bg-[#134a9c]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#134a9c]"><?= $w['source'] === 'CENTRAL' ? '중앙부처' : '지자체' ?></span>
                 <?php if (!empty($w['lifeCycle'])): ?><span class="min-w-0 flex-1 truncate text-[10.5px] text-zinc-400"><?= nh($w['lifeCycle']) ?></span><?php endif; ?>
               </div>
-              <div class="text-[14px] font-bold leading-snug text-zinc-900 group-hover:text-[#0a8f5b] line-clamp-2"><?= nh($w['name']) ?></div>
+              <div class="text-[14px] font-bold leading-snug text-zinc-900 group-hover:text-[#134a9c] line-clamp-2"><?= nh($w['name']) ?></div>
               <?php if (!empty($w['summary'])): ?><div class="mt-1.5 text-[12px] leading-relaxed text-zinc-500 line-clamp-2"><?= nh($w['summary']) ?></div><?php endif; ?>
               <?php if (!empty($w['dept'])): ?><div class="mt-2 text-[11px] text-zinc-400 truncate"><?= nh($w['dept']) ?></div><?php endif; ?>
             </a>
@@ -335,10 +335,10 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
 
         <?php render_ad("home-sidebar"); ?>
 
-        <a href="/welfare.php" class="block rounded-lg border border-[#0a8f5b] bg-[#0a8f5b] p-4 text-white transition-colors hover:bg-[#087a4d]">
+        <a href="/welfare.php" class="block rounded-lg border border-[#134a9c] bg-[#134a9c] p-4 text-white transition-colors hover:bg-[#0f3d82]">
           <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">payments</span>정부 지원금 찾기</div>
           <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85 line-clamp-1">생애주기·지역별 지원금을 한 번에.</div>
-          <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[#0a8f5b]">지원금 보기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
+          <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[#134a9c]">지원금 보기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
         </a>
 
         <?php if ($partner): ?>

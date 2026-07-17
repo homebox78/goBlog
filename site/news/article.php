@@ -405,7 +405,7 @@ html { scroll-behavior:smooth; }
         <div class="mt-1.5 flex items-center gap-1 text-[11px] text-zinc-400"><span class="material-symbols-outlined text-[13px]">info</span>구매 시 운영자가 수수료를 제공받을 수 있습니다</div>
       </a>
       <?php endif; ?>
-      <a href="/welfare.php" class="block rounded-lg border border-[#0a8f5b] bg-[#0a8f5b] p-4 text-white hover:bg-[#087a4d]">
+      <a href="/welfare.php" class="block rounded-lg border border-[#134a9c] bg-[#134a9c] p-4 text-white hover:bg-[#0f3d82]">
         <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">payments</span>정부 지원금 찾기</div>
         <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85">생애주기·지역별 신청 가능한 지원금을 한 번에.</div>
       </a>
