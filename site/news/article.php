@@ -60,18 +60,23 @@ $showFigure = $image !== null && strpos($html, $image) === false;
 // ── 제휴 배너 자동 삽입 ─────────────────────────────────────────────
 // 생성 단계에서 광고가 안 들어간 글(adSource null)에만, 글 키워드에 매칭된 상품 중
 // 제휴 트래킹 링크(link.coupang.com/coupa.ng/naver.me)가 있는 것을 골라 삽입한다.
-$ad = null;
-if (empty($article['adSource']) && !empty($article['keywordId'])) {
+// 키워드에 매칭된 제휴 상품을 최대 2개 가져온다 — [0]은 본문 배너, [1]은 사이드바 카드(중복 방지).
+$adProducts = [];
+if (!empty($article['keywordId'])) {
     $st = $db->prepare(
         "SELECT name, brand, price, originPrice, imageUrl, productUrl, source, isRocket
          FROM products
          WHERE matchedKeywordId = ? AND status <> 'DISABLED'
            AND (productUrl LIKE '%link.coupang.com%' OR productUrl LIKE '%coupa.ng%' OR productUrl LIKE '%naver.me%')
-         ORDER BY COALESCE(ratingCount, 0) DESC LIMIT 1",
+         ORDER BY COALESCE(ratingCount, 0) DESC LIMIT 2",
     );
     $st->execute([(int) $article['keywordId']]);
-    $ad = $st->fetch() ?: null;
+    $adProducts = $st->fetchAll();
 }
+// 본문 배너: 생성 단계에서 광고가 안 들어간 글(adSource null)에만 삽입
+$ad = (empty($article['adSource']) && isset($adProducts[0])) ? $adProducts[0] : null;
+// 사이드바 파트너스 추천: 본문 배너와 다른 상품(없으면 본문 배너 미노출 시 첫 상품)
+$sideAd = $ad ? ($adProducts[1] ?? null) : ($adProducts[0] ?? null);
 
 function ad_banner(array $p): string
 {
@@ -124,7 +129,10 @@ if ($ad) {
 $toc = [];
 $html = preg_replace_callback('/<h2\b([^>]*)>(.*?)<\/h2>/is', function ($m) use (&$toc) {
     $n = count($toc) + 1;
-    $toc[] = trim(strip_tags($m[2]));
+    // 목차 라벨에서는 이모지·기호를 제거한다(본문 h2 원문은 그대로 유지)
+    $label = strip_tags($m[2]);
+    $label = preg_replace('/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{2190}-\x{21FF}\x{FE00}-\x{FE0F}\x{1F1E6}-\x{1F1FF}\x{2B50}\x{2705}\x{2714}\x{2611}]/u', '', $label);
+    $toc[] = trim(preg_replace('/\s+/u', ' ', $label));
     $attrs = preg_replace('/\s*id\s*=\s*"[^"]*"/i', '', $m[1]); // 기존 id 제거 후 통일
     return '<h2' . $attrs . ' id="toc-' . $n . '">' . $m[2] . '</h2>';
 }, $html);
@@ -336,6 +344,22 @@ html { scroll-behavior:smooth; }
           <?php endforeach; ?>
         </div>
       </div>
+      <?php if ($sideAd): $isCp = $sideAd['source'] === 'COUPANG'; $accent = $isCp ? '#e52528' : '#03c75a'; ?>
+      <a href="<?= nh($sideAd['productUrl']) ?>" target="_blank" rel="sponsored nofollow noopener" class="block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div class="mb-2.5 flex items-center justify-between">
+          <span class="text-[13px] font-extrabold text-[<?= NEWS_PRIMARY ?>]">파트너스 추천</span>
+          <span class="inline-flex items-center rounded border border-zinc-200 px-1.5 text-[10.5px] text-zinc-400">AD</span>
+        </div>
+        <?php if (!empty($sideAd['imageUrl'])): ?>
+          <img src="<?= nh($sideAd['imageUrl']) ?>" alt="<?= nh($sideAd['name']) ?>" referrerpolicy="no-referrer" loading="lazy" class="h-28 w-full rounded-md bg-zinc-50 object-contain">
+        <?php endif; ?>
+        <div class="mt-2.5 text-sm font-bold leading-normal line-clamp-2"><?= nh($sideAd['name']) ?></div>
+        <?php if (!empty($sideAd['price'])): ?>
+          <div class="mt-1 text-[15px] font-extrabold" style="color:<?= $accent ?>"><?= number_format((int) $sideAd['price']) ?>원<?= $sideAd['isRocket'] ? ' <span class="text-[11px]" style="color:#2c7fff">🚀</span>' : '' ?></div>
+        <?php endif; ?>
+        <div class="mt-1.5 flex items-center gap-1 text-[11px] text-zinc-400"><span class="material-symbols-outlined text-[13px]">info</span>구매 시 운영자가 수수료를 제공받을 수 있습니다</div>
+      </a>
+      <?php endif; ?>
       <a href="/welfare.php" class="block rounded-lg border border-[#0a8f5b] bg-[#0a8f5b] p-4 text-white hover:bg-[#087a4d]">
         <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">payments</span>정부 지원금 찾기</div>
         <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85">생애주기·지역별 신청 가능한 지원금을 한 번에.</div>
