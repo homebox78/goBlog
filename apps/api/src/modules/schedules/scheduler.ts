@@ -50,10 +50,12 @@ async function findProductForKeyword(keywordId: number, text: string): Promise<P
   if (isNonCommercialKeyword(text)) return null;
 
   // ① 등록 상품: 명시 매칭 우선 → 없으면 활성 상품 중 토큰 겹침 최고.
-  // ⚠️ 쿠팡은 제휴 단축링크(link.coupang.com·coupa.ng)가 있는 상품만 쓴다 —
-  //    원본 coupang.com URL은 수수료 추적이 안 돼 광고를 붙이는 의미가 없다(크롤 직후 링크 미발급 상품 제외).
+  // ⚠️ 제휴 트래킹 링크가 있는 상품만 쓴다 — 원본 상품 URL(coupang.com·smartstore)은
+  //    수수료 추적이 안 돼 광고를 붙이는 의미가 없다(크롤 직후 링크 미발급 상품 제외).
   const hasAffiliateLink = (p: { source: string; productUrl: string }) =>
-    p.source !== "COUPANG" || /link\.coupang\.com|coupa\.ng/i.test(p.productUrl);
+    p.source === "COUPANG"
+      ? /link\.coupang\.com|coupa\.ng/i.test(p.productUrl)
+      : /naver\.me/i.test(p.productUrl);
   const explicit = await prisma.product.findFirst({
     where: { status: "ACTIVE", matchedKeywordId: keywordId },
     orderBy: { createdAt: "asc" },

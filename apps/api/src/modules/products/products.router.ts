@@ -179,6 +179,36 @@ productsRouter.post(
   }),
 );
 
+/**
+ * 전체 재매칭 — 매칭 규칙(STOPWORDS 등) 개선 후 ACTIVE 상품의 매칭을 다시 계산한다.
+ * USED/DISABLED는 발행 이력이 있어 건드리지 않는다.
+ */
+productsRouter.post(
+  "/rematch",
+  asyncHandler(async (_req, res) => {
+    const keywords = await matchableKeywords();
+    const actives = await prisma.product.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true, brand: true, matchedKeywordId: true },
+    });
+    let changed = 0;
+    let matchedCount = 0;
+    for (const p of actives) {
+      const match = bestKeywordForProduct({ name: p.name, brand: p.brand }, keywords);
+      const newId = match?.keyword.id ?? null;
+      if (newId) matchedCount += 1;
+      if (newId !== p.matchedKeywordId) {
+        await prisma.product.update({
+          where: { id: p.id },
+          data: { matchedKeywordId: newId, matchedAt: newId ? new Date() : null },
+        });
+        changed += 1;
+      }
+    }
+    res.json({ scanned: actives.length, matched: matchedCount, changed });
+  }),
+);
+
 const bulkMatchSchema = z.object({
   source: z.enum(["COUPANG", "BRANDCONNECT"]),
   text: z.string().min(1, "상품 목록을 붙여넣어주세요."),
