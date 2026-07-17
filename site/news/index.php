@@ -135,7 +135,10 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
       <div class="flex flex-col pb-2">
         <?php foreach ($subLeads as $h): ?>
           <a href="/article.php?id=<?= (int) $h['id'] ?>" class="flex gap-3.5 items-center py-3 border-b border-zinc-100 group">
-            <div class="flex-1 text-[15px] font-bold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($h['title']) ?></div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[15px] font-bold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($h['title']) ?></div>
+              <?php if (!empty($h['excerpt'])): ?><div class="mt-1 text-[13px] text-zinc-500 line-clamp-1"><?= nh($h['excerpt']) ?></div><?php endif; ?>
+            </div>
             <?php if (!empty($h['image'])): ?><div class="w-[88px] h-[60px] rounded-md flex-none bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($h['image']) ?>')"></div><?php endif; ?>
           </a>
         <?php endforeach; ?>
@@ -143,7 +146,10 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
           <div id="h2b-more-leads" class="hidden flex-col">
             <?php foreach ($moreLeads as $h): ?>
               <a href="/article.php?id=<?= (int) $h['id'] ?>" class="flex gap-3.5 items-center py-3 border-b border-zinc-100 group">
-                <div class="flex-1 text-[15px] font-bold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($h['title']) ?></div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[15px] font-bold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($h['title']) ?></div>
+                  <?php if (!empty($h['excerpt'])): ?><div class="mt-1 text-[13px] text-zinc-500 line-clamp-1"><?= nh($h['excerpt']) ?></div><?php endif; ?>
+                </div>
                 <?php if (!empty($h['image'])): ?><div class="w-[88px] h-[60px] rounded-md flex-none bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($h['image']) ?>')"></div><?php endif; ?>
               </a>
             <?php endforeach; ?>
@@ -212,35 +218,68 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
       </div>
     </div>
 
-    <!-- 정부 지원금·복지 최근 소식 -->
-    <?php $welfare = welfare_recent(4); if ($welfare): ?>
+    <!-- 정부 지원금·복지 최근 소식 (per-view 캐러셀: lg 4 / sm 3 / mobile 1) -->
+    <?php $welfare = welfare_recent(12); if ($welfare): ?>
     <div class="mt-6">
       <div class="flex items-center gap-2 mb-3">
         <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
         <span class="material-symbols-outlined text-[20px] text-[#0a8f5b]">volunteer_activism</span>
         <span class="text-[16px] font-bold tracking-tight">정부 지원금·복지 소식</span>
         <div class="ml-auto flex items-center gap-1.5">
-          <button type="button" onclick="document.getElementById('h2b-wf').scrollBy({left:-320,behavior:'smooth'})" class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 hover:border-[#0a8f5b] hover:text-[#0a8f5b]"><span class="material-symbols-outlined text-[16px]">chevron_left</span></button>
-          <button type="button" onclick="document.getElementById('h2b-wf').scrollBy({left:320,behavior:'smooth'})" class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 hover:border-[#0a8f5b] hover:text-[#0a8f5b]"><span class="material-symbols-outlined text-[16px]">chevron_right</span></button>
+          <button type="button" id="h2b-wf-prev" class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 hover:border-[#0a8f5b] hover:text-[#0a8f5b] disabled:opacity-30 disabled:cursor-default disabled:hover:border-zinc-200 disabled:hover:text-zinc-400"><span class="material-symbols-outlined text-[16px]">chevron_left</span></button>
+          <button type="button" id="h2b-wf-next" class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 hover:border-[#0a8f5b] hover:text-[#0a8f5b] disabled:opacity-30 disabled:cursor-default disabled:hover:border-zinc-200 disabled:hover:text-zinc-400"><span class="material-symbols-outlined text-[16px]">chevron_right</span></button>
           <a href="/welfare.php" class="ml-1 text-xs text-zinc-400 hover:text-[#0a8f5b] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
         </div>
       </div>
-      <div id="h2b-wf" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <?php foreach ($welfare as $w):
-          $wlink = !empty($w['detailLink']) ? $w['detailLink'] : '/welfare.php';
-          $wext = !empty($w['detailLink']); ?>
-          <a href="<?= nh($wlink) ?>"<?= $wext ? ' target="_blank" rel="noopener"' : '' ?> class="block rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-[#0a8f5b] transition-all group">
-            <div class="mb-1.5 flex items-center gap-1.5">
-              <span class="inline-flex items-center rounded bg-[#0a8f5b]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#0a8f5b]"><?= $w['source'] === 'CENTRAL' ? '중앙부처' : '지자체' ?></span>
-              <?php if (!empty($w['lifeCycle'])): ?><span class="text-[10.5px] text-zinc-400"><?= nh($w['lifeCycle']) ?></span><?php endif; ?>
-            </div>
-            <div class="text-[14px] font-bold leading-snug text-zinc-900 group-hover:text-[#0a8f5b] line-clamp-2"><?= nh($w['name']) ?></div>
-            <?php if (!empty($w['summary'])): ?><div class="mt-1.5 text-[12px] leading-relaxed text-zinc-500 line-clamp-2"><?= nh($w['summary']) ?></div><?php endif; ?>
-            <?php if (!empty($w['dept'])): ?><div class="mt-2 text-[11px] text-zinc-400 truncate"><?= nh($w['dept']) ?></div><?php endif; ?>
-          </a>
-        <?php endforeach; ?>
+      <div id="h2b-wf" class="overflow-hidden">
+        <div id="h2b-wf-track" class="h2b-wf-track">
+          <?php foreach ($welfare as $w):
+            $wlink = !empty($w['detailLink']) ? $w['detailLink'] : '/welfare.php';
+            $wext = !empty($w['detailLink']); ?>
+            <a href="<?= nh($wlink) ?>"<?= $wext ? ' target="_blank" rel="noopener"' : '' ?> class="h2b-wf-item block rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-[#0a8f5b] transition-all group">
+              <div class="mb-1.5 flex items-center gap-1.5">
+                <span class="inline-flex items-center rounded bg-[#0a8f5b]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#0a8f5b]"><?= $w['source'] === 'CENTRAL' ? '중앙부처' : '지자체' ?></span>
+                <?php if (!empty($w['lifeCycle'])): ?><span class="text-[10.5px] text-zinc-400"><?= nh($w['lifeCycle']) ?></span><?php endif; ?>
+              </div>
+              <div class="text-[14px] font-bold leading-snug text-zinc-900 group-hover:text-[#0a8f5b] line-clamp-2"><?= nh($w['name']) ?></div>
+              <?php if (!empty($w['summary'])): ?><div class="mt-1.5 text-[12px] leading-relaxed text-zinc-500 line-clamp-2"><?= nh($w['summary']) ?></div><?php endif; ?>
+              <?php if (!empty($w['dept'])): ?><div class="mt-2 text-[11px] text-zinc-400 truncate"><?= nh($w['dept']) ?></div><?php endif; ?>
+            </a>
+          <?php endforeach; ?>
+        </div>
       </div>
     </div>
+    <style>
+      /* per-view: 모바일 1개(100%) / sm 3개 / lg 4개 — gap 12px 반영한 calc basis */
+      .h2b-wf-track{display:flex;gap:12px;transition:transform .35s ease;will-change:transform;}
+      .h2b-wf-item{flex:0 0 100%;min-width:0;}
+      @media (min-width:640px){.h2b-wf-item{flex:0 0 calc((100% - 24px) / 3);}}
+      @media (min-width:1024px){.h2b-wf-item{flex:0 0 calc((100% - 36px) / 4);}}
+    </style>
+    <script>
+    (function(){
+      var vp=document.getElementById('h2b-wf'),track=document.getElementById('h2b-wf-track');
+      if(!vp||!track) return;
+      var prev=document.getElementById('h2b-wf-prev'),next=document.getElementById('h2b-wf-next');
+      var total=track.children.length,gap=12,page=0;
+      function perView(){var w=window.innerWidth;return w<640?1:(w<1024?3:4);}
+      function pages(){return Math.max(1,Math.ceil(total/perView()));}
+      function render(){
+        var maxPage=pages()-1;
+        if(page>maxPage)page=maxPage;
+        if(page<0)page=0;
+        var x=page*(vp.clientWidth+gap);
+        track.style.transform='translateX(-'+x+'px)';
+        if(prev)prev.disabled=(page<=0);
+        if(next)next.disabled=(page>=maxPage);
+      }
+      if(prev)prev.addEventListener('click',function(){page--;render();});
+      if(next)next.addEventListener('click',function(){page++;render();});
+      var rt;
+      window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,120);});
+      render();
+    })();
+    </script>
     <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-9 pt-7 pb-2">
@@ -293,7 +332,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
 
         <a href="/welfare.php" class="block rounded-lg border border-[#0a8f5b] bg-[#0a8f5b] p-4 text-white transition-colors hover:bg-[#087a4d]">
           <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">payments</span>정부 지원금 찾기</div>
-          <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85">생애주기·지역별 신청 가능한 정부·지자체 지원금을 한 번에.</div>
+          <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85 line-clamp-1">생애주기·지역별 지원금을 한 번에.</div>
           <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[#0a8f5b]">지원금 보기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
         </a>
 
@@ -332,7 +371,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
 
         <a href="/subscribe.php" class="block rounded-lg border border-[<?= $P ?>] bg-[<?= $P ?>] p-4 text-white transition-colors hover:bg-[#0f3d82]">
           <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">mail</span>무료 뉴스레터 구독</div>
-          <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/80">매일 아침·저녁, 분야별 핵심 기사를 메일함에서 받아보세요.</div>
+          <div class="mt-1.5 text-[12px] leading-relaxed text-white/80 line-clamp-1">매일 아침·저녁, 핵심 기사를 메일로 받아보세요.</div>
           <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[<?= $P ?>]">구독하기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
         </a>
       </div>
@@ -353,13 +392,19 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
         </div>
       </div>
       <?php $first = true; foreach ($press as $key => $tab): ?>
-        <div class="press-panel flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 -mx-6 px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0" id="press-<?= nh($key) ?>" <?= $first ? '' : 'style="display:none"' ?>>
+        <div class="press-panel grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="press-<?= nh($key) ?>" <?= $first ? '' : 'style="display:none"' ?>>
           <?php foreach ($tab['boxes'] as $boxLabel => $links): ?>
-            <div class="w-[80%] shrink-0 snap-start sm:w-[46%] lg:w-auto lg:min-w-0 rounded-lg border border-zinc-200 bg-white shadow-sm overflow-hidden">
-              <div class="px-4 py-2.5 text-sm font-extrabold text-[<?= $P ?>] bg-zinc-50 border-b-2 border-[<?= $P ?>]"><?= nh((string) $boxLabel) ?></div>
-              <div class="px-4 py-1.5">
+            <div class="rounded-lg border border-zinc-200 bg-white shadow-sm overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-50 border-b-2 border-[<?= $P ?>]">
+                <span class="h-[13px] w-[3px] rounded-full bg-[#e0392b]"></span>
+                <span class="text-sm font-extrabold text-[<?= $P ?>]"><?= nh((string) $boxLabel) ?></span>
+              </div>
+              <div class="px-3 py-1">
                 <?php foreach ($links as $l): ?>
-                  <a href="<?= nh($l['link']) ?>" target="_blank" rel="noopener nofollow" title="<?= nh($l['title']) ?>" class="block truncate py-1.5 text-[13px] leading-normal border-b border-zinc-50 last:border-0 hover:text-[<?= $P ?>]"><?= nh($l['title']) ?></a>
+                  <a href="<?= nh($l['link']) ?>" target="_blank" rel="noopener nofollow" title="<?= nh($l['title']) ?>" class="flex items-start gap-2 border-b border-zinc-50 px-1 py-2 last:border-0 group">
+                    <span class="mt-[7px] h-1 w-1 flex-none rounded-full bg-[#e0392b]"></span>
+                    <span class="text-[13.5px] font-semibold leading-normal text-zinc-800 line-clamp-2 group-hover:text-[<?= $P ?>]"><?= nh($l['title']) ?></span>
+                  </a>
                 <?php endforeach; ?>
               </div>
             </div>

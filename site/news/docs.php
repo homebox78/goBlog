@@ -86,7 +86,7 @@ render_nav('문서도구', [], true);
     </nav>
     <div class="border-b border-zinc-200 pb-4">
       <h1 class="m-0 text-[26px] sm:text-[30px] font-bold tracking-tight"><?= nh($d['title']) ?></h1>
-      <p class="mt-1.5 text-[13.5px] leading-relaxed text-zinc-500"><?= nh($d['desc']) ?></p>
+      <p class="mt-1.5 text-[13.5px] leading-relaxed text-zinc-500 line-clamp-1"><?= nh($d['desc']) ?></p>
     </div>
   </div>
   <div class="mx-auto max-w-[1399px] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 lg:gap-10 px-4 sm:px-6 py-7">

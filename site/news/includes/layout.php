@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718f';
+const TW_CSS_VER = '20260718i';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -78,15 +78,20 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32.png">
 <link rel="apple-touch-icon" href="/favicon/apple-touch-icon-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fastly.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="/assets/tailwind.css?v=<?= TW_CSS_VER ?>">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<!-- 폰트 전량 자체호스팅(외부 CDN 호출 없음). MS 기본 클래스는 tailwind.css 앞에 둬 text-[Npx]가 뒤에서 크기를 이기게 함 -->
+<link rel="preload" href="/assets/fonts/S-CoreDream-4Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/MaterialSymbolsOutlined.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-@font-face{font-family:'Escoredream';src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff');font-weight:400;font-display:swap;}
-@font-face{font-family:'Escoredream';src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-5Medium.woff') format('woff');font-weight:500;font-display:swap;}
-@font-face{font-family:'Escoredream';src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-6Bold.woff') format('woff');font-weight:700;font-display:swap;}
-@font-face{font-family:'Escoredream';src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff');font-weight:800;font-display:swap;}
+@font-face{font-family:'Material Symbols Outlined';font-style:normal;font-weight:normal;font-display:block;src:url('/assets/fonts/MaterialSymbolsOutlined.woff2') format('woff2');}
+.material-symbols-outlined{font-family:'Material Symbols Outlined';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:'liga';-webkit-font-smoothing:antialiased;}
+</style>
+<link rel="stylesheet" href="/assets/tailwind.css?v=<?= TW_CSS_VER ?>">
+<style>
+@font-face{font-family:'Escoredream';src:url('/assets/fonts/S-CoreDream-3Light.woff2') format('woff2');font-weight:300;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('/assets/fonts/S-CoreDream-4Regular.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('/assets/fonts/S-CoreDream-5Medium.woff2') format('woff2');font-weight:500;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('/assets/fonts/S-CoreDream-6Bold.woff2') format('woff2');font-weight:700;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('/assets/fonts/S-CoreDream-8Heavy.woff2') format('woff2');font-weight:800;font-display:swap;}
 body,input,button,select,textarea,table { font-family:'Escoredream','Noto Sans KR',-apple-system,'Malgun Gothic',sans-serif !important; }
 a { text-decoration:none; color:inherit; }
 .material-symbols-outlined { line-height:1; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; top:.5px; }
@@ -103,6 +108,9 @@ a { text-decoration:none; color:inherit; }
 .h2b-ico-play { display:none; }
 .h2b-pause:checked ~ label .h2b-ico-play { display:inline-flex; }
 .h2b-pause:checked ~ label .h2b-ico-pause { display:none; }
+/* 좌우 퀵 레일 접기 (시안 동일 — :has 토글) */
+body:has(#h2brail:checked) .h2b-rail-items { display:none; }
+body:has(#h2brail:checked) .h2b-rail-chev { transform:rotate(180deg); }
 </style>
 </head>
 <body class="bg-white text-zinc-900">
@@ -111,11 +119,55 @@ a { text-decoration:none; color:inherit; }
 
 function render_foot(): void
 {
+    $cur = basename($_SERVER['PHP_SELF'] ?? '');
+    $act = fn(array $n) => in_array($cur, $n, true);
+    // 레일 링크 항목 (좌: 네비 / 우: 유틸)
+    $item = function (string $href, string $title, string $icon, bool $active, string $side) {
+        $st = $active ? 'text-[#134a9c] bg-[#134a9c]/10' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900';
+        $tip = $side === 'left' ? 'left-[52px]' : 'right-[52px]';
+        echo '<a href="' . $href . '" title="' . nh($title) . '" class="group relative flex h-11 w-11 items-center justify-center rounded-xl transition-colors ' . $st . '">'
+            . '<span class="material-symbols-outlined text-[22px]">' . $icon . '</span>'
+            . '<span class="pointer-events-none absolute ' . $tip . ' whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">' . nh($title) . '</span></a>';
+    };
     ?>
-<!-- 플로팅 버튼 그룹: 문의하기(+) · 맨 위로(↑) -->
-<div class="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3">
-  <button id="h2b-inquiry" type="button" aria-label="문의하기" title="문의하기"
-          class="flex h-12 w-12 items-center justify-center rounded-full bg-[#134a9c] text-white shadow-lg transition-transform hover:scale-105 hover:bg-[#0f3d82]">
+<!-- 좌우 퀵 레일 (2xl 이상, 시안 동일) — 접기 토글 공유 -->
+<input type="checkbox" id="h2brail" class="hidden">
+<aside class="fixed left-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-zinc-200 bg-white/90 p-1.5 shadow-lg backdrop-blur 2xl:flex">
+  <label for="h2brail" title="접기/펼치기" class="flex h-9 w-11 flex-none cursor-pointer items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px] transition-transform h2b-rail-chev">chevron_left</span></label>
+  <div class="flex flex-col items-center gap-1 h2b-rail-items">
+    <?php
+      $item('/', '뉴스', 'public', $act(['index.php', '']), 'left');
+      $item('/opinion.php', '오피니언', 'description', $act(['opinion.php']), 'left');
+      $item('/press.php', '언론사', 'forum', $act(['press.php']), 'left');
+      $item('/tools.php', '계산기', 'calculate', $act(['tools.php', 'tool.php']), 'left');
+      $item('/welfare.php', '지원금', 'volunteer_activism', $act(['welfare.php']), 'left');
+    ?>
+  </div>
+</aside>
+<aside class="fixed right-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-zinc-200 bg-white/90 p-1.5 shadow-lg backdrop-blur 2xl:flex">
+  <label for="h2brail" title="접기/펼치기" class="flex h-9 w-11 flex-none cursor-pointer items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px] transition-transform h2b-rail-chev">chevron_right</span></label>
+  <div class="flex flex-col items-center gap-1 h2b-rail-items">
+    <?php
+      $item('/docs.php', '문서도구', 'draft', $act(['docs.php']), 'right');
+      $item('/search.php', '검색', 'search', $act(['search.php']), 'right');
+      $item('/subscribe.php', '구독', 'bookmark', $act(['subscribe.php']), 'right');
+    ?>
+    <button type="button" title="문의하기" class="h2b-open-inq group relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900">
+      <span class="material-symbols-outlined text-[22px]">support_agent</span>
+      <span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">문의하기</span>
+    </button>
+    <div class="my-0.5 h-px w-6 bg-zinc-200"></div>
+    <button type="button" title="맨 위로" onclick="window.scrollTo({top:0,behavior:'smooth'})" class="group relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900">
+      <span class="material-symbols-outlined text-[22px]">arrow_upward</span>
+      <span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">맨 위로</span>
+    </button>
+  </div>
+</aside>
+
+<!-- 플로팅 버튼 그룹 (2xl 미만 — 레일 숨김 시 노출) -->
+<div class="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3 2xl:hidden">
+  <button type="button" aria-label="문의하기" title="문의하기"
+          class="h2b-open-inq flex h-12 w-12 items-center justify-center rounded-full bg-[#134a9c] text-white shadow-lg transition-transform hover:scale-105 hover:bg-[#0f3d82]">
     <span class="material-symbols-outlined text-[26px] leading-none">add</span>
   </button>
   <button id="h2b-top" type="button" aria-label="맨 위로" title="맨 위로" onclick="window.scrollTo({top:0,behavior:'smooth'})"
@@ -177,7 +229,7 @@ function render_foot(): void
   var modal=document.getElementById('h2b-inq-modal');
   function open(){ modal.classList.remove('hidden'); modal.classList.add('flex'); document.body.style.overflow='hidden'; }
   function close(){ modal.classList.add('hidden'); modal.classList.remove('flex'); document.body.style.overflow=''; }
-  document.getElementById('h2b-inquiry').addEventListener('click',open);
+  document.querySelectorAll('.h2b-open-inq').forEach(function(b){ b.addEventListener('click',open); });
   document.getElementById('h2b-inq-close').addEventListener('click',close);
   modal.addEventListener('click',function(e){ if(e.target===modal) close(); });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&!modal.classList.contains('hidden')) close(); });

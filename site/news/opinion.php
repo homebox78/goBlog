@@ -90,14 +90,14 @@ render_nav('오피니언', [], true);
 
         <?php foreach ($rest as $a): ?>
         <a href="/article.php?id=<?= (int) $a['id'] ?>" data-optype="own" class="flex items-center gap-3.5 sm:gap-5 border-b border-zinc-100 py-5 group">
-          <div class="h-[64px] w-[96px] sm:h-[78px] sm:w-[120px] flex-none overflow-hidden rounded-lg bg-cover bg-center bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"<?php if (!empty($a['image'])): ?> style="background-image:url('<?= nh($a['image']) ?>')"<?php endif; ?>></div>
+          <div class="h-[92px] w-[138px] sm:h-[110px] sm:w-[165px] flex-none overflow-hidden rounded-lg bg-cover bg-center bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"<?php if (!empty($a['image'])): ?> style="background-image:url('<?= nh($a['image']) ?>')"<?php endif; ?>></div>
           <div class="min-w-0 flex-1">
             <div class="mb-1 flex items-center gap-2">
               <span class="inline-flex whitespace-nowrap items-center rounded-md bg-[<?= $P ?>]/10 px-2 py-0.5 text-[11px] font-bold text-[<?= $P ?>]">편집국 칼럼</span>
               <span class="text-[11.5px] text-zinc-400"><?= nh(news_date($a['publishedAt'])) ?></span>
             </div>
             <div class="text-[15.5px] sm:text-[18px] font-bold leading-snug group-hover:text-[<?= $P ?>]"><?= nh($a['title']) ?></div>
-            <?php if (!empty($a['excerpt'])): ?><div class="mt-1 hidden sm:block text-[13px] leading-relaxed text-zinc-500 line-clamp-1"><?= nh($a['excerpt']) ?></div><?php endif; ?>
+            <?php if (!empty($a['excerpt'])): ?><div class="mt-1 hidden sm:block text-[13px] leading-relaxed text-zinc-500 line-clamp-2"><?= nh($a['excerpt']) ?></div><?php endif; ?>
             <div class="mt-1.5 text-xs font-semibold text-zinc-400">HOM2BOX 편집국 · <?= nh($a['section']) ?></div>
           </div>
           <span class="material-symbols-outlined hidden sm:inline-flex flex-none text-[20px] text-zinc-300 group-hover:text-[<?= $P ?>]">chevron_right</span>
@@ -106,13 +106,13 @@ render_nav('오피니언', [], true);
 
         <?php foreach ($pressItems as $pi): ?>
         <a href="<?= nh($pi['link']) ?>" target="_blank" rel="noopener" data-optype="press" class="flex items-center gap-3.5 sm:gap-5 border-b border-zinc-100 py-5 group">
-          <div class="h-[64px] w-[96px] sm:h-[78px] sm:w-[120px] flex-none overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"></div>
+          <div class="h-[92px] w-[138px] sm:h-[110px] sm:w-[165px] flex-none overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"></div>
           <div class="min-w-0 flex-1">
             <div class="mb-1 flex items-center gap-2">
               <span class="inline-flex whitespace-nowrap items-center rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-bold text-zinc-500">제휴 매체</span>
             </div>
             <div class="text-[15.5px] sm:text-[18px] font-bold leading-snug group-hover:text-[<?= $P ?>]"><?= nh($pi['title']) ?></div>
-            <div class="mt-1 hidden sm:block text-[13px] leading-relaxed text-zinc-500 line-clamp-1">제휴 매체 오피니언 · 원문에서 전문을 읽을 수 있습니다.</div>
+            <div class="mt-1 hidden sm:block text-[13px] leading-relaxed text-zinc-500 line-clamp-2">제휴 매체 오피니언 · 원문에서 전문을 읽을 수 있습니다.</div>
             <div class="mt-1.5 text-xs font-semibold text-zinc-400"><?= nh($pi['source']) ?> · 오피니언</div>
           </div>
           <span class="material-symbols-outlined hidden sm:inline-flex flex-none text-[20px] text-zinc-300 group-hover:text-[<?= $P ?>]">chevron_right</span>

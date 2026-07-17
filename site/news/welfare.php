@@ -48,10 +48,27 @@ function wchip(bool $on): string
             ? 'border-[#134a9c] bg-[#134a9c] text-white'
             : 'border-zinc-200 bg-white text-zinc-600 hover:border-[#134a9c] hover:text-[#134a9c]');
 }
+/** 시도 정식 행정구역명 → 축약 표시 라벨. 값·필터링(sido=?)은 정식명 유지, 라벨만 축약 */
+function wf_sido_short(string $s): string
+{
+    static $map = [
+        '전국·중앙' => '전국', '중앙' => '전국', '전국' => '전국',
+        '서울특별시' => '서울', '부산광역시' => '부산', '대구광역시' => '대구',
+        '인천광역시' => '인천', '광주광역시' => '광주', '대전광역시' => '대전',
+        '울산광역시' => '울산', '세종특별자치시' => '세종',
+        '경기도' => '경기', '강원특별자치도' => '강원', '강원도' => '강원',
+        '충청북도' => '충북', '충청남도' => '충남',
+        '전북특별자치도' => '전북', '전라북도' => '전북', '전라남도' => '전남',
+        '경상북도' => '경북', '경상남도' => '경남',
+        '제주특별자치도' => '제주', '제주도' => '제주',
+    ];
+    $s = trim($s);
+    return $map[$s] ?? $s;
+}
 // 결과 헤더 우측 필터 요약(시안 filterNote)
 $notes = [];
 if ($life !== '') $notes[] = $life;
-if ($sido !== '') $notes[] = $sido;
+if ($sido !== '') $notes[] = wf_sido_short($sido);
 if ($q !== '') $notes[] = "'" . $q . "'";
 $filterNote = $notes ? (implode(' · ', $notes) . ' 필터 적용 중') : '전체 지원금 표시 중';
 
@@ -100,9 +117,9 @@ render_nav('지원금', [], true);
     <?php if ($sidos): ?>
     <div class="mb-1.5 text-[12.5px] font-bold text-zinc-500">지역</div>
     <div class="mb-6 flex flex-wrap gap-2">
-      <a href="<?= nh(wq2(['sido' => '', 'page' => 1])) ?>" class="<?= wchip($sido === '') ?>">전국·중앙</a>
+      <a href="<?= nh(wq2(['sido' => '', 'page' => 1])) ?>" class="<?= wchip($sido === '') ?>"><?= nh(wf_sido_short('전국·중앙')) ?></a>
       <?php foreach ($sidos as $s): ?>
-        <a href="<?= nh(wq2(['sido' => $s, 'page' => 1])) ?>" class="<?= wchip($sido === $s) ?>"><?= nh($s) ?></a>
+        <a href="<?= nh(wq2(['sido' => $s, 'page' => 1])) ?>" class="<?= wchip($sido === $s) ?>"><?= nh(wf_sido_short($s)) ?></a>
       <?php endforeach; ?>
     </div>
     <?php endif; ?>

@@ -125,9 +125,9 @@ render_nav('', [], true);
             <?php foreach ($items as $a): ?>
               <a href="/article.php?id=<?= (int) $a['id'] ?>" data-cat="<?= nh($a['section'] ?? '종합') ?>" class="flex gap-4 sm:gap-5 items-center py-4 border-b border-zinc-100 group">
                 <?php if (!empty($a['image'])): ?>
-                  <div class="w-24 h-16 flex-none rounded-md bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($a['image']) ?>')"></div>
+                  <div class="w-[138px] h-[92px] sm:w-[165px] sm:h-[110px] flex-none rounded-md bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($a['image']) ?>')"></div>
                 <?php else: ?>
-                  <div class="w-24 h-16 flex-none rounded-md bg-zinc-100 flex items-center justify-center"><span class="material-symbols-outlined text-[24px] text-zinc-300">imagesmode</span></div>
+                  <div class="w-[138px] h-[92px] sm:w-[165px] sm:h-[110px] flex-none rounded-md bg-zinc-100 flex items-center justify-center"><span class="material-symbols-outlined text-[24px] text-zinc-300">imagesmode</span></div>
                 <?php endif; ?>
                 <div class="min-w-0 flex-1">
                   <div class="mb-1.5 flex items-center gap-2">

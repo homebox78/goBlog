@@ -1,20 +1,542 @@
 <?php
-// 개별 계산기 — 시안 2단 레이아웃: 본문(계산기+기준+FAQ) + 320px 사이드바(문서도구·구독·관련도구).
+// 개별 계산기 — 시안 2단 레이아웃(입력카드+실시간 결과카드+계산식+비교표+기준·FAQ·팁) + 320px 사이드바.
+// 계산 엔진은 시안(build) vanilla JS 이식. basis/faq/tips/disclaimer는 서버 렌더(SEO), fields/result/formula/tables만 JS.
 declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
 require_once __DIR__ . '/includes/layout.php';
 require_once __DIR__ . '/includes/tools-data.php';
 
+// 내 URL id → 시안 build id (기존 URL 유지)
+const CALC_ID_MAP = [
+    'salary' => 'salary', 'insurance4' => 'fourins', 'severance' => 'severance',
+    'weeklyholiday' => 'holidaypay', 'unemployment' => 'unemploy', 'annualleave' => 'annualleave',
+    'freelancer' => 'freelancer', 'loan' => 'loan', 'dsr' => 'dsr', 'jeonsewolse' => 'jeonse',
+    'acquisition' => 'acqtax', 'capitalgains' => 'captax', 'savings' => 'savings', 'vat' => 'vat',
+    'youtube' => 'youtube', 'adsense' => 'adsense', 'instagram' => 'insta', 'tiktok' => 'tiktok',
+    'naverblog' => 'blog', 'coupang' => 'coupang', 'exchange' => 'fx', 'incometax' => 'tax',
+    'yearend' => 'yearend', 'minwage' => 'minwage', 'wageconv' => 'wageconv', 'rentyield' => 'rentyield',
+    'gifttax' => 'gifttax', 'corptax' => 'corptax', 'area' => 'area', 'bmi' => 'bmi',
+];
+
 $id = (string) ($_GET['id'] ?? '');
-if (!isset(TOOLS[$id])) { header('Location: /tools.php'); exit; }
+if (!isset(TOOLS[$id]) || !isset(CALC_ID_MAP[$id])) { header('Location: /tools.php'); exit; }
+$did = CALC_ID_MAP[$id];
 $t = TOOLS[$id];
-$full = tool_full($id); // body/intro/whenUse/basis/faq/related
 $P = NEWS_PRIMARY;
+
+/**
+ * 시안 build의 정적 콘텐츠(basis/disclaimer/faqs/tips/articles) — 시안 엔진과 세율·근거가 일치하도록 시안 원문 사용.
+ * 키는 시안 build id. articles는 hom2box 기사(article.php?id=).
+ */
+function calc_content(): array
+{
+    $A = static fn(int $n): string => '/article.php?id=' . $n;
+    return [
+        'salary' => [
+            'basis' => [
+                "2026년 기준 국민연금 4.5%, 건강보험 3.545%, 장기요양보험 건강보험료의 12.95%, 고용보험 0.9% 요율을 적용합니다.",
+                "국민연금은 기준소득월액 상한(617만 원)까지만 부과됩니다.",
+                "소득세는 과세표준 구간별 기본세율(6~35%)로 추정한 간이 금액이며, 실제 원천징수는 근로소득 간이세액표를 따릅니다.",
+                "비과세액(식대 등)은 보험료·소득세 산정 시 제외됩니다.",
+            ],
+            'disclaimer' => "실제 실수령액은 회사 복리후생·공제 항목, 연말정산 결과에 따라 달라집니다. 정확한 금액은 급여명세서를 확인하세요.",
+            'tips' => [
+                "식대·보육수당 등 비과세 항목을 월 20만 원까지 활용하면 보험료·세금 부담이 줄어 실수령이 늘어납니다.",
+                "연봉 협상 시 세전이 아닌 '월 실수령'과 성과급 지급 방식을 함께 확인하세요.",
+                "연말정산 공제(연금계좌·주택청약 등)를 챙기면 실질 수령액이 더 커집니다.",
+            ],
+            'faqs' => [
+                ['q' => "실수령액이 급여명세서와 다른 이유는?", 'a' => "회사별 식대·복지포인트 등 비과세 항목과 노동조합비·상조회비 같은 기타 공제가 반영되지 않아 차이가 납니다."],
+                ['q' => "4대 보험료율은 매년 바뀌나요?", 'a' => "건강보험·장기요양 요율은 거의 매년, 국민연금·고용보험은 수시로 조정됩니다. 본 계산기는 2026년 기준입니다."],
+                ['q' => "부양가족 수는 어떻게 반영되나요?", 'a' => "부양가족이 많을수록 간이세액표상 소득세가 줄어듭니다. 본 계산기는 1명당 약 12,500원 경감으로 간략 반영합니다."],
+            ],
+            'articles' => [ ['title' => "블로거 세금 신고 2026 완벽 가이드 — 종합소득세 신고 방법", 'href' => $A(32)], ['title' => "달러 예금 가입 은행 금리 비교 2026", 'href' => $A(24)] ],
+        ],
+        'loan' => [
+            'basis' => [
+                "원리금균등상환 방식으로 매월 같은 금액(원금+이자)을 갚는 것을 가정합니다.",
+                "월 상환액 = 원금 × 월이율 × (1+월이율)^개월 ÷ ((1+월이율)^개월 − 1) 공식을 사용합니다.",
+                "월이율은 연 금리를 12로 나눈 값입니다.",
+                "중도상환수수료·인지세 등 부대비용은 포함하지 않습니다.",
+            ],
+            'disclaimer' => "실제 상환액은 상환 방식(원금균등·만기일시), 거치기간, 우대금리 적용 여부에 따라 달라집니다.",
+            'tips' => [
+                "같은 금리라도 원금균등상환은 총이자가 더 적습니다(초기 부담은 큼).",
+                "3년 경과 후에는 중도상환수수료가 면제되는 경우가 많아 여유자금으로 갚으면 이자를 크게 줄일 수 있습니다.",
+                "금리 인하 요구권(승진·소득 증가 시)을 활용해 금리를 낮출 수 있습니다.",
+            ],
+            'faqs' => [
+                ['q' => "원리금균등과 원금균등의 차이는?", 'a' => "원리금균등은 매월 상환액이 일정하고, 원금균등은 초기 상환액이 크지만 총이자가 적습니다."],
+                ['q' => "거치기간이 있으면 어떻게 되나요?", 'a' => "거치기간에는 이자만 내고 이후 원금을 갚습니다. 본 계산기는 거치 없이 즉시 원리금 상환을 가정합니다."],
+                ['q' => "중도상환수수료는 반영되나요?", 'a' => "포함하지 않습니다. 보통 잔액의 0.5~1.2% 수준이며 3년 경과 시 면제되는 경우가 많습니다."],
+            ],
+            'articles' => [ ['title' => "주담대 한도 줄었을 때 대안 대출 5가지 비교 2026", 'href' => $A(57)], ['title' => "국민성장펀드 100만원 저리대출 금리 조건 2026", 'href' => $A(68)] ],
+        ],
+        'savings' => [
+            'basis' => [
+                "예금은 예치금 전액에, 적금은 매월 납입액에 대해 이자를 계산합니다.",
+                "복리는 월 복리(연 금리 ÷ 12를 매월 적용)를 가정합니다.",
+                "이자소득세는 15.4%(소득세 14% + 지방소득세 1.4%)를 적용합니다.",
+                "비과세·세금우대 상품은 별도이며 본 계산기에는 반영되지 않습니다.",
+            ],
+            'disclaimer' => "실제 수령액은 은행 상품별 이자 지급 방식, 우대금리 조건 충족 여부에 따라 달라집니다.",
+            'tips' => [
+                "적금 표시금리는 실효수익률의 약 2배로 느껴집니다 — 첫 달 납입금만 전 기간 이자가 붙기 때문입니다.",
+                "ISA·비과세종합저축을 쓰면 이자과세 15.4%를 면제·감면받을 수 있습니다.",
+                "우대금리 조건(자동이체·카드실적 등) 충족 여부로 실수령이 크게 달라집니다.",
+            ],
+            'faqs' => [
+                ['q' => "적금 금리가 높은데 이자가 생각보다 적어요.", 'a' => "적금은 첫 달 납입금만 전체 기간 이자가 붙고, 마지막 달 납입금은 한 달치 이자만 붙기 때문입니다. 실효수익률은 표시금리의 약 절반 수준입니다."],
+                ['q' => "단리와 복리 중 뭐가 유리한가요?", 'a' => "기간이 길수록 복리가 유리합니다. 다만 국내 예적금은 대부분 단리 상품이 많습니다."],
+                ['q' => "이자과세 15.4%는 무엇인가요?", 'a' => "이자소득세 14%와 지방소득세 1.4%를 합한 세율입니다. ISA·비과세종합저축 등은 면제·감면됩니다."],
+            ],
+            'articles' => [ ['title' => "달러 예금 가입 은행 금리 비교 2026 — 어디가 제일 유리할까?", 'href' => $A(24)] ],
+        ],
+        'vat' => [
+            'basis' => [
+                "부가가치세율은 일반과세 기준 10%입니다.",
+                "공급가액 기준: 부가세 = 공급가액 × 10%, 합계 = 공급가액 + 부가세.",
+                "합계금액 기준: 공급가액 = 합계 ÷ 1.1, 부가세 = 합계 − 공급가액.",
+                "면세·간이과세 대상은 별도 기준이 적용됩니다.",
+            ],
+            'disclaimer' => "간이과세자·면세사업자는 부가세 계산 방식이 다릅니다. 세금계산서 발행은 홈택스 기준을 확인하세요.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "합계금액에서 부가세만 빼려면?", 'a' => "합계금액을 1.1로 나누면 공급가액, 합계에서 공급가액을 빼면 부가세입니다."],
+                ['q' => "간이과세자도 10%인가요?", 'a' => "간이과세자는 업종별 부가가치율(15~40%)에 10%를 곱한 낮은 세율이 적용됩니다."],
+                ['q' => "면세 품목은 어떻게 되나요?", 'a' => "농축수산물·도서·의료 등 면세 품목은 부가세가 붙지 않습니다."],
+            ],
+            'articles' => [ ['title' => "블로거 세금 신고 2026 완벽 가이드 — 종합소득세 신고 방법", 'href' => $A(32)] ],
+        ],
+        'area' => [
+            'basis' => [
+                "1평 = 400/121 ≈ 3.3058㎡ (한 변 6자, 1자 = 30.303cm 기준).",
+                "㎡ → 평 변환은 ㎡ 값을 3.3058로 나눕니다.",
+                "부동산 공부(등기부·건축물대장)는 ㎡ 단위를 사용합니다.",
+            ],
+            'disclaimer' => "분양·계약 시 전용면적·공급면적·계약면적의 구분을 함께 확인하세요.",
+            'tips' => [
+                "분양광고의 '34평형'은 공급면적, 등기부의 ㎡는 전용면적입니다.",
+                "전용면적 84㎡ ≈ 25.4평이 국민평형입니다.",
+                "관리비는 공급면적 기준으로 부과되는 경우가 많습니다.",
+            ],
+            'faqs' => [
+                ['q' => "'국민평형' 84㎡는 몇 평인가요?", 'a' => "84㎡는 약 25.4평입니다. 다만 이는 전용면적이며, 공급면적 기준으로는 흔히 34평형으로 불립니다."],
+                ['q' => "전용면적과 공급면적의 차이는?", 'a' => "전용면적은 실제 사용 공간, 공급면적은 전용면적에 계단·복도 등 주거공용면적을 더한 것입니다."],
+                ['q' => "평과 ㎡ 중 공식 단위는?", 'a' => "2007년부터 법정 계량단위는 ㎡이며, 평은 관습적으로 병행 사용됩니다."],
+            ],
+            'articles' => [],
+        ],
+        'bmi' => [
+            'basis' => [
+                "BMI = 몸무게(kg) ÷ 키(m)의 제곱.",
+                "대한비만학회 기준: 18.5 미만 저체중, 18.5~22.9 정상, 23~24.9 과체중, 25~29.9 비만, 30 이상 고도비만.",
+                "아시아·태평양 기준은 서양(WHO) 기준보다 비만 판정 수치가 낮습니다.",
+            ],
+            'disclaimer' => "BMI는 근육량·체지방 분포를 반영하지 못합니다. 운동선수 등은 실제 체성분과 차이가 클 수 있습니다.",
+            'tips' => [
+                "복부비만은 허리둘레(남 90·여 85cm)로 별도 확인하세요.",
+                "근육량이 많으면 BMI가 높아도 건강할 수 있습니다.",
+                "체지방률·골격근량은 체성분 검사로 확인합니다.",
+            ],
+            'faqs' => [
+                ['q' => "BMI가 정상인데 뱃살이 많아요.", 'a' => "BMI는 체지방 위치를 반영하지 않습니다. 복부비만은 허리둘레(남 90cm·여 85cm 이상)로 별도 확인하세요."],
+                ['q' => "한국 기준과 WHO 기준이 다른가요?", 'a' => "네. WHO는 25 이상을 과체중으로 보지만, 아시아·태평양 기준은 23 이상을 과체중으로 봅니다."],
+                ['q' => "근육이 많으면 BMI가 높게 나오나요?", 'a' => "그렇습니다. 근육량이 많으면 체지방이 적어도 BMI가 높게 나올 수 있어 체성분 검사를 함께 권장합니다."],
+            ],
+            'articles' => [ ['title' => "저당 그래놀라 혈당 관리 건강식 추천 2026 비교 정리", 'href' => $A(58)] ],
+        ],
+        'tax' => [
+            'basis' => [
+                "2026년 기준 종합소득세 8단계 초과누진세율(6~45%)과 구간별 누진공제액을 적용합니다.",
+                "과세표준 = 종합소득금액 − 필요경비 − 각종 소득·인적공제.",
+                "산출세액 = 과세표준 × 세율 − 누진공제액. 여기에 지방소득세 10%가 더해집니다.",
+                "기납부세액(원천징수·중간예납)을 빼면 실제 납부(또는 환급)액이 됩니다.",
+            ],
+            'disclaimer' => "세액공제·감면(연금계좌·의료비 등)은 반영하지 않은 개략 추정치입니다. 정확한 세액은 홈택스 모의계산 또는 세무 전문가를 확인하세요.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "종합소득세 신고 대상은 누구인가요?", 'a' => "근로 외 사업·프리랜서·임대·금융소득 등이 있는 경우가 대상이며, 매년 5월에 신고·납부합니다."],
+                ['q' => "필요경비는 어떻게 정하나요?", 'a' => "실제 지출한 사업 관련 비용을 증빙으로 인정받거나, 업종별 단순·기준경비율로 추계할 수 있습니다."],
+                ['q' => "누진공제액이 무엇인가요?", 'a' => "구간별로 낮은 세율이 적용된 부분을 조정해주는 금액으로, 산출세액에서 빼면 실제 누진세액이 됩니다."],
+            ],
+            'articles' => [ ['title' => "블로거 세금 신고 2026 완벽 가이드 — 종합소득세 신고 방법", 'href' => $A(32)] ],
+        ],
+        'severance' => [
+            'basis' => [
+                "법정 퇴직금 = 1일 평균임금 × 30일 × (총 재직일수 ÷ 365).",
+                "1일 평균임금 = 퇴직 전 3개월 임금 총액 ÷ 그 기간의 총일수(약 91.25일).",
+                "상여금·연차수당은 연간 금액의 3/12(3개월분)만 평균임금에 산입합니다.",
+                "1년 이상 근속·주 15시간 이상 근로자가 지급 대상입니다.",
+            ],
+            'disclaimer' => "실제 퇴직금은 3개월 실제 임금·근무일수, 퇴직소득세 공제에 따라 달라집니다. 확정 금액은 회사 인사팀 또는 고용노동부 계산기를 확인하세요.",
+            'tips' => [
+                "상여금·연차수당은 연간 금액의 3/12만 평균임금에 산입됩니다.",
+                "퇴직 직전 3개월 임금이 높을수록 퇴직금이 커집니다.",
+                "근속이 길수록 퇴직소득세 실효세율이 낮아집니다.",
+            ],
+            'faqs' => [
+                ['q' => "평균임금과 통상임금 중 뭘로 계산하나요?", 'a' => "퇴직금은 평균임금 기준이며, 평균임금이 통상임금보다 적으면 통상임금으로 계산합니다."],
+                ['q' => "1년 미만 근무도 퇴직금을 받나요?", 'a' => "계속근로기간이 1년 미만이면 법정 퇴직금 지급 대상이 아닙니다."],
+                ['q' => "퇴직소득세는 얼마나 떼나요?", 'a' => "근속연수공제·환산급여공제를 거쳐 낮은 실효세율이 적용됩니다. 근속이 길수록 세부담이 줄어듭니다."],
+            ],
+            'articles' => [ ['title' => "블로거 세금 신고 2026 완벽 가이드 — 종합소득세 신고 방법", 'href' => $A(32)] ],
+        ],
+        'fx' => [
+            'basis' => [
+                "표시 환율은 참고용 고시 기준(2026년 예시)이며 실시간 시세가 아닙니다.",
+                "엔화(JPY)는 100엔 단위로 고시되어 100엔당 원화로 환산합니다.",
+                "실제 환전 시에는 매매기준율에 스프레드(현찰 살 때·팔 때 차이)가 더해집니다.",
+            ],
+            'disclaimer' => "실시간 환율·수수료는 은행·환전소마다 다릅니다. 실제 거래 전 고시 환율을 반드시 확인하세요.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "표시 환율은 실시간인가요?", 'a' => "아니요. 참고용 예시 환율입니다. 실거래 시 은행 고시 매매기준율을 확인하세요."],
+                ['q' => "현찰 살 때와 보낼 때 환율이 왜 다른가요?", 'a' => "은행이 매매기준율에 스프레드(마진)를 더하기 때문입니다. 현찰·송금·카드마다 우대율이 다릅니다."],
+                ['q' => "엔화는 왜 100엔 단위인가요?", 'a' => "엔은 원 대비 단위가 작아 국내 외환시장에서 관례적으로 100엔당 원화로 고시합니다."],
+            ],
+            'articles' => [ ['title' => "달러 예금 가입 은행 금리 비교 2026 — 어디가 제일 유리할까?", 'href' => $A(24)] ],
+        ],
+        'fourins' => [
+            'basis' => [
+                "2026년 기준 근로자 부담 요율: 국민연금 4.5%, 건강보험 3.545%, 장기요양 건강보험료의 12.95%, 고용보험 0.9%.",
+                "국민연금은 기준소득월액 상한(617만 원)까지만 부과됩니다.",
+                "산재보험은 전액 사업주가 부담합니다.",
+            ],
+            'disclaimer' => "요율은 매년 조정될 수 있습니다. 정확한 금액은 4대사회보험 정보연계센터를 확인하세요.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "회사 부담분도 포함인가요?", 'a' => "아니요. 위 금액은 급여에서 공제되는 근로자 본인 부담분입니다."],
+                ['q' => "장기요양보험료 계산은?", 'a' => "건강보험료에 12.95%를 곱해 산정합니다."],
+            ],
+            'articles' => [],
+        ],
+        'minwage' => [
+            'basis' => [
+                "2026년 최저시급 예시 10,320원(실제 고시액 확인 필요)을 기본값으로 제공합니다.",
+                "월 환산 시 주 15시간 이상이면 주휴시간을 비례 가산합니다.",
+                "주 40시간 기준 월 소정근로시간은 약 209시간입니다.",
+            ],
+            'disclaimer' => "실제 최저임금·수당은 매년 고시액과 근로형태에 따라 다릅니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "주휴수당이 뭔가요?", 'a' => "주 15시간 이상 개근 시 유급으로 부여되는 하루치 임금입니다."],
+                ['q' => "월 209시간은 어떻게 나오나요?", 'a' => "(주 40시간 + 주휴 8시간) × 4.345주 ≈ 209시간입니다."],
+            ],
+            'articles' => [],
+        ],
+        'holidaypay' => [
+            'basis' => [
+                "주휴수당 = (주 소정근로시간 ÷ 40) × 8 × 시급 (40시간 초과분은 40으로 계산).",
+                "주 15시간 이상 근무하고 소정근로일을 개근해야 지급됩니다.",
+                "월 환산은 주휴수당 × 4.345주입니다.",
+            ],
+            'disclaimer' => "실제 지급은 근로계약·개근 여부에 따라 달라집니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "결근하면 주휴수당을 못 받나요?", 'a' => "해당 주 소정근로일을 개근하지 못하면 그 주 주휴수당은 발생하지 않습니다."],
+                ['q' => "단시간 근로자도 받나요?", 'a' => "주 15시간 이상이면 시간에 비례해 받습니다."],
+            ],
+            'articles' => [],
+        ],
+        'wageconv' => [
+            'basis' => [
+                "주 40시간 기준 월 소정근로시간 209시간(주휴 포함)을 사용합니다.",
+                "시급→월급 = 시급 × 209, 월급→시급 = 월급 ÷ 209.",
+                "연장·야간·휴일 수당은 포함하지 않은 기본 환산입니다.",
+            ],
+            'disclaimer' => "실제 근로시간·수당 구조에 따라 달라질 수 있습니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "왜 209시간인가요?", 'a' => "(40시간 + 주휴 8시간) × 4.345주를 반올림한 법정 월 소정근로시간입니다."],
+                ['q' => "월급에 주휴가 포함되나요?", 'a' => "월급제는 통상 주휴수당이 포함된 것으로 봅니다."],
+            ],
+            'articles' => [],
+        ],
+        'annualleave' => [
+            'basis' => [
+                "1년 미만 근로자는 개근한 1개월마다 1일(최대 11일)이 발생합니다.",
+                "1년 이상은 기본 15일, 3년 차부터 2년마다 1일씩 가산(최대 25일).",
+                "회계연도·입사일 기준에 따라 실제 부여일이 다를 수 있습니다.",
+            ],
+            'disclaimer' => "취업규칙·노사 합의에 따라 부여 방식이 달라질 수 있습니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "미사용 연차는?", 'a' => "연차수당으로 보상받거나, 사용촉진 절차를 거치면 소멸될 수 있습니다."],
+                ['q' => "가산은 언제부터인가요?", 'a' => "3년 차에 1일 추가되어 16일, 이후 2년마다 1일씩 늘어납니다."],
+            ],
+            'articles' => [],
+        ],
+        'unemploy' => [
+            'basis' => [
+                "1일 구직급여 = 평균임금의 60%, 2026년 상한 66,000원·하한(최저임금 80%) 예시 적용.",
+                "소정급여일수는 가입기간과 연령(50세 기준)에 따라 120~270일.",
+                "수급은 이직 사유·구직활동 요건 충족이 전제됩니다.",
+            ],
+            'disclaimer' => "자발적 이직 등은 수급 제한될 수 있습니다. 정확한 내용은 고용24를 확인하세요.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "자발적 퇴사도 받나요?", 'a' => "원칙적으로 제외되나 정당한 사유가 인정되면 예외적으로 가능합니다."],
+                ['q' => "상·하한액이 왜 있나요?", 'a' => "고소득자 과다 수급과 저소득자 최저 보장을 위해 둡니다."],
+            ],
+            'articles' => [],
+        ],
+        'yearend' => [
+            'basis' => [
+                "총급여에서 근로소득공제와 각종 공제를 빼 과세표준을 구합니다.",
+                "종합소득세 기본세율(6~38% 구간)로 결정세액을 추정합니다.",
+                "결정세액에서 기납부세액을 빼면 환급 또는 추가납부액이 됩니다.",
+            ],
+            'disclaimer' => "세액공제(연금·의료·교육 등)를 단순 합산 가정으로, 실제 연말정산 결과와 다를 수 있습니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "왜 13월의 월급이라 하나요?", 'a' => "미리 낸 원천징수 세금이 결정세액보다 많으면 차액을 환급받기 때문입니다."],
+                ['q' => "공제를 어떻게 늘리나요?", 'a' => "연금계좌·의료비·기부금·신용카드 사용 등 공제 항목을 챙기면 세액이 줄어듭니다."],
+            ],
+            'articles' => [ ['title' => "블로거 세금 신고 2026 완벽 가이드 — 종합소득세 신고 방법", 'href' => $A(32)] ],
+        ],
+        'dsr' => [
+            'basis' => [
+                "DSR = (기존 + 신규 대출 연간 원리금) ÷ 연소득 × 100.",
+                "신규 대출은 원리금균등 기준으로 연 상환액을 계산합니다.",
+                "은행권 DSR 규제 한도는 통상 40%(제2금융권 50%)입니다.",
+            ],
+            'disclaimer' => "대출 종류별 산정만기·가산 기준이 있어 은행 심사 결과와 다를 수 있습니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "DSR과 DTI 차이는?", 'a' => "DSR은 모든 대출 원리금을, DTI는 주담대 원리금+기타대출 이자만 반영합니다."],
+                ['q' => "한도를 넘으면?", 'a' => "규제 한도 초과 시 대출 한도가 줄거나 실행이 제한될 수 있습니다."],
+            ],
+            'articles' => [ ['title' => "주담대 한도 줄었을 때 대안 대출 5가지 비교 2026", 'href' => $A(57)] ],
+        ],
+        'jeonse' => [
+            'basis' => [
+                "전세 월 환산비용 = 전세보증금 × 금리 ÷ 12 (기회비용/대출이자).",
+                "월세 월 비용 = 월세 + 월세보증금 × 금리 ÷ 12.",
+                "두 비용을 비교해 더 낮은 쪽이 유리합니다.",
+            ],
+            'disclaimer' => "관리비·중개보수·보증금 반환 위험 등은 반영하지 않은 단순 비교입니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "금리는 뭘 넣나요?", 'a' => "전세대출 금리 또는 보증금 예치 시 기대수익률(기회비용)을 넣습니다."],
+                ['q' => "전세가 항상 유리한가요?", 'a' => "금리가 높을수록 전세의 기회비용이 커져 월세가 유리해질 수 있습니다."],
+            ],
+            'articles' => [],
+        ],
+        'rentyield' => [
+            'basis' => [
+                "표면 수익률 = 연 임대수입 ÷ 매입가 × 100.",
+                "실질 수익률 = (연 임대수입 − 대출이자) ÷ 실투자금 × 100.",
+                "실투자금 = 매입가 − 보증금 − 대출금.",
+            ],
+            'disclaimer' => "취득세·중개보수·공실·수선비 등은 반영하지 않은 개략 수익률입니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "표면과 실질 차이는?", 'a' => "표면은 비용 무시 총수익률, 실질은 대출이자 등 비용과 자기자본만 반영한 수익률입니다."],
+                ['q' => "레버리지가 왜 수익률을 올리나요?", 'a' => "자기자본(분모)이 줄기 때문입니다. 다만 금리 상승 시 위험도 커집니다."],
+            ],
+            'articles' => [],
+        ],
+        'acqtax' => [
+            'basis' => [
+                "1주택 기준 6억 이하 1%, 6~9억 비례(1~3%), 9억 초과 3%.",
+                "다주택·조정지역은 8~12% 중과세율이 적용될 수 있습니다.",
+                "취득세에 지방교육세(취득세의 10%)와 농어촌특별세가 더해집니다.",
+            ],
+            'disclaimer' => "생애최초·신혼 감면과 중과 요건은 반영하지 않았습니다. 위택스·관할 시군구를 확인하세요.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "6~9억 세율은 왜 다르나요?", 'a' => "가액에 따라 1~3%로 연동되는 구조라 취득가마다 세율이 달라집니다."],
+                ['q' => "생애최초 감면이 있나요?", 'a' => "요건 충족 시 일정 한도로 취득세가 감면됩니다. 별도 확인이 필요합니다."],
+            ],
+            'articles' => [],
+        ],
+        'captax' => [
+            'basis' => [
+                "과세표준 = 양도차익 − 장기보유특별공제 − 기본공제(연 250만 원).",
+                "장기보유특별공제는 3년 이상부터 연 2%씩(최대 30%, 일반 부동산) 가정.",
+                "기본세율(6~45%)에 지방소득세 10%가 더해집니다.",
+            ],
+            'disclaimer' => "1세대1주택 비과세·중과·필요경비는 반영하지 않았습니다. 홈택스·세무 전문가 확인이 필요합니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "1주택은 비과세인가요?", 'a' => "1세대1주택 요건(보유·거주기간 등)을 충족하면 일정 금액까지 비과세됩니다."],
+                ['q' => "장기보유특별공제란?", 'a' => "오래 보유할수록 양도차익의 일정 비율을 공제해 세부담을 줄여줍니다."],
+            ],
+            'articles' => [],
+        ],
+        'gifttax' => [
+            'basis' => [
+                "10년간 합산 증여재산공제: 배우자 6억, 직계존비속 5천만(미성년 2천만), 기타친족 1천만 원.",
+                "과세표준 = 증여액 − 증여재산공제.",
+                "증여세율은 10~50% 5단계 누진세율입니다.",
+            ],
+            'disclaimer' => "신고세액공제·세대생략 할증 등은 반영하지 않았습니다. 국세청 홈택스를 확인하세요.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "누가 증여세를 내나요?", 'a' => "재산을 받은 수증자가 신고·납부합니다."],
+                ['q' => "공제는 매번 되나요?", 'a' => "동일인 기준 10년간 합산해 한 번의 한도로 적용됩니다."],
+            ],
+            'articles' => [],
+        ],
+        'corptax' => [
+            'basis' => [
+                "2026년 기준 법인세율: 2억 이하 9%, 2억~200억 19%, 200억~3000억 21%, 3000억 초과 24%.",
+                "구간별 누진공제액을 적용해 산출세액을 계산합니다.",
+                "산출세액의 10%가 지방소득세로 더해집니다.",
+            ],
+            'disclaimer' => "세액공제·감면, 최저한세는 반영하지 않은 개략 추정치입니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "과세표준은 매출인가요?", 'a' => "아닙니다. 매출에서 비용을 뺀 각 사업연도 소득에서 이월결손금 등을 차감한 금액입니다."],
+                ['q' => "개인사업자와 뭐가 다른가요?", 'a' => "개인은 종합소득세(6~45%), 법인은 법인세(9~24%)로 세율 구조가 다릅니다."],
+            ],
+            'articles' => [],
+        ],
+        'freelancer' => [
+            'basis' => [
+                "프리랜서(3.3% 사업소득)는 지급 시 소득세 3%+지방세 0.3%가 원천징수됩니다.",
+                "단순경비율 60%·기본공제 가정으로 과세표준을 추정했습니다.",
+                "5월 종합소득세 신고로 원천징수액과 정산해 환급·추가납부합니다.",
+            ],
+            'disclaimer' => "실제 경비율·공제는 업종·증빙에 따라 크게 달라집니다. 개략 추정치입니다.",
+            'tips' => [],
+            'faqs' => [
+                ['q' => "3.3%가 최종 세금인가요?", 'a' => "아닙니다. 미리 떼는 선납이며 5월 종합소득세 신고로 정산합니다."],
+                ['q' => "경비 처리는?", 'a' => "실제 사업 관련 지출을 증빙으로 인정받거나 업종별 경비율로 추계합니다."],
+            ],
+            'articles' => [ ['title' => "블로거 세금 신고 2026 완벽 가이드 — 종합소득세 신고 방법", 'href' => $A(32)] ],
+        ],
+        'youtube' => [
+            'basis' => [
+                "RPM(1,000회당 실수령 수익)은 유튜브 수익 배분(약 55%)이 반영된 값입니다.",
+                "주제별 RPM 예시: 금융·재테크 5,000원, IT·테크 3,500원, 게임 1,800원, 키즈 900원 등.",
+                "실제 RPM은 시청 지역·시즌(4분기 광고 성수기)·영상 길이에 따라 달라집니다.",
+                "광고수익 외 멤버십·슈퍼챗·브랜드 협찬은 별도입니다.",
+            ],
+            'disclaimer' => "멤버십·슈퍼챗·협찬은 제외한 순수 광고수익 추정치입니다. 실제 RPM은 채널마다 크게 다릅니다.",
+            'tips' => [
+                "8분 이상 영상은 중간 광고를 넣을 수 있어 RPM이 오릅니다.",
+                "4분기(10~12월)는 광고 단가 성수기라 RPM이 20~40% 상승합니다.",
+                "고단가 주제(금융·부동산·B2B)는 조회수가 적어도 수익이 큽니다.",
+                "멤버십·슈퍼챗·협찬으로 수익원을 다변화하면 광고 의존도를 낮출 수 있습니다.",
+            ],
+            'faqs' => [
+                ['q' => "유튜브 수익 계산기란?", 'a' => "월 조회수와 채널 주제(RPM)를 기반으로 예상 광고수익을 계산하는 도구입니다. 주제별 RPM과 조회수 구간별 수익을 함께 비교할 수 있습니다."],
+                ['q' => "RPM과 CPM의 차이는?", 'a' => "CPM은 광고주가 지불하는 1,000회당 단가, RPM은 수익 배분 후 크리에이터가 실제 받는 1,000회당 수익입니다."],
+                ['q' => "같은 조회수인데 수익이 다른 이유는?", 'a' => "주제(RPM), 시청 지역, 광고 시청 완료율, 영상 길이(중간 광고 여부)에 따라 크게 달라집니다."],
+                ['q' => "수익 창출 조건은?", 'a' => "구독자 1,000명 + 최근 12개월 시청시간 4,000시간(또는 쇼츠 조건)을 충족해야 광고수익이 시작됩니다."],
+                ['q' => "광고수익이 전부인가요?", 'a' => "아닙니다. 멤버십·슈퍼챗·상품판매·브랜드 협찬이 대형 채널 수익의 큰 비중을 차지합니다."],
+            ],
+            'articles' => [],
+        ],
+        'adsense' => [
+            'basis' => [
+                "예상 수익 = 월 페이지뷰 ÷ 1,000 × 페이지 RPM.",
+                "페이지 RPM은 광고 클릭률(CTR)과 클릭단가(CPC)로 결정됩니다.",
+                "주제·방문자 국가·광고 배치에 따라 편차가 큽니다.",
+            ],
+            'disclaimer' => "무효 클릭·광고 정책·계절성에 따라 실제 수익이 달라집니다.",
+            'tips' => [
+                "본문 상단·문단 사이 광고가 하단보다 RPM이 높습니다.",
+                "검색 유입(구글·네이버) 비중이 높을수록 광고 클릭률이 좋습니다.",
+                "금융·보험·법률 키워드는 CPC가 높아 소수 방문자로도 수익이 큽니다.",
+            ],
+            'faqs' => [
+                ['q' => "RPM을 어떻게 올리나요?", 'a' => "고단가 주제, 본문 상단 광고 배치, 체류시간 개선 등이 도움이 됩니다."],
+                ['q' => "지급 기준은?", 'a' => "구글 애드센스는 통상 월 100달러 이상 누적 시 지급됩니다."],
+            ],
+            'articles' => [],
+        ],
+        'blog' => [
+            'basis' => [
+                "예상 수익 = 방문자 × 클릭률(CTR) × 클릭단가(CPC).",
+                "블로그 CTR은 통상 1~3%, CPC는 주제에 따라 100~1,000원 수준입니다.",
+                "애드포스트·애드센스 등 매체에 따라 단가가 다릅니다.",
+            ],
+            'disclaimer' => "제휴·협찬 수익은 제외한 광고 클릭 수익 추정치입니다.",
+            'tips' => [
+                "네이버 블로그는 애드포스트만, 티스토리·워드프레스는 애드센스까지 붙일 수 있습니다.",
+                "체류시간과 재방문을 높이면 광고 노출·클릭이 함께 늘어납니다.",
+                "제휴 마케팅(쿠팡파트너스 등)을 병행하면 클릭 수익보다 전환 수익이 큽니다.",
+            ],
+            'faqs' => [
+                ['q' => "애드포스트와 애드센스 차이는?", 'a' => "애드센스가 대체로 단가가 높지만, 네이버 블로그는 애드포스트만 가능합니다."],
+                ['q' => "수익을 올리려면?", 'a' => "검색 유입을 늘리고 고단가 주제·체류시간을 높이는 것이 핵심입니다."],
+            ],
+            'articles' => [],
+        ],
+        'coupang' => [
+            'basis' => [
+                "예상 수익 = 클릭수 × 구매전환율 × 평균 주문액 × 수수료율.",
+                "쿠팡파트너스 수수료율은 카테고리별로 통상 1~4% 수준입니다.",
+                "24시간 쿠키 기준으로 클릭 후 구매가 전환으로 집계됩니다.",
+            ],
+            'disclaimer' => "카테고리·전환·반품에 따라 실제 수익이 달라집니다. 광고임을 반드시 고지해야 합니다.",
+            'tips' => [
+                "리뷰·비교·추천 콘텐츠가 단순 링크보다 전환율이 훨씬 높습니다.",
+                "클릭 후 24시간 내 구매(장바구니 포함)가 수수료로 집계됩니다.",
+                "본인 구매는 수수료 대상이 아니며, '파트너스 활동으로 수수료를 받습니다' 고지가 필수입니다.",
+            ],
+            'faqs' => [
+                ['q' => "전환율은 보통 얼마인가요?", 'a' => "콘텐츠·상품 적합도에 따라 다르나 통상 1~5% 범위입니다."],
+                ['q' => "수수료율은 고정인가요?", 'a' => "카테고리별로 다르며 정책에 따라 변동될 수 있습니다."],
+            ],
+            'articles' => [],
+        ],
+        'insta' => [
+            'basis' => [
+                "기준 단가는 팔로워 1만명당 15만원(1명당 15원)으로 설정합니다.",
+                "참여율 = (좋아요 + 댓글) ÷ 팔로워 × 100, 최근 게시물 약 10개 평균으로 계산합니다.",
+                "참여율 6% 이상이면 단가가 우대(약 1.6배)됩니다.",
+                "카테고리 가중치: IT·테크 1.3, 뷰티·패션 1.2, 푸드·라이프·여행·피트니스 1.0, 육아·가족 0.9, 엔터테인먼트 0.8.",
+                "릴스는 피드의 80%, 스토리는 피드의 30% 수준으로 책정합니다.",
+            ],
+            'disclaimer' => "실제 협찬 단가는 브랜드 예산·독점 조건·2차 활용권·팔로워 구성(허수·해외 비중)에 따라 크게 달라지는 참고용 예상치입니다.",
+            'tips' => [
+                "협찬 제안 시 팔로워 수보다 참여율·저장수·도달수 스크린샷을 함께 제시하면 단가 협상에 유리합니다.",
+                "2차 활용(브랜드 광고 소재 재사용)·독점 조건은 별도 비용으로 청구하세요.",
+                "릴스+피드+스토리를 묶은 패키지로 제안하면 건별보다 총액을 높일 수 있습니다.",
+                "협찬 게시물에는 '광고'·'유료광고 포함'을 반드시 표기해야 합니다(표시광고법).",
+            ],
+            'faqs' => [
+                ['q' => "인스타그램 수익 계산기란 무엇인가요?", 'a' => "팔로워 수·참여율·카테고리를 기반으로 게시물·릴스·스토리의 예상 광고 협찬 단가를 계산하는 도구입니다. 팔로워 1만명당 기준 단가 15만원에 참여율·카테고리 가중치를 적용하고 인플루언서 등급도 함께 표시합니다."],
+                ['q' => "언제 필요한가요?", 'a' => "협찬 제안 시 적정 단가 파악, 팔로워 목표별 수익 시뮬레이션, 카테고리별 단가 비교, 참여율 개선 시 수익 변화 예측, 릴스·피드·스토리 구조 비교에 활용합니다."],
+                ['q' => "팔로워가 많아도 단가가 낮을 수 있나요?", 'a' => "네. 참여율이 낮거나 팔로워가 허수·해외 계정 위주면 단가가 낮게 책정됩니다. 브랜드는 팔로워 수보다 참여율·타겟 적합도를 더 중요하게 봅니다."],
+                ['q' => "릴스·스토리 단가는 왜 다른가요?", 'a' => "릴스는 피드의 약 80%, 스토리는 약 30% 수준으로 책정하는 것이 일반적입니다. 스토리는 24시간 후 사라지기 때문입니다."],
+                ['q' => "참여율은 어떻게 올리나요?", 'a' => "저장·공유를 유도하는 정보성 콘텐츠, 스토리 상호작용(투표·질문), 일관된 업로드가 참여율과 단가를 함께 끌어올립니다."],
+            ],
+            'articles' => [ ['title' => "AI 이미지 생성 서비스 비교 챗GPT 제미나이 2026 완전 가이드", 'href' => $A(27)] ],
+        ],
+        'tiktok' => [
+            'basis' => [
+                "크리에이티비티 프로그램 수익 = 조회수 ÷ 1,000 × 단가(1,000회당 30~50원 예시).",
+                "협찬 단가 = 팔로워 × 12원 × 참여율 가중치(참여율 3% 기준 ±0.08/1%p).",
+                "틱톡은 조회당 단가가 유튜브보다 낮은 대신 협찬·라이브 선물 비중이 큽니다.",
+            ],
+            'disclaimer' => "크리에이티비티 프로그램은 조건(팔로워 1만·최근 30일 10만 조회 등)과 영상 길이·지역에 따라 단가가 크게 달라지는 참고용 추정치입니다.",
+            'tips' => [
+                "1분 이상 영상이 크리에이티비티 프로그램 수익 대상입니다.",
+                "참여율(완주율·공유·저장)이 높을수록 추천 노출과 협찬 단가가 함께 오릅니다.",
+                "라이브 선물·커머스(틱톡샵)가 조회 수익보다 큰 경우가 많습니다.",
+            ],
+            'faqs' => [
+                ['q' => "틱톡도 조회수로 돈을 버나요?", 'a' => "크리에이티비티 프로그램(1분+ 영상)으로 조회 기반 수익이 있지만, 유튜브보다 단가가 낮아 협찬·라이브·커머스 비중이 큽니다."],
+                ['q' => "협찬 단가는 어떻게 정해지나요?", 'a' => "팔로워 수와 참여율(완주율·공유)이 핵심이며, 카테고리·독점 조건에 따라 달라집니다."],
+                ['q' => "크리에이티비티 프로그램 조건은?", 'a' => "팔로워 1만 이상, 최근 30일 10만 조회 등 요건을 충족하고 1분 이상 영상이어야 합니다."],
+            ],
+            'articles' => [],
+        ],
+    ];
+}
+
+$CC = calc_content();
+$c = $CC[$did] ?? ['basis' => [], 'disclaimer' => '', 'faqs' => [], 'tips' => [], 'articles' => []];
 
 $ticker = [];
 try { $ticker = array_slice(news_articles(), 0, 6); } catch (Throwable) {}
 
-// 사이드바: 카테고리별 관련 도구 그룹(자기 제외)
+// 사이드바: 카테고리별 관련 도구 그룹(자기 제외) — 링크는 내 URL id
 $sideGroups = [];
 foreach (TOOLS as $tid => $tt) {
     if ($tid === $id) continue;
@@ -27,9 +549,9 @@ uksort($sideGroups, function ($a, $b) use ($catOrder) {
     return ($ia === false ? 99 : $ia) <=> ($ib === false ? 99 : $ib);
 });
 
-// FAQ 구조화 데이터(SEO)
+// FAQ 구조화 데이터(SEO) — 시안 faq 기준
 $faqLd = '';
-if (!empty($full['faq'])) {
+if (!empty($c['faqs'])) {
     $faqLd = json_encode([
         '@context' => 'https://schema.org',
         '@type' => 'FAQPage',
@@ -37,7 +559,7 @@ if (!empty($full['faq'])) {
             '@type' => 'Question',
             'name' => $f['q'],
             'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
-        ], $full['faq']),
+        ], $c['faqs']),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
@@ -65,89 +587,89 @@ render_topbar();
 render_masthead();
 render_nav('계산기', [], true);
 ?>
-<div class="min-h-screen bg-white">
+<style>
+.tog-row { display:flex; gap:8px; }
+.tog-row > button { flex:1 1 0; }
+.tog-grid { display:grid; gap:8px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+</style>
+<div class="bg-white">
+  <!-- 브레드크럼 + 제목 (시안 178~187) -->
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6 pt-6">
-    <nav class="mb-4 flex items-center gap-1.5 text-[12.5px] text-zinc-400">
+    <div class="mb-4 flex items-center gap-1.5 text-[12.5px] text-zinc-400">
       <a href="/tools.php" class="hover:text-[<?= $P ?>]">계산기</a>
       <span class="material-symbols-outlined text-[14px]">chevron_right</span><span class="text-zinc-600"><?= nh($t['name']) ?></span>
-    </nav>
+    </div>
     <div class="border-b border-zinc-200 pb-4">
-      <div class="flex items-center gap-3">
-        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-[<?= $P ?>]/10 text-[<?= $P ?>]"><span class="material-symbols-outlined text-[24px]"><?= nh($t['icon']) ?></span></span>
-        <div>
-          <h1 class="m-0 text-[24px] sm:text-[28px] font-bold tracking-tight"><?= nh($t['name']) ?></h1>
-          <p class="mt-1 text-[13.5px] leading-relaxed text-zinc-500"><?= nh($t['desc']) ?></p>
-        </div>
-      </div>
+      <h1 class="m-0 text-[26px] sm:text-[30px] font-bold tracking-tight"><?= nh($t['name']) ?></h1>
+      <p class="mt-1.5 text-[13.5px] leading-relaxed text-zinc-500"><?= nh($t['desc']) ?></p>
     </div>
   </div>
 
   <div class="mx-auto max-w-[1399px] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 lg:gap-10 px-4 sm:px-6 py-7">
     <!-- 본문 -->
     <div class="min-w-0">
-      <div class="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
-        <?= $full['body'] /* 계산기 폼+JS — 신뢰 콘텐츠 */ ?>
+      <!-- 입력 + 결과 (JS) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div class="mb-4 text-[15px] font-bold">입력</div>
+          <div id="calcFields" class="flex flex-col gap-4"></div>
+        </div>
+        <div id="calcResult" class="flex flex-col rounded-xl border-2 border-[#134a9c]/20 bg-[#134a9c]/[0.03] p-6"></div>
       </div>
-      <script>
-        // 금액 인풋 자동 천단위 콤마 (class="money"). 계산 시엔 nv(id)로 콤마 제거 후 숫자화.
-        function nv(id){var el=document.getElementById(id);return el?(parseFloat((el.value||'').replace(/[^0-9.\-]/g,''))||0):0;}
-        document.addEventListener('input',function(e){
-          if(e.target.classList && e.target.classList.contains('money')){
-            var neg=e.target.value.trim().startsWith('-');
-            var v=e.target.value.replace(/[^0-9]/g,'');
-            e.target.value = v ? (neg?'-':'')+parseInt(v,10).toLocaleString('ko-KR') : '';
-          }
-        });
-      </script>
 
-      <?php render_ad("tool-bottom"); ?>
+      <!-- 비교표 (JS) -->
+      <div id="calcTables"></div>
 
-      <?php if (!empty($full['intro'])): ?>
-      <section class="mt-9">
-        <div class="mb-2 flex items-center gap-2.5"><span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span><h2 class="m-0 text-[18px] font-bold tracking-tight"><?= nh($t['name']) ?>란?</h2></div>
-        <div class="text-[14.5px] leading-relaxed text-zinc-600"><?= $full['intro'] ?></div>
-      </section>
-      <?php endif; ?>
+      <!-- 계산식 (JS) -->
+      <div id="calcFormula" class="mt-8 rounded-xl border border-[#134a9c]/20 bg-[#134a9c]/[0.03] p-6" style="display:none"></div>
 
-      <?php if (!empty($full['whenUse'])): ?>
-      <section class="mt-8">
-        <div class="mb-2 flex items-center gap-2.5"><span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span><h2 class="m-0 text-[18px] font-bold tracking-tight">언제 필요한가요?</h2></div>
-        <ul class="space-y-1.5">
-          <?php foreach ($full['whenUse'] as $w): ?>
-            <li class="flex gap-2 text-[14.5px] text-zinc-600"><span class="text-[<?= $P ?>] font-bold">•</span><?= nh($w) ?></li>
+      <!-- 계산 기준·근거 (서버) -->
+      <?php if (!empty($c['basis'])): ?>
+      <div class="mt-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div class="mb-3 flex items-center gap-1.5 text-[15px] font-bold"><span class="material-symbols-outlined text-[19px] text-[<?= $P ?>]">fact_check</span>계산 기준·근거</div>
+        <div class="flex flex-col gap-2.5">
+          <?php foreach ($c['basis'] as $b): ?>
+            <div class="flex gap-2.5 text-[13.5px] leading-relaxed text-zinc-600"><span class="mt-0.5 flex-none text-[<?= $P ?>]">•</span><span><?= nh($b) ?></span></div>
           <?php endforeach; ?>
-        </ul>
-      </section>
+        </div>
+        <?php if (!empty($c['disclaimer'])): ?>
+        <div class="mt-4 rounded-lg bg-zinc-50 p-3 text-[12px] leading-relaxed text-zinc-400"><?= nh($c['disclaimer']) ?></div>
+        <?php endif; ?>
+      </div>
       <?php endif; ?>
 
-      <?php if (!empty($full['basis'])): ?>
-      <section class="mt-8">
-        <div class="mb-2 flex items-center gap-2.5"><span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span><h2 class="m-0 text-[18px] font-bold tracking-tight">계산 기준</h2></div>
-        <ul class="space-y-1.5">
-          <?php foreach ($full['basis'] as $b): ?>
-            <li class="flex gap-2 text-[14.5px] text-zinc-600"><span class="text-[#0a8f5b] font-bold">✓</span><?= nh($b) ?></li>
-          <?php endforeach; ?>
-        </ul>
-      </section>
-      <?php endif; ?>
-
-      <?php if (!empty($full['faq'])): ?>
-      <section class="mt-8">
-        <div class="mb-3 flex items-center gap-2.5"><span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span><h2 class="m-0 text-[18px] font-bold tracking-tight">자주 묻는 질문</h2></div>
+      <!-- 자주 묻는 질문 (서버) -->
+      <?php if (!empty($c['faqs'])): ?>
+      <div class="mt-8">
+        <div class="mb-3 flex items-center gap-1.5 text-[15px] font-bold"><span class="material-symbols-outlined text-[19px] text-[<?= $P ?>]">quiz</span>자주 묻는 질문</div>
         <div class="flex flex-col gap-2">
-          <?php foreach ($full['faq'] as $f): ?>
+          <?php foreach ($c['faqs'] as $f): ?>
             <details class="group overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
               <summary class="flex cursor-pointer list-none items-center gap-2.5 px-5 py-4 text-[14.5px] font-semibold">
                 <span class="flex-none font-bold text-[<?= $P ?>]">Q</span>
                 <span class="min-w-0 flex-1"><?= nh($f['q']) ?></span>
-                <span class="w-5 flex-none text-center text-[20px] font-light leading-none text-zinc-400"><span class="group-open:hidden">+</span><span class="hidden group-open:inline">−</span></span>
+                <span class="material-symbols-outlined flex-none text-[20px] text-zinc-400"><span class="group-open:hidden">add</span><span class="hidden group-open:inline">remove</span></span>
               </summary>
               <div class="flex gap-2.5 px-5 pb-4 text-[13.5px] leading-relaxed text-zinc-500"><span class="flex-none font-bold text-zinc-400">A</span><span><?= nh($f['a']) ?></span></div>
             </details>
           <?php endforeach; ?>
         </div>
-      </section>
+      </div>
       <?php endif; ?>
+
+      <!-- 활용 팁 (서버) -->
+      <?php if (!empty($c['tips'])): ?>
+      <div class="mt-8 rounded-xl border border-amber-200 bg-amber-50/60 p-6">
+        <div class="mb-3 flex items-center gap-1.5 text-[15px] font-bold"><span class="material-symbols-outlined text-[19px] text-amber-600">lightbulb</span>활용 팁</div>
+        <div class="flex flex-col gap-2.5">
+          <?php foreach ($c['tips'] as $tip): ?>
+            <div class="flex gap-2.5 text-[13.5px] leading-relaxed text-zinc-700"><span class="mt-0.5 flex-none text-amber-600">✓</span><span><?= nh($tip) ?></span></div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <?php endif; ?>
+
+      <?php render_ad("tool-bottom"); ?>
 
       <p class="mt-6 text-xs text-zinc-400">⚠️ 본 계산기는 참고용 예상치입니다. 실제 금액은 개인 상황·법령·기관 기준에 따라 달라질 수 있습니다.</p>
     </div>
@@ -161,15 +683,15 @@ render_nav('계산기', [], true);
       </a>
 
       <!-- 이메일 구독 -->
-      <div class="rounded-xl border border-[<?= $P ?>]/30 bg-[<?= $P ?>]/[0.04] p-5">
-        <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px] text-[<?= $P ?>]">mail</span>결과를 이메일로 받아보시겠어요?</div>
-        <p class="mt-1.5 text-[12.5px] leading-relaxed text-zinc-500">구독하시면 기사·계산 결과와 유용한 생활 정보를 메일로 보내드립니다.</p>
+      <div class="rounded-xl border border-[<?= $P ?>] bg-[<?= $P ?>] p-5 text-white">
+        <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">mail</span>결과를 이메일로 받기</div>
+        <p class="mt-1.5 text-[12.5px] leading-relaxed text-white/80">구독하시면 기사·계산 결과와 유용한 생활 정보를 메일로 보내드립니다.</p>
         <form id="subForm" class="mt-3 flex flex-col gap-2">
-          <input id="subEmail" type="email" required placeholder="이메일 주소" class="w-full rounded-md border border-zinc-300 px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-[<?= $P ?>]/30">
-          <button type="submit" class="rounded-md bg-[<?= $P ?>] text-white h-10 text-sm font-bold hover:bg-[#0f3d82]">무료 구독</button>
+          <input id="subEmail" type="email" required placeholder="이메일 주소" class="w-full rounded-md border border-white/40 bg-white/10 px-3 h-10 text-sm text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/40">
+          <button type="submit" class="rounded-md bg-white text-[<?= $P ?>] h-10 text-sm font-bold hover:bg-zinc-100">무료 구독</button>
         </form>
         <div id="subMsg" class="mt-2 hidden text-[12.5px] font-bold"></div>
-        <p class="mt-2 text-[11px] text-zinc-400">언제든 해지할 수 있습니다. <a href="/privacy.php" class="underline">개인정보처리방침</a></p>
+        <p class="mt-2 text-[11px] text-white/70">언제든 해지할 수 있습니다. <a href="/privacy.php" class="underline">개인정보처리방침</a></p>
       </div>
       <script>
       document.getElementById('subForm').addEventListener('submit',function(e){
@@ -179,14 +701,14 @@ render_nav('계산기', [], true);
         var fd=new FormData(); fd.append('email',email); fd.append('topics','경제·금융'); fd.append('sendTime','both'); fd.append('agree','1'); fd.append('source','tool-'+<?= json_encode($id) ?>); fd.append('ajax','1');
         fetch('/subscribe.php',{method:'POST',headers:{'X-Requested-With':'fetch'},body:fd})
           .then(function(r){return r.json();})
-          .then(function(d){msg.classList.remove('hidden');msg.textContent=(d.ok?'✅ ':'⚠️ ')+d.msg;msg.style.color=d.ok?'#0a8f5b':'#dc2626';if(d.ok)document.getElementById('subForm').reset();})
-          .catch(function(){msg.classList.remove('hidden');msg.textContent='⚠️ 일시적인 오류가 발생했습니다.';msg.style.color='#dc2626';});
+          .then(function(d){msg.classList.remove('hidden');msg.textContent=(d.ok?'✅ ':'⚠️ ')+d.msg;msg.style.color=d.ok?'#e6ffe6':'#ffdede';if(d.ok)document.getElementById('subForm').reset();})
+          .catch(function(){msg.classList.remove('hidden');msg.textContent='⚠️ 일시적인 오류가 발생했습니다.';msg.style.color='#ffdede';});
       });
       </script>
 
       <!-- 관련 도구 (카테고리별) -->
       <div class="rounded-xl border border-zinc-200 bg-white shadow-sm">
-        <div class="border-b border-zinc-100 px-4 pt-3.5 pb-2.5 text-[15px] font-bold">다른 계산기</div>
+        <div class="border-b border-zinc-100 px-4 pt-3.5 pb-2.5 text-[15px] font-bold">관련 도구</div>
         <div class="max-h-[420px] overflow-y-auto px-2 py-2">
           <?php foreach ($sideGroups as $cat => $tools): ?>
             <div class="px-2.5 pt-2.5 pb-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400"><?= nh($cat) ?></div>
@@ -200,9 +722,563 @@ render_nav('계산기', [], true);
         </div>
       </div>
 
+      <!-- 함께 보면 좋은 기사 -->
+      <?php if (!empty($c['articles'])): ?>
+      <div class="rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <div class="border-b border-zinc-100 px-4 pt-3.5 pb-2.5 text-[15px] font-bold">함께 보면 좋은 기사</div>
+        <div class="px-4 py-1.5">
+          <?php foreach ($c['articles'] as $a): ?>
+            <a href="<?= nh($a['href']) ?>" class="flex items-baseline gap-2.5 border-b border-zinc-50 py-2.5 last:border-0 group">
+              <span class="material-symbols-outlined flex-none text-[15px] text-[<?= $P ?>]">article</span>
+              <span class="flex-1 text-[13px] font-semibold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($a['title']) ?></span>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <?php endif; ?>
+
       <?php render_ad("home-sidebar"); ?>
     </aside>
   </div>
   <?php render_footer(); ?>
 </div>
+
+<script>
+// ===== 시안 계산 엔진(build) vanilla 이식 — fields/result/formula/tables만 사용 =====
+var CALC_INPUTS = {}, CALC_TOGGLES = {};
+var VIEW = <?= json_encode($did) ?>;
+
+function num(k, def) { var v = CALC_INPUTS[k]; if (v === undefined || v === "") return def; var n = parseFloat(String(v).replace(/,/g, "")); return isNaN(n) ? def : n; }
+function raw(k, def) { var v = CALC_INPUTS[k]; return v === undefined ? def : v; }
+function tog(k, def) { return CALC_TOGGLES[k] === undefined ? def : CALC_TOGGLES[k]; }
+function fmt(n) { if (!isFinite(n)) return "-"; return Math.round(n).toLocaleString("ko-KR"); }
+function fmt1(n) { if (!isFinite(n)) return "-"; return (Math.round(n * 100) / 100).toLocaleString("ko-KR"); }
+function tcol(label, right) { return { label: label, cls: "px-2 py-2 text-[12px] font-bold text-zinc-400 " + (right ? "text-right" : "text-left") }; }
+function tcell(v, cls) { return { v: v, cls: "px-2 py-2.5 border-b border-zinc-50 " + (cls || "") }; }
+function numField(k, label, unit, def) { return { label: label, unit: unit, isNumber: true, isToggle: false, value: raw(k, String(def)), k: k }; }
+function togField(k, label, opts, def) {
+  var cur = tog(k, def);
+  var n = opts.length;
+  var gridCls = n <= 4 ? "tog-row" : "tog-grid";
+  return { label: label, isToggle: true, isNumber: false, gridCls: gridCls, k: k, options: opts.map(function (o) {
+    return { name: o, value: o, cls: "cursor-pointer text-center leading-snug rounded-lg border px-3 py-2.5 text-[13.5px] font-bold " +
+      (o === cur ? "border-[#134a9c] bg-[#134a9c] text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-[#134a9c] hover:text-[#134a9c]") }; }) };
+}
+
+function build(view) {
+  var fields = [], result = { bigLabel: "", bigValue: "-", bigSub: "", rows: [] }, formula = [], tables = [];
+  if (view === "salary") {
+    const annual = num("sal_annual", 40000000);
+    const nonTax = num("sal_nontax", 200000);
+    const deps = num("sal_deps", 1);
+    const mGross = annual / 12;
+    const base = Math.max(0, mGross - nonTax);
+    const np = Math.min(base, 6170000) * 0.045;
+    const hi = base * 0.03545;
+    const ltc = hi * 0.1295;
+    const ei = base * 0.009;
+    let it;
+    const y = base * 12;
+    if (y <= 14000000) it = y * 0.06;
+    else if (y <= 50000000) it = 840000 + (y - 14000000) * 0.15;
+    else if (y <= 88000000) it = 6240000 + (y - 50000000) * 0.24;
+    else it = 15360000 + (y - 88000000) * 0.35;
+    it = Math.max(0, (it / 12) - (deps - 1) * 12500);
+    const local = it * 0.1;
+    const ded = np + hi + ltc + ei + it + local;
+    const net = mGross - ded;
+    result = { bigLabel: "예상 월 실수령액", bigValue: "₩ " + fmt(net), bigSub: "연 환산 약 " + fmt(net * 12) + "원",
+      rows: [
+        { label: "월 급여(세전)", value: fmt(mGross) + "원" },
+        { label: "국민연금 (4.5%)", value: "-" + fmt(np) + "원" },
+        { label: "건강보험 (3.545%)", value: "-" + fmt(hi) + "원" },
+        { label: "장기요양 (건보 12.95%)", value: "-" + fmt(ltc) + "원" },
+        { label: "고용보험 (0.9%)", value: "-" + fmt(ei) + "원" },
+        { label: "소득세(간이)", value: "-" + fmt(it) + "원" },
+        { label: "지방소득세 (소득세 10%)", value: "-" + fmt(local) + "원" },
+        { label: "공제 합계", value: "-" + fmt(ded) + "원" },
+      ] };
+    fields = [ numField("sal_annual", "연봉", "원", 40000000), numField("sal_nontax", "월 비과세액 (식대 등)", "원", 200000), numField("sal_deps", "부양가족 수 (본인 포함)", "명", 1) ];
+    formula = [ "월 실수령 = 월 급여(세전) − 4대보험 − 소득세 − 지방소득세", fmt(mGross) + " − " + fmt(np + hi + ltc + ei) + "(4대보험) − " + fmt(it) + "(소득세) − " + fmt(local) + "(지방세) = " + fmt(net) + "원", "과세표준(연) " + fmt(y) + "원 구간 세율 적용 후 부양가족 " + deps + "명 반영" ];
+  } else if (view === "loan") {
+    const P = num("loan_p", 30000000);
+    const r = num("loan_r", 4.5) / 100 / 12;
+    const n = num("loan_n", 60);
+    let pay;
+    if (r === 0) pay = P / n; else pay = P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+    const total = pay * n; const interest = total - P;
+    result = { bigLabel: "월 상환액 (원리금균등)", bigValue: "₩ " + fmt(pay), bigSub: n + "개월 동안 매월 상환",
+      rows: [ { label: "대출 원금", value: fmt(P) + "원" }, { label: "총 이자", value: fmt(interest) + "원" }, { label: "총 상환액", value: fmt(total) + "원" }, { label: "적용 연금리", value: fmt1(num("loan_r", 4.5)) + "%" } ] };
+    fields = [ numField("loan_p", "대출 원금", "원", 30000000), numField("loan_r", "연 금리", "%", 4.5), numField("loan_n", "대출 기간", "개월", 60) ];
+    formula = [ "월 상환액 = 원금 × 월이율 × (1+월이율)^n ÷ ((1+월이율)^n − 1)", "원금 " + fmt(P) + "원 · 월이율 " + fmt1(num("loan_r", 4.5) / 12) + "% · " + n + "개월 → 월 " + fmt(pay) + "원", "총이자 = 월상환액 × n − 원금 = " + fmt(interest) + "원" ];
+  } else if (view === "savings") {
+    const type = tog("sav_type", "예금");
+    const method = tog("sav_method", "복리");
+    const amt = num("sav_amt", type === "예금" ? 10000000 : 300000);
+    const r = num("sav_r", 3.5) / 100;
+    const n = num("sav_n", 12);
+    let principal, interest;
+    if (type === "예금") {
+      principal = amt;
+      if (method === "단리") interest = amt * r * (n / 12);
+      else interest = amt * (Math.pow(1 + r / 12, n) - 1);
+    } else {
+      principal = amt * n;
+      if (method === "단리") interest = amt * r / 12 * (n * (n + 1) / 2);
+      else { let s = 0; for (let k = 1; k <= n; k++) s += amt * (Math.pow(1 + r / 12, n - k + 1) - 1); interest = s; }
+    }
+    const tax = interest * 0.154; const net = principal + interest - tax;
+    result = { bigLabel: "만기 수령액 (세후)", bigValue: "₩ " + fmt(net), bigSub: type + " · " + method + " · " + n + "개월",
+      rows: [ { label: "납입 원금", value: fmt(principal) + "원" }, { label: "세전 이자", value: fmt(interest) + "원" }, { label: "이자과세 (15.4%)", value: "-" + fmt(tax) + "원" }, { label: "세후 이자", value: fmt(interest - tax) + "원" } ] };
+    fields = [ togField("sav_type", "상품 유형", ["예금", "적금"], "예금"), numField("sav_amt", type === "예금" ? "예치금" : "월 납입액", "원", type === "예금" ? 10000000 : 300000), numField("sav_r", "연 금리", "%", 3.5), numField("sav_n", "기간", "개월", 12), togField("sav_method", "이자 방식", ["단리", "복리"], "복리") ];
+    formula = [ (type === "예금" ? "예금 이자 = 예치금 × 금리 × 기간(또는 월복리 적용)" : "적금 이자 = 매월 납입액에 잔여개월만큼 이자 누적"), "세전 이자 " + fmt(interest) + "원 − 이자과세 15.4%(" + fmt(tax) + "원) = 세후 " + fmt(interest - tax) + "원", "만기 수령액 = 원금 " + fmt(principal) + " + 세후이자 " + fmt(interest - tax) + " = " + fmt(net) + "원" ];
+  } else if (view === "vat") {
+    const basisType = tog("vat_type", "공급가액");
+    const v = num("vat_amt", 1000000);
+    let supply, vat, total;
+    if (basisType === "공급가액") { supply = v; vat = v * 0.1; total = v + vat; }
+    else { supply = v / 1.1; vat = v - supply; total = v; }
+    result = { bigLabel: "부가가치세 (10%)", bigValue: "₩ " + fmt(vat), bigSub: basisType + " 기준 계산",
+      rows: [ { label: "공급가액", value: fmt(supply) + "원" }, { label: "부가세", value: fmt(vat) + "원" }, { label: "합계금액", value: fmt(total) + "원" } ] };
+    fields = [ togField("vat_type", "입력 기준", ["공급가액", "합계금액"], "공급가액"), numField("vat_amt", "금액", "원", 1000000) ];
+  } else if (view === "area") {
+    const dir = tog("area_dir", "평→㎡");
+    const v = num("area_v", 34);
+    const P = 3.3057851;
+    let out, outUnit, alt;
+    if (dir === "평→㎡") { out = v * P; outUnit = "㎡"; alt = v + "평 = " + fmt1(out) + "㎡"; }
+    else { out = v / P; outUnit = "평"; alt = v + "㎡ = " + fmt1(out) + "평"; }
+    result = { bigLabel: "변환 결과", bigValue: fmt1(out) + " " + outUnit, bigSub: alt,
+      rows: [ { label: "입력값", value: v + (dir === "평→㎡" ? " 평" : " ㎡") }, { label: "변환값", value: fmt1(out) + " " + outUnit }, { label: "1평", value: "3.3058 ㎡" }, { label: "1㎡", value: "0.3025 평" } ] };
+    fields = [ togField("area_dir", "변환 방향", ["평→㎡", "㎡→평"], "평→㎡"), numField("area_v", "값", dir === "평→㎡" ? "평" : "㎡", 34) ];
+    formula = [ "1평 = 3.3058㎡, 1㎡ = 0.3025평", (dir === "평→㎡" ? v + "평 × 3.3058 = " + fmt1(out) + "㎡" : v + "㎡ ÷ 3.3058 = " + fmt1(out) + "평") ];
+  } else if (view === "bmi") {
+    const h = num("bmi_h", 170) / 100;
+    const w = num("bmi_w", 65);
+    const bmi = w / (h * h);
+    let stage;
+    if (bmi < 18.5) stage = "저체중";
+    else if (bmi < 23) stage = "정상";
+    else if (bmi < 25) stage = "과체중";
+    else if (bmi < 30) stage = "비만";
+    else stage = "고도비만";
+    const lo = 18.5 * h * h, hi = 22.9 * h * h;
+    result = { bigLabel: "체질량지수 (BMI)", bigValue: fmt1(bmi), bigSub: "판정: " + stage,
+      rows: [ { label: "판정 단계", value: stage }, { label: "정상 체중 범위", value: fmt1(lo) + " ~ " + fmt1(hi) + " kg" }, { label: "입력 키 / 몸무게", value: num("bmi_h", 170) + "cm / " + w + "kg" } ] };
+    fields = [ numField("bmi_h", "키", "cm", 170), numField("bmi_w", "몸무게", "kg", 65) ];
+    formula = [ "BMI = 몸무게(kg) ÷ 키(m)²", w + " ÷ " + fmt1(h) + "² = " + fmt1(bmi) + " (" + stage + ")", "정상 체중 = 18.5~22.9 × 키(m)² = " + fmt1(lo) + "~" + fmt1(hi) + "kg" ];
+  } else if (view === "tax") {
+    const income = num("tax_income", 50000000);
+    const expense = num("tax_expense", 0);
+    const ded = num("tax_ded", 1500000);
+    const prepaid = num("tax_prepaid", 0);
+    const taxBase = Math.max(0, income - expense - ded);
+    let calc, rate, prog;
+    if (taxBase <= 14000000) { rate = "6%"; calc = taxBase * 0.06; prog = 0; }
+    else if (taxBase <= 50000000) { rate = "15%"; calc = taxBase * 0.15 - 1260000; prog = 1260000; }
+    else if (taxBase <= 88000000) { rate = "24%"; calc = taxBase * 0.24 - 5760000; prog = 5760000; }
+    else if (taxBase <= 150000000) { rate = "35%"; calc = taxBase * 0.35 - 15440000; prog = 15440000; }
+    else if (taxBase <= 300000000) { rate = "38%"; calc = taxBase * 0.38 - 19940000; prog = 19940000; }
+    else if (taxBase <= 500000000) { rate = "40%"; calc = taxBase * 0.40 - 25940000; prog = 25940000; }
+    else if (taxBase <= 1000000000) { rate = "42%"; calc = taxBase * 0.42 - 35940000; prog = 35940000; }
+    else { rate = "45%"; calc = taxBase * 0.45 - 65940000; prog = 65940000; }
+    calc = Math.max(0, calc);
+    const local = calc * 0.1;
+    const finalTax = calc + local - prepaid;
+    result = { bigLabel: "예상 납부세액 (지방세 포함)", bigValue: "₩ " + fmt(finalTax), bigSub: (finalTax < 0 ? "환급 예상 " + fmt(-finalTax) + "원" : "과세표준 " + fmt(taxBase) + "원 · 세율 " + rate),
+      rows: [ { label: "종합소득금액", value: fmt(income) + "원" }, { label: "필요경비", value: "-" + fmt(expense) + "원" }, { label: "소득·인적공제", value: "-" + fmt(ded) + "원" }, { label: "과세표준", value: fmt(taxBase) + "원" }, { label: "산출세액 (누진공제 " + fmt(prog) + ")", value: fmt(calc) + "원" }, { label: "지방소득세 (10%)", value: fmt(local) + "원" }, { label: "기납부세액", value: "-" + fmt(prepaid) + "원" } ] };
+    fields = [ numField("tax_income", "연간 종합소득금액", "원", 50000000), numField("tax_expense", "필요경비", "원", 0), numField("tax_ded", "소득·인적공제 합계", "원", 1500000), numField("tax_prepaid", "기납부세액 (원천징수 등)", "원", 0) ];
+  } else if (view === "severance") {
+    const monthly = num("sev_monthly", 3000000);
+    const bonus = num("sev_bonus", 0);
+    const annualLeave = num("sev_leave", 0);
+    const years = num("sev_years", 3);
+    const months = num("sev_months", 0);
+    const totalDays = Math.round(years * 365 + months * 30);
+    const avgDaily = (monthly * 3 + bonus * (3 / 12) + annualLeave * (3 / 12)) / 91.25;
+    const severance = avgDaily * 30 * (totalDays / 365);
+    result = { bigLabel: "예상 퇴직금 (세전)", bigValue: "₩ " + fmt(severance), bigSub: "재직 " + years + "년 " + months + "개월 · 1일 평균임금 " + fmt(avgDaily) + "원",
+      rows: [ { label: "재직일수", value: fmt(totalDays) + "일" }, { label: "1일 평균임금", value: fmt(avgDaily) + "원" }, { label: "30일분 평균임금", value: fmt(avgDaily * 30) + "원" }, { label: "예상 퇴직금", value: fmt(severance) + "원" } ] };
+    fields = [ numField("sev_monthly", "월 기본급(세전)", "원", 3000000), numField("sev_bonus", "연간 상여금 총액", "원", 0), numField("sev_leave", "연차수당 등 (연간)", "원", 0), numField("sev_years", "재직 연수", "년", 3), numField("sev_months", "추가 개월", "개월", 0) ];
+    formula = [ "퇴직금 = 1일 평균임금 × 30 × (재직일수 ÷ 365)", "1일 평균임금 " + fmt(avgDaily) + "원 × 30 × (" + fmt(totalDays) + "일 ÷ 365) = " + fmt(severance) + "원", "1일 평균임금 = 퇴직 전 3개월 임금총액 ÷ 91.25일" ];
+  } else if (view === "fx") {
+    const rates = { USD: 1335, JPY: 8.6, EUR: 1452, CNY: 186, GBP: 1710 };
+    const cur = tog("fx_cur", "USD");
+    const dir = tog("fx_dir", "외화→원");
+    const amt = num("fx_amt", 100);
+    const rate = rates[cur];
+    const unit = cur === "JPY" ? 100 : 1;
+    let out, outUnit, sub;
+    if (dir === "외화→원") { out = amt * rate / unit; outUnit = "원"; sub = amt + (cur === "JPY" ? "엔" : cur) + " → 원화"; }
+    else { out = amt / (rate / unit); outUnit = cur; sub = amt + "원 → " + cur; }
+    result = { bigLabel: "환산 결과", bigValue: fmt1(out) + " " + outUnit, bigSub: sub,
+      rows: [ { label: "기준 환율", value: "1 " + (cur === "JPY" ? "100JPY" : cur) + " = " + fmt(rate) + "원" }, { label: "입력값", value: fmt1(amt) + " " + (dir === "외화→원" ? cur : "원") }, { label: "환산값", value: fmt1(out) + " " + outUnit } ] };
+    fields = [ togField("fx_cur", "통화", ["USD", "JPY", "EUR", "CNY", "GBP"], "USD"), togField("fx_dir", "변환 방향", ["외화→원", "원→외화"], "외화→원"), numField("fx_amt", "금액", dir === "외화→원" ? (cur === "JPY" ? "엔" : cur) : "원", 100) ];
+  } else if (view === "fourins") {
+    const g = num("fi_gross", 3000000);
+    const np = Math.min(g, 6170000) * 0.045, hi = g * 0.03545, ltc = hi * 0.1295, ei = g * 0.009;
+    const sum = np + hi + ltc + ei;
+    result = { bigLabel: "근로자 부담 4대보험 합계", bigValue: "₩ " + fmt(sum), bigSub: "월 급여 " + fmt(g) + "원 기준 · 공제 후 " + fmt(g - sum) + "원",
+      rows: [ { label: "국민연금 (4.5%)", value: fmt(np) + "원" }, { label: "건강보험 (3.545%)", value: fmt(hi) + "원" }, { label: "장기요양 (건보 12.95%)", value: fmt(ltc) + "원" }, { label: "고용보험 (0.9%)", value: fmt(ei) + "원" } ] };
+    fields = [ numField("fi_gross", "월 급여(세전)", "원", 3000000) ];
+  } else if (view === "minwage") {
+    const wage = num("mw_wage", 10320);
+    const hrs = num("mw_hours", 40);
+    const weeklyPaid = hrs >= 15 ? Math.min(hrs, 40) / 40 * 8 : 0;
+    const monthly = wage * (hrs + weeklyPaid) * 4.345;
+    result = { bigLabel: "예상 월 환산액", bigValue: "₩ " + fmt(monthly), bigSub: "시급 " + fmt(wage) + "원 · 주 " + hrs + "시간(주휴 포함)",
+      rows: [ { label: "시급", value: fmt(wage) + "원" }, { label: "일급 (8시간)", value: fmt(wage * 8) + "원" }, { label: "주급 (주휴 포함)", value: fmt(wage * (hrs + weeklyPaid)) + "원" }, { label: "월 환산", value: fmt(monthly) + "원" } ] };
+    fields = [ numField("mw_wage", "시급", "원", 10320), numField("mw_hours", "주 근로시간", "시간", 40) ];
+  } else if (view === "holidaypay") {
+    const wage = num("hp_wage", 10320);
+    const hrs = num("hp_hours", 40);
+    const eligible = hrs >= 15;
+    const weekly = eligible ? Math.min(hrs, 40) / 40 * 8 * wage : 0;
+    result = { bigLabel: "주휴수당 (주급)", bigValue: "₩ " + fmt(weekly), bigSub: eligible ? "월 약 " + fmt(weekly * 4.345) + "원" : "주 15시간 미만 — 대상 아님",
+      rows: [ { label: "지급 대상", value: eligible ? "대상 (주 15시간 이상)" : "비대상" }, { label: "주휴수당 (주)", value: fmt(weekly) + "원" }, { label: "주휴수당 (월 환산)", value: fmt(weekly * 4.345) + "원" } ] };
+    fields = [ numField("hp_wage", "시급", "원", 10320), numField("hp_hours", "주 근로시간", "시간", 40) ];
+  } else if (view === "wageconv") {
+    const dir = tog("wc_dir", "시급→월급");
+    const val = num("wc_val", dir === "시급→월급" ? 10320 : 2160000);
+    const H = 209;
+    let out, outUnit;
+    if (dir === "시급→월급") { out = val * H; outUnit = "원/월"; } else { out = val / H; outUnit = "원/시"; }
+    result = { bigLabel: "환산 결과", bigValue: "₩ " + fmt(out), bigSub: dir + " · 월 소정근로 209시간 기준",
+      rows: [ { label: "입력값", value: fmt(val) + (dir === "시급→월급" ? "원/시" : "원/월") }, { label: "월 소정근로시간", value: "209시간" }, { label: "환산값", value: fmt(out) + " " + outUnit } ] };
+    fields = [ togField("wc_dir", "변환 방향", ["시급→월급", "월급→시급"], "시급→월급"), numField("wc_val", "금액", "원", dir === "시급→월급" ? 10320 : 2160000) ];
+  } else if (view === "annualleave") {
+    const y = num("al_years", 3);
+    const m = num("al_months", 0);
+    let days;
+    if (y < 1) days = Math.min(11, Math.floor(m)); else days = Math.min(25, 15 + Math.floor((y - 1) / 2));
+    result = { bigLabel: "연간 연차휴가", bigValue: days + "일", bigSub: "근속 " + y + "년 " + m + "개월 기준",
+      rows: [ { label: "기본 연차", value: (y < 1 ? "개근 월 1일" : "15일") }, { label: "가산 연차", value: (y < 1 ? "-" : Math.min(10, Math.floor((y - 1) / 2)) + "일") }, { label: "총 연차", value: days + "일 (최대 25일)" } ] };
+    fields = [ numField("al_years", "근속 연수", "년", 3), numField("al_months", "추가 개월(1년 미만 시)", "개월", 0) ];
+  } else if (view === "unemploy") {
+    const monthly = num("ue_monthly", 3000000);
+    const yrs = num("ue_years", 3);
+    const age = num("ue_age", 35);
+    const daily = Math.min(66000, Math.max(63104, monthly / 30 * 0.6));
+    let payDays;
+    if (yrs < 1) payDays = 120; else if (yrs < 3) payDays = age >= 50 ? 180 : 150; else if (yrs < 5) payDays = age >= 50 ? 210 : 180; else if (yrs < 10) payDays = age >= 50 ? 240 : 210; else payDays = age >= 50 ? 270 : 240;
+    const total = daily * payDays;
+    result = { bigLabel: "예상 총 구직급여", bigValue: "₩ " + fmt(total), bigSub: "1일 " + fmt(daily) + "원 × " + payDays + "일",
+      rows: [ { label: "1일 구직급여", value: fmt(daily) + "원" }, { label: "소정급여일수", value: payDays + "일" }, { label: "총 예상 수급액", value: fmt(total) + "원" } ] };
+    fields = [ numField("ue_monthly", "이직 전 월 평균임금", "원", 3000000), numField("ue_years", "고용보험 가입기간", "년", 3), numField("ue_age", "이직 시 나이", "세", 35) ];
+  } else if (view === "yearend") {
+    const salary = num("ye_salary", 50000000);
+    const ded = num("ye_ded", 3000000);
+    const prepaid = num("ye_prepaid", 0);
+    let earnDed;
+    if (salary <= 5000000) earnDed = salary * 0.7; else if (salary <= 15000000) earnDed = 3500000 + (salary - 5000000) * 0.4; else if (salary <= 45000000) earnDed = 7500000 + (salary - 15000000) * 0.15; else if (salary <= 100000000) earnDed = 12000000 + (salary - 45000000) * 0.05; else earnDed = 14750000 + (salary - 100000000) * 0.02;
+    const base = Math.max(0, salary - earnDed - ded);
+    let calc;
+    if (base <= 14000000) calc = base * 0.06; else if (base <= 50000000) calc = base * 0.15 - 1260000; else if (base <= 88000000) calc = base * 0.24 - 5760000; else if (base <= 150000000) calc = base * 0.35 - 15440000; else calc = base * 0.38 - 19940000;
+    calc = Math.max(0, calc);
+    const settle = calc - prepaid;
+    result = { bigLabel: settle <= 0 ? "예상 환급액" : "예상 추가납부", bigValue: "₩ " + fmt(Math.abs(settle)), bigSub: settle <= 0 ? "돌려받을 것으로 예상" : "더 낼 것으로 예상",
+      rows: [ { label: "총급여", value: fmt(salary) + "원" }, { label: "근로소득공제", value: "-" + fmt(earnDed) + "원" }, { label: "각종 소득·세액공제", value: "-" + fmt(ded) + "원" }, { label: "과세표준", value: fmt(base) + "원" }, { label: "결정세액", value: fmt(calc) + "원" }, { label: "기납부세액", value: "-" + fmt(prepaid) + "원" } ] };
+    fields = [ numField("ye_salary", "연간 총급여", "원", 50000000), numField("ye_ded", "소득·세액공제 합계", "원", 3000000), numField("ye_prepaid", "기납부(원천징수)세액", "원", 0) ];
+  } else if (view === "dsr") {
+    const income = num("dsr_income", 50000000);
+    const existing = num("dsr_existing", 0);
+    const P = num("dsr_p", 300000000);
+    const r = num("dsr_r", 4.5) / 100 / 12;
+    const n = num("dsr_n", 360);
+    const pay = r === 0 ? P / n : P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+    const newAnnual = pay * 12;
+    const dsr = income > 0 ? (existing + newAnnual) / income * 100 : 0;
+    result = { bigLabel: "예상 DSR", bigValue: fmt1(dsr) + " %", bigSub: dsr <= 40 ? "규제 한도(40%) 이내" : "40% 초과 — 한도 제한 가능",
+      rows: [ { label: "연소득", value: fmt(income) + "원" }, { label: "기존 대출 연 원리금", value: fmt(existing) + "원" }, { label: "신규 대출 연 원리금", value: fmt(newAnnual) + "원" }, { label: "DSR", value: fmt1(dsr) + "%" } ] };
+    fields = [ numField("dsr_income", "연소득", "원", 50000000), numField("dsr_existing", "기존 대출 연 원리금", "원", 0), numField("dsr_p", "신규 대출 원금", "원", 300000000), numField("dsr_r", "신규 대출 금리", "%", 4.5), numField("dsr_n", "신규 대출 기간", "개월", 360) ];
+  } else if (view === "jeonse") {
+    const jDeposit = num("js_jeonse", 300000000);
+    const mDeposit = num("js_mdeposit", 50000000);
+    const rent = num("js_rent", 600000);
+    const rate = num("js_rate", 4.5) / 100;
+    const jeonseCost = jDeposit * rate / 12;
+    const monthlyCost = rent + mDeposit * rate / 12;
+    const cheaper = jeonseCost <= monthlyCost ? "전세" : "월세";
+    const diff = Math.abs(jeonseCost - monthlyCost);
+    result = { bigLabel: "유리한 선택", bigValue: cheaper, bigSub: "월 약 " + fmt(diff) + "원 " + cheaper + "가 저렴",
+      rows: [ { label: "전세 월 환산비용", value: fmt(jeonseCost) + "원" }, { label: "월세 월 비용", value: fmt(monthlyCost) + "원" }, { label: "월 차이", value: fmt(diff) + "원" } ] };
+    fields = [ numField("js_jeonse", "전세보증금", "원", 300000000), numField("js_mdeposit", "월세보증금", "원", 50000000), numField("js_rent", "월세", "원", 600000), numField("js_rate", "기회비용·대출 금리", "%", 4.5) ];
+  } else if (view === "rentyield") {
+    const price = num("ry_price", 300000000);
+    const deposit = num("ry_deposit", 50000000);
+    const rent = num("ry_rent", 1000000);
+    const loan = num("ry_loan", 0);
+    const loanRate = num("ry_rate", 4.5) / 100;
+    const annualRent = rent * 12;
+    const surfaceYield = price > 0 ? annualRent / price * 100 : 0;
+    const invest = price - deposit - loan;
+    const netAnnual = annualRent - loan * loanRate;
+    const netYield = invest > 0 ? netAnnual / invest * 100 : 0;
+    result = { bigLabel: "실질 수익률 (레버리지)", bigValue: fmt1(netYield) + " %", bigSub: "표면 수익률 " + fmt1(surfaceYield) + "%",
+      rows: [ { label: "연 임대수입", value: fmt(annualRent) + "원" }, { label: "실투자금", value: fmt(invest) + "원" }, { label: "연 대출이자", value: fmt(loan * loanRate) + "원" }, { label: "표면 / 실질", value: fmt1(surfaceYield) + "% / " + fmt1(netYield) + "%" } ] };
+    fields = [ numField("ry_price", "매입가", "원", 300000000), numField("ry_deposit", "보증금", "원", 50000000), numField("ry_rent", "월세", "원", 1000000), numField("ry_loan", "대출금", "원", 0), numField("ry_rate", "대출 금리", "%", 4.5) ];
+  } else if (view === "acqtax") {
+    const price = num("acq_price", 500000000);
+    const type = tog("acq_type", "6억 이하");
+    let rate;
+    if (type === "6억 이하") rate = 0.01; else if (type === "6억~9억") rate = (price * 2 / 300000000 - 3) / 100; else if (type === "9억 초과") rate = 0.03; else rate = 0.08;
+    rate = Math.max(0.01, Math.min(rate, 0.12));
+    const acq = price * rate;
+    const edu = acq * 0.1;
+    const farm = type === "다주택·조정" ? price * 0.01 : (rate >= 0.03 ? price * 0.002 : 0);
+    const total = acq + edu + farm;
+    result = { bigLabel: "예상 취득세 합계", bigValue: "₩ " + fmt(total), bigSub: "취득가 " + fmt(price) + "원 · 세율 " + fmt1(rate * 100) + "%",
+      rows: [ { label: "취득세", value: fmt(acq) + "원" }, { label: "지방교육세", value: fmt(edu) + "원" }, { label: "농어촌특별세", value: fmt(farm) + "원" }, { label: "합계", value: fmt(total) + "원" } ] };
+    fields = [ numField("acq_price", "취득가액", "원", 500000000), togField("acq_type", "구분", ["6억 이하", "6억~9억", "9억 초과", "다주택·조정"], "6억 이하") ];
+  } else if (view === "captax") {
+    const gain = num("cg_gain", 100000000);
+    const years = num("cg_years", 3);
+    const ltd = years >= 3 ? Math.min(0.30, years * 0.02) : 0;
+    const base = Math.max(0, gain * (1 - ltd) - 2500000);
+    let calc;
+    if (base <= 14000000) calc = base * 0.06; else if (base <= 50000000) calc = base * 0.15 - 1260000; else if (base <= 88000000) calc = base * 0.24 - 5760000; else if (base <= 150000000) calc = base * 0.35 - 15440000; else if (base <= 300000000) calc = base * 0.38 - 19940000; else calc = base * 0.40 - 25940000;
+    calc = Math.max(0, calc);
+    const local = calc * 0.1;
+    result = { bigLabel: "예상 양도소득세 (지방세 포함)", bigValue: "₩ " + fmt(calc + local), bigSub: "양도차익 " + fmt(gain) + "원 · 보유 " + years + "년",
+      rows: [ { label: "장기보유특별공제", value: "-" + fmt(gain * ltd) + "원 (" + fmt1(ltd * 100) + "%)" }, { label: "기본공제", value: "-2,500,000원" }, { label: "과세표준", value: fmt(base) + "원" }, { label: "산출세액", value: fmt(calc) + "원" }, { label: "지방소득세(10%)", value: fmt(local) + "원" } ] };
+    fields = [ numField("cg_gain", "양도차익", "원", 100000000), numField("cg_years", "보유 연수", "년", 3) ];
+  } else if (view === "gifttax") {
+    const amount = num("gt_amount", 100000000);
+    const rel = tog("gt_rel", "직계존비속");
+    const exempt = rel === "배우자" ? 600000000 : rel === "직계존비속" ? 50000000 : 10000000;
+    const base = Math.max(0, amount - exempt);
+    let calc, r;
+    if (base <= 100000000) { r = "10%"; calc = base * 0.1; } else if (base <= 500000000) { r = "20%"; calc = base * 0.2 - 10000000; } else if (base <= 1000000000) { r = "30%"; calc = base * 0.3 - 60000000; } else if (base <= 3000000000) { r = "40%"; calc = base * 0.4 - 160000000; } else { r = "50%"; calc = base * 0.5 - 460000000; }
+    calc = Math.max(0, calc);
+    result = { bigLabel: "예상 증여세", bigValue: "₩ " + fmt(calc), bigSub: "증여액 " + fmt(amount) + "원 · 세율 " + r,
+      rows: [ { label: "증여재산공제", value: "-" + fmt(exempt) + "원" }, { label: "과세표준", value: fmt(base) + "원" }, { label: "산출세액", value: fmt(calc) + "원" } ] };
+    fields = [ numField("gt_amount", "증여액", "원", 100000000), togField("gt_rel", "관계", ["배우자", "직계존비속", "기타친족"], "직계존비속") ];
+  } else if (view === "corptax") {
+    const base = num("ct_base", 200000000);
+    let calc, r;
+    if (base <= 200000000) { r = "9%"; calc = base * 0.09; } else if (base <= 20000000000) { r = "19%"; calc = base * 0.19 - 20000000; } else if (base <= 300000000000) { r = "21%"; calc = base * 0.21 - 420000000; } else { r = "24%"; calc = base * 0.24 - 9420000000; }
+    const local = calc * 0.1;
+    result = { bigLabel: "예상 법인세 (지방세 포함)", bigValue: "₩ " + fmt(calc + local), bigSub: "과세표준 " + fmt(base) + "원 · 세율 " + r,
+      rows: [ { label: "과세표준", value: fmt(base) + "원" }, { label: "법인세 산출세액", value: fmt(calc) + "원" }, { label: "지방소득세(10%)", value: fmt(local) + "원" }, { label: "합계", value: fmt(calc + local) + "원" } ] };
+    fields = [ numField("ct_base", "과세표준", "원", 200000000) ];
+  } else if (view === "freelancer") {
+    const income = num("fl_income", 30000000);
+    const withheld = income * 0.033;
+    const base = Math.max(0, income * 0.4 - 1500000);
+    let calc;
+    if (base <= 14000000) calc = base * 0.06; else if (base <= 50000000) calc = base * 0.15 - 1260000; else calc = base * 0.24 - 5760000;
+    calc = Math.max(0, calc);
+    const settle = calc - withheld;
+    result = { bigLabel: settle <= 0 ? "예상 환급액" : "예상 추가납부", bigValue: "₩ " + fmt(Math.abs(settle)), bigSub: "원천징수 3.3% = " + fmt(withheld) + "원",
+      rows: [ { label: "연 수입", value: fmt(income) + "원" }, { label: "원천징수액(3.3%)", value: fmt(withheld) + "원" }, { label: "추정 과세표준", value: fmt(base) + "원" }, { label: "예상 결정세액", value: fmt(calc) + "원" } ] };
+    fields = [ numField("fl_income", "연 수입(세전)", "원", 30000000) ];
+  } else if (view === "youtube") {
+    const views = num("yt_views", 100) * 10000;
+    const catDefs = [ ["금융·재테크", 5000], ["IT·테크", 3500], ["교육·정보", 3000], ["뷰티·패션", 2500], ["게임", 1800], ["브이로그·일상", 1500], ["엔터·예능", 1200], ["키즈", 900] ];
+    const catOpts = catDefs.map(([n, r]) => n + " " + fmt(r));
+    const cat = tog("yt_cat", "IT·테크 3,500");
+    const rpm = (catDefs.find(([n, r]) => n + " " + fmt(r) === cat) || ["", 2000])[1];
+    const catName = cat.replace(/ [\d,]+$/, "");
+    const revenue = views / 1000 * rpm;
+    result = { bigLabel: "예상 월 광고수익", bigValue: "₩ " + fmt(revenue), bigSub: catName + " · RPM " + fmt(rpm) + "원 · 월 " + fmt1(views / 10000) + "만 조회",
+      rows: [ { label: "월 조회수", value: fmt(views) + "회" }, { label: "적용 RPM(1,000회당)", value: fmt(rpm) + "원" }, { label: "월 예상 광고수익", value: fmt(revenue) + "원" }, { label: "연 예상 광고수익", value: fmt(revenue * 12) + "원" } ] };
+    fields = [ numField("yt_views", "월 조회수", "만회", 100), togField("yt_cat", "채널 주제", catOpts, "IT·테크 3,500") ];
+    const col = (label, cls) => ({ label, cls: "px-2 py-2 text-[12px] font-bold text-zinc-400 " + (cls || "text-left") });
+    const cell = (v, cls) => ({ v, cls: "px-2 py-2.5 border-b border-zinc-50 " + (cls || "") });
+    const rowCls = (on) => on ? "bg-[#134a9c]/[0.06]" : "";
+    const vscale = [100000, 500000, 1000000, 5000000, 10000000];
+    const flabel = (f) => f >= 10000 ? (f / 10000) + "만" : fmt(f);
+    const activeV = [...vscale].reverse().find((f) => views >= f) || vscale[0];
+    tables = [
+      { title: "채널 주제별 예상 월수익 (현재 조회수 기준)", cols: [ col("주제"), col("RPM", "text-right"), col("월 광고수익", "text-right") ],
+        rows: catDefs.map(([n, r]) => ({ cls: rowCls(n === catName), cells: [ cell(n, "font-semibold " + (n === catName ? "text-[#134a9c]" : "text-zinc-700")), cell(fmt(r) + "원", "text-right text-zinc-600"), cell(fmt(views / 1000 * r) + "원", "text-right font-bold text-[#134a9c]") ] })) },
+      { title: "월 조회수별 예상 광고수익 (현재 RPM 기준)", cols: [ col("월 조회수"), col("월 수익", "text-right"), col("연 수익", "text-right") ],
+        rows: vscale.map((f) => ({ cls: rowCls(f === activeV), cells: [ cell(flabel(f) + (f === activeV ? " ◀" : ""), "font-semibold " + (f === activeV ? "text-[#134a9c]" : "text-zinc-600")), cell(fmt(f / 1000 * rpm) + "원", "text-right font-bold text-[#134a9c]"), cell(fmt(f / 1000 * rpm * 12) + "원", "text-right text-zinc-600") ] })) },
+    ];
+    formula = [ "월 광고수익 = 월 조회수 ÷ 1,000 × RPM", fmt(views) + " ÷ 1,000 × " + fmt(rpm) + "원(" + catName + ") = " + fmt(revenue) + "원", "연 환산 = 월 수익 × 12 = " + fmt(revenue * 12) + "원" ];
+  } else if (view === "adsense") {
+    const pv = num("as_pv", 10) * 10000;
+    const rpm = num("as_rpm", 1500);
+    const revenue = pv / 1000 * rpm;
+    result = { bigLabel: "예상 월 애드센스 수익", bigValue: "₩ " + fmt(revenue), bigSub: "월 페이지뷰 " + fmt(pv) + " · RPM " + fmt(rpm) + "원",
+      rows: [ { label: "월 페이지뷰", value: fmt(pv) + "회" }, { label: "페이지 RPM", value: fmt(rpm) + "원" }, { label: "월 예상 수익", value: fmt(revenue) + "원" }, { label: "연 예상 수익", value: fmt(revenue * 12) + "원" } ] };
+    fields = [ numField("as_pv", "월 페이지뷰", "만뷰", 10), numField("as_rpm", "페이지 RPM", "원", 1500) ];
+    { const A = [50000, 100000, 500000, 1000000, 5000000]; const av = [...A].reverse().find((x) => pv >= x) || A[0]; tables = [ { title: "월 페이지뷰별 예상 수익 (현재 RPM 기준)", cols: [ tcol("월 페이지뷰"), tcol("월 수익", true), tcol("연 수익", true) ], rows: A.map((f) => ({ cls: f === av ? "bg-[#134a9c]/[0.06]" : "", cells: [ tcell((f >= 10000 ? f / 10000 + "만" : fmt(f)) + (f === av ? " ◀" : ""), "font-semibold " + (f === av ? "text-[#134a9c]" : "text-zinc-600")), tcell(fmt(f / 1000 * rpm) + "원", "text-right font-bold text-[#134a9c]"), tcell(fmt(f / 1000 * rpm * 12) + "원", "text-right text-zinc-600") ] })) } ]; }
+    formula = [ "월 수익 = 월 페이지뷰 ÷ 1,000 × 페이지 RPM", fmt(pv) + " ÷ 1,000 × " + fmt(rpm) + "원 = " + fmt(revenue) + "원", "페이지 RPM ≈ 클릭률(CTR) × 클릭단가(CPC) × 10" ];
+  } else if (view === "blog") {
+    const visitors = num("bl_visitors", 3) * 10000;
+    const ctr = num("bl_ctr", 2);
+    const cpc = num("bl_cpc", 300);
+    const clicks = visitors * ctr / 100;
+    const revenue = clicks * cpc;
+    result = { bigLabel: "예상 월 블로그 수익", bigValue: "₩ " + fmt(revenue), bigSub: "월 방문자 " + fmt(visitors) + " · 클릭 " + fmt(clicks) + "회",
+      rows: [ { label: "월 방문자", value: fmt(visitors) + "명" }, { label: "광고 클릭수", value: fmt(clicks) + "회" }, { label: "클릭당 단가(CPC)", value: fmt(cpc) + "원" }, { label: "월 예상 수익", value: fmt(revenue) + "원" } ] };
+    fields = [ numField("bl_visitors", "월 방문자", "만명", 3), numField("bl_ctr", "광고 클릭률(CTR)", "%", 2), numField("bl_cpc", "클릭당 단가(CPC)", "원", 300) ];
+    { const A = [10000, 30000, 100000, 300000, 1000000]; const av = [...A].reverse().find((x) => visitors >= x) || A[0]; tables = [ { title: "월 방문자별 예상 수익 (현재 CTR·CPC 기준)", cols: [ tcol("월 방문자"), tcol("광고 클릭", true), tcol("월 수익", true) ], rows: A.map((f) => ({ cls: f === av ? "bg-[#134a9c]/[0.06]" : "", cells: [ tcell((f >= 10000 ? f / 10000 + "만" : fmt(f)) + (f === av ? " ◀" : ""), "font-semibold " + (f === av ? "text-[#134a9c]" : "text-zinc-600")), tcell(fmt(f * ctr / 100) + "회", "text-right text-zinc-600"), tcell(fmt(f * ctr / 100 * cpc) + "원", "text-right font-bold text-[#134a9c]") ] })) } ]; }
+    formula = [ "월 수익 = 방문자 × 클릭률(CTR) × 클릭단가(CPC)", fmt(visitors) + " × " + fmt1(ctr) + "% × " + fmt(cpc) + "원 = " + fmt(revenue) + "원", "광고 클릭수 = 방문자 × CTR = " + fmt(clicks) + "회" ];
+  } else if (view === "coupang") {
+    const clicks = num("cp_clicks", 5000);
+    const conv = num("cp_conv", 3);
+    const order = num("cp_order", 30000);
+    const rate = num("cp_rate", 3);
+    const orders = clicks * conv / 100;
+    const revenue = orders * order * rate / 100;
+    result = { bigLabel: "예상 월 파트너스 수익", bigValue: "₩ " + fmt(revenue), bigSub: "월 클릭 " + fmt(clicks) + " · 구매전환 " + fmt1(orders) + "건",
+      rows: [ { label: "월 클릭수", value: fmt(clicks) + "회" }, { label: "구매 전환수", value: fmt1(orders) + "건" }, { label: "평균 주문액", value: fmt(order) + "원" }, { label: "월 예상 수수료", value: fmt(revenue) + "원" } ] };
+    fields = [ numField("cp_clicks", "월 클릭수", "회", 5000), numField("cp_conv", "구매 전환율", "%", 3), numField("cp_order", "평균 주문금액", "원", 30000), numField("cp_rate", "수수료율", "%", 3) ];
+    { const A = [1000, 5000, 10000, 30000, 100000]; const av = [...A].reverse().find((x) => clicks >= x) || A[0]; tables = [ { title: "월 클릭수별 예상 수수료 (현재 전환율·주문액 기준)", cols: [ tcol("월 클릭수"), tcol("구매 전환", true), tcol("월 수수료", true) ], rows: A.map((f) => ({ cls: f === av ? "bg-[#134a9c]/[0.06]" : "", cells: [ tcell(fmt(f) + (f === av ? " ◀" : ""), "font-semibold " + (f === av ? "text-[#134a9c]" : "text-zinc-600")), tcell(fmt1(f * conv / 100) + "건", "text-right text-zinc-600"), tcell(fmt(f * conv / 100 * order * rate / 100) + "원", "text-right font-bold text-[#134a9c]") ] })) } ]; }
+    formula = [ "월 수수료 = 클릭수 × 전환율 × 평균 주문액 × 수수료율", fmt(clicks) + " × " + fmt1(conv) + "% × " + fmt(order) + "원 × " + fmt1(rate) + "% = " + fmt(revenue) + "원", "구매 전환수 = 클릭수 × 전환율 = " + fmt1(orders) + "건" ];
+  } else if (view === "insta") {
+    const followers = num("ig_followers", 10000);
+    const engage = num("ig_engage", 3);
+    const catDefs = [ ["IT·테크", 1.3], ["뷰티·패션", 1.2], ["푸드·라이프", 1.0], ["여행", 1.0], ["피트니스·헬스", 1.0], ["육아·가족", 0.9], ["엔터테인먼트", 0.8] ];
+    const catOpts = catDefs.map(([n, m]) => n + " ×" + m);
+    const cat = tog("ig_cat", "뷰티·패션 ×1.2");
+    const catMult = (catDefs.find(([n, m]) => n + " ×" + m === cat) || ["", 1])[1];
+    const catName = cat.split(" ×")[0];
+    const fmtName = tog("ig_fmt", "피드");
+    const fmtDefs = { "피드": 1.0, "릴스": 0.8, "스토리": 0.3 };
+    const fmtMult = fmtDefs[fmtName];
+    const BASE = 15;
+    const engMult = Math.max(0.5, 1 + engage * 0.1);
+    let bandLabel;
+    if (followers < 10000) bandLabel = "나노 인플루언서"; else if (followers < 100000) bandLabel = "마이크로 인플루언서"; else if (followers < 1000000) bandLabel = "매크로 인플루언서"; else bandLabel = "메가 인플루언서";
+    bandLabel += " (" + fmt1(followers / 10000) + "만명)";
+    let grade;
+    if (engage < 1) grade = "낮음"; else if (engage < 3) grade = "평균"; else if (engage < 6) grade = "좋음"; else grade = "매우 높음";
+    const feed = followers * BASE * catMult * engMult;
+    const reels = feed * 0.8, story = feed * 0.3;
+    const sel = feed * fmtMult;
+    result = { bigLabel: fmtName + " 게시물 1건 예상 협찬 단가", bigValue: "₩ " + fmt(sel), bigSub: "참여율 가중치 ×" + fmt1(engMult) + " · 카테고리 ×" + fmt1(catMult) + " · " + bandLabel,
+      rows: [ { label: "월 1회 협찬", value: fmt(sel) + "원" }, { label: "월 4회 협찬", value: fmt(sel * 4) + "원" }, { label: "참여율 등급", value: fmt1(engage) + "% (" + grade + ")" }, { label: "인플루언서 등급", value: bandLabel } ] };
+    fields = [ numField("ig_followers", "팔로워 수", "명", 10000), numField("ig_engage", "평균 참여율(좋아요+댓글 ÷ 팔로워)", "%", 3), togField("ig_cat", "카테고리", catOpts, "뷰티·패션 ×1.2"), togField("ig_fmt", "콘텐츠 유형", ["피드", "릴스", "스토리"], "피드") ];
+    const col = (label, cls) => ({ label, cls: "px-2 py-2 text-[12px] font-bold text-zinc-400 " + (cls || "text-left") });
+    const cell = (v, cls) => ({ v, cls: "px-2 py-2.5 border-b border-zinc-50 " + (cls || "") });
+    const rowCls = (on) => on ? "bg-[#134a9c]/[0.06]" : "";
+    const scale = [1000, 5000, 10000, 50000, 100000, 500000];
+    const flabel = (f) => f >= 10000 ? (f / 10000) + "만" : fmt(f);
+    const activeF = [...scale].reverse().find((f) => followers >= f) || scale[0];
+    tables = [
+      { title: "콘텐츠 유형별 단가 비교", cols: [ col("유형"), col("단가", "text-right") ],
+        rows: [
+          { cls: rowCls(fmtName === "피드"), cells: [ cell("피드 게시물 (100%)", "font-semibold text-zinc-700"), cell(fmt(feed) + "원", "text-right font-bold text-[#134a9c]") ] },
+          { cls: rowCls(fmtName === "릴스"), cells: [ cell("릴스 (80%)", "font-semibold text-zinc-700"), cell(fmt(reels) + "원", "text-right font-bold text-[#134a9c]") ] },
+          { cls: rowCls(fmtName === "스토리"), cells: [ cell("스토리 (30%)", "font-semibold text-zinc-700"), cell(fmt(story) + "원", "text-right font-bold text-[#134a9c]") ] },
+        ] },
+      { title: "팔로워별 피드 협찬 단가", cols: [ col("팔로워"), col("게시물 단가", "text-right"), col("월 4회", "text-right") ],
+        rows: scale.map((f) => { const p = f * BASE * catMult * engMult; return { cls: rowCls(f === activeF), cells: [ cell(flabel(f) + (f === activeF ? " ◀" : ""), "font-semibold " + (f === activeF ? "text-[#134a9c]" : "text-zinc-600")), cell(fmt(p) + "원", "text-right font-bold text-[#134a9c]"), cell(fmt(p * 4) + "원", "text-right text-zinc-600") ] }; }) },
+    ];
+    formula = [ "게시물 단가 = 팔로워 × 기준단가(1만명당 15만원) × 참여율 가중치 × 카테고리 가중치", fmt(followers) + " × 15원 × " + fmt1(engMult) + "(참여율) × " + fmt1(catMult) + "(" + catName + ") = " + fmt(feed) + "원", "참여율 가중치 = 1 + 참여율 × 0.1 (참여율 " + fmt1(engage) + "% → ×" + fmt1(engMult) + ")", "릴스 = 피드 ×0.8, 스토리 = 피드 ×0.3" ];
+  } else if (view === "tiktok") {
+    const views = num("tk_views", 100) * 10000;
+    const followers = num("tk_followers", 50000);
+    const rpm = num("tk_rpm", 40);
+    const engage = num("tk_engage", 5);
+    const fund = views / 1000 * rpm;
+    const engMult = Math.max(0.6, 1 + (engage - 3) * 0.08);
+    const sponsor = followers * 12 * engMult;
+    let band;
+    if (followers < 10000) band = "나노"; else if (followers < 100000) band = "마이크로"; else if (followers < 1000000) band = "매크로"; else band = "메가";
+    result = { bigLabel: "예상 월 수익 (펀드 + 협찬 1건)", bigValue: "₩ " + fmt(fund + sponsor), bigSub: band + " 인플루언서 · 월 " + fmt1(views / 10000) + "만 조회",
+      rows: [ { label: "월 조회수", value: fmt(views) + "회" }, { label: "크리에이티비티 프로그램", value: fmt(fund) + "원" }, { label: "협찬 게시물 1건", value: fmt(sponsor) + "원" }, { label: "월 4회 협찬 시", value: fmt(fund + sponsor * 4) + "원" } ] };
+    fields = [ numField("tk_views", "월 조회수", "만회", 100), numField("tk_followers", "팔로워 수", "명", 50000), numField("tk_engage", "평균 참여율", "%", 5), numField("tk_rpm", "1,000회당 펀드 단가", "원", 40) ];
+    formula = [ "월 수익 = 펀드 수익 + 협찬 단가", "펀드 = " + fmt(views) + " ÷ 1,000 × " + fmt(rpm) + "원 = " + fmt(fund) + "원", "협찬 = " + fmt(followers) + " × 12원 × " + fmt1(engMult) + "(참여율) = " + fmt(sponsor) + "원" ];
+  }
+  return { fields: fields, result: result, formula: formula, tables: tables, hasFormula: formula.length > 0, hasTables: tables.length > 0 };
+}
+
+// ===== 렌더 =====
+function esc(s) { return String(s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; }); }
+
+function renderFields(fields) {
+  var h = "";
+  fields.forEach(function (f) {
+    h += '<div><div class="mb-1.5 text-[13px] font-bold text-zinc-600">' + esc(f.label) + '</div>';
+    if (f.isToggle) {
+      h += '<div class="' + f.gridCls + '">';
+      f.options.forEach(function (o) {
+        h += '<button type="button" data-k="' + esc(f.k) + '" data-v="' + esc(o.value) + '" class="' + o.cls + '">' + esc(o.name) + '</button>';
+      });
+      h += '</div>';
+    } else {
+      h += '<div class="flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3.5 h-11 focus-within:ring-2 focus-within:ring-[#134a9c]/30">' +
+        '<input type="text" inputmode="decimal" value="' + esc(fmtComma(f.value)) + '" data-k="' + esc(f.k) + '" class="w-full border-0 bg-transparent text-right text-[16px] font-bold outline-none">' +
+        '<span class="flex-none text-[13px] font-semibold text-zinc-400">' + esc(f.unit) + '</span></div>';
+    }
+    h += '</div>';
+  });
+  document.getElementById("calcFields").innerHTML = h;
+}
+
+function renderResult(r) {
+  var h = '<div class="mb-3 text-[13px] font-bold text-[#134a9c]">' + esc(r.bigLabel) + '</div>' +
+    '<div class="mb-1 text-[26px] sm:text-[32px] font-extrabold leading-none tracking-tight text-[#134a9c] break-all">' + esc(r.bigValue) + '</div>' +
+    '<div class="mb-5 text-[13px] text-zinc-400">' + esc(r.bigSub) + '</div>' +
+    '<div class="flex flex-col gap-0.5 border-t border-[#134a9c]/15 pt-4">';
+  (r.rows || []).forEach(function (x) {
+    h += '<div class="flex items-center justify-between gap-3 py-1.5 text-[13.5px]"><span class="whitespace-nowrap text-zinc-500">' + esc(x.label) + '</span><span class="flex-none whitespace-nowrap font-bold text-zinc-800">' + esc(x.value) + '</span></div>';
+  });
+  h += '</div>';
+  document.getElementById("calcResult").innerHTML = h;
+}
+
+function renderFormula(formula) {
+  var el = document.getElementById("calcFormula");
+  if (!formula || !formula.length) { el.style.display = "none"; el.innerHTML = ""; return; }
+  el.style.display = "";
+  var h = '<div class="mb-3 flex items-center gap-1.5 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[19px] text-[#134a9c]">functions</span>계산식</div><div class="flex flex-col gap-2">';
+  formula.forEach(function (f) { h += '<div class="rounded-lg bg-white/70 px-3.5 py-2.5 font-mono text-[12.5px] leading-relaxed text-zinc-700">' + esc(f) + '</div>'; });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function renderTables(tables) {
+  var el = document.getElementById("calcTables");
+  if (!tables || !tables.length) { el.innerHTML = ""; return; }
+  var h = "";
+  tables.forEach(function (tb) {
+    h += '<div class="mt-8 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"><div class="mb-3 text-[15px] font-bold">' + esc(tb.title) + '</div><div class="overflow-x-auto"><table class="w-full min-w-[420px] border-collapse text-[13.5px]"><thead><tr class="border-b border-zinc-200">';
+    tb.cols.forEach(function (co) { h += '<th class="' + co.cls + '">' + esc(co.label) + '</th>'; });
+    h += '</tr></thead><tbody>';
+    tb.rows.forEach(function (r) {
+      h += '<tr class="' + (r.cls || "") + '">';
+      r.cells.forEach(function (cell) { h += '<td class="' + cell.cls + '">' + esc(cell.v) + '</td>'; });
+      h += '</tr>';
+    });
+    h += '</tbody></table></div></div>';
+  });
+  el.innerHTML = h;
+}
+
+function renderAll() { var v = build(VIEW); renderFields(v.fields); renderResult(v.result); renderFormula(v.formula); renderTables(v.tables); }
+function renderDynamic() { var v = build(VIEW); renderResult(v.result); renderFormula(v.formula); renderTables(v.tables); }
+
+// 3자리 콤마 자동 포맷(정수부만, 소수점 유지)
+function fmtComma(s) {
+  if (s === undefined || s === null || s === "") return "";
+  s = String(s).replace(/[^\d.]/g, "");
+  var p = s.split(".");
+  var i = p[0].replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return p.length > 1 ? i + "." + p.slice(1).join("") : i;
+}
+// 입력값 재포맷 + 캐럿 위치 보정(자릿수 기준)
+function reformatInput(el) {
+  var start = el.selectionStart || 0;
+  var digitsLeft = el.value.slice(0, start).replace(/[^\d]/g, "").length;
+  var f = fmtComma(el.value);
+  el.value = f;
+  var pos = 0, seen = 0;
+  while (pos < f.length && seen < digitsLeft) { var c = f.charCodeAt(pos); if (c >= 48 && c <= 57) seen++; pos++; }
+  try { el.setSelectionRange(pos, pos); } catch (e) {}
+}
+function setNum(k, v) { CALC_INPUTS[k] = v; renderDynamic(); }
+function setTog(k, v) { CALC_TOGGLES[k] = v; renderAll(); }
+
+(function () {
+  var fe = document.getElementById("calcFields");
+  fe.addEventListener("input", function (e) { var el = e.target; if (el.tagName === "INPUT" && el.dataset.k) { reformatInput(el); setNum(el.dataset.k, el.value.replace(/,/g, "")); } });
+  fe.addEventListener("click", function (e) { var b = e.target.closest("button[data-k]"); if (b) setTog(b.dataset.k, b.dataset.v); });
+  renderAll();
+})();
+</script>
 <?php render_foot();
