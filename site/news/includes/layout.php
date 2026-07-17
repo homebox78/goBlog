@@ -8,7 +8,7 @@ if (!function_exists('nh')) {
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260717e';
+const TW_CSS_VER = '20260717f';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -114,7 +114,7 @@ function render_foot(): void
 <!-- 플로팅 버튼 그룹: 문의하기(+) · 맨 위로(↑) -->
 <div class="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3">
   <button id="h2b-inquiry" type="button" aria-label="문의하기" title="문의하기"
-          class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5b6ef5] text-white shadow-lg transition-transform hover:scale-105 hover:bg-[#4a5de0]">
+          class="flex h-12 w-12 items-center justify-center rounded-full bg-[#134a9c] text-white shadow-lg transition-transform hover:scale-105 hover:bg-[#0f3d82]">
     <span class="material-symbols-outlined text-[26px] leading-none">add</span>
   </button>
   <button id="h2b-top" type="button" aria-label="맨 위로" title="맨 위로" onclick="window.scrollTo({top:0,behavior:'smooth'})"
@@ -128,7 +128,7 @@ function render_foot(): void
   <div class="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
     <div class="border-b border-zinc-100 px-6 py-5">
       <h2 class="text-[20px] font-extrabold text-zinc-900">문의하기</h2>
-      <p class="mt-0.5 text-[13px] text-[#5b6ef5]">정정·제보, 제휴/광고, 저작권 등 무엇이든 남겨주세요</p>
+      <p class="mt-0.5 text-[13px] text-[#134a9c]">정정·제보, 제휴/광고, 저작권 등 무엇이든 남겨주세요</p>
     </div>
     <form id="h2b-inq-form" class="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5">
       <div>
@@ -136,33 +136,33 @@ function render_foot(): void
         <div id="h2b-inq-cats" class="flex flex-wrap gap-2">
           <?php foreach (['정정·제보', '제휴·광고', '저작권', '기타'] as $i => $cat): ?>
             <button type="button" data-cat="<?= nh($cat) ?>"
-                    class="h2b-cat rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors <?= $i === 0 ? 'border-[#5b6ef5] text-[#5b6ef5]' : 'border-zinc-200 text-zinc-500' ?>"><?= nh($cat) ?></button>
+                    class="h2b-cat rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors <?= $i === 0 ? 'border-[#134a9c] text-[#134a9c]' : 'border-zinc-200 text-zinc-500' ?>"><?= nh($cat) ?></button>
           <?php endforeach; ?>
         </div>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="mb-1.5 block text-[13px] font-bold text-zinc-700">이름 <span class="text-zinc-400">(선택)</span></label>
-          <input name="name" placeholder="이름" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 h-11 text-sm outline-none focus:border-[#5b6ef5] focus:bg-white focus:ring-2 focus:ring-[#5b6ef5]/20">
+          <input name="name" placeholder="이름" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 h-11 text-sm outline-none focus:border-[#134a9c] focus:bg-white focus:ring-2 focus:ring-[#134a9c]/20">
         </div>
         <div>
           <label class="mb-1.5 block text-[13px] font-bold text-zinc-700">이메일 <span class="text-zinc-400">(회신용)</span></label>
-          <input name="email" type="email" placeholder="you@example.com" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 h-11 text-sm outline-none focus:border-[#5b6ef5] focus:bg-white focus:ring-2 focus:ring-[#5b6ef5]/20">
+          <input name="email" type="email" placeholder="you@example.com" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 h-11 text-sm outline-none focus:border-[#134a9c] focus:bg-white focus:ring-2 focus:ring-[#134a9c]/20">
         </div>
       </div>
       <div>
         <label class="mb-1.5 block text-[13px] font-bold text-zinc-700">제목 <span class="text-zinc-400">(선택)</span></label>
-        <input name="subject" placeholder="제목을 입력하세요" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 h-11 text-sm outline-none focus:border-[#5b6ef5] focus:bg-white focus:ring-2 focus:ring-[#5b6ef5]/20">
+        <input name="subject" placeholder="제목을 입력하세요" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 h-11 text-sm outline-none focus:border-[#134a9c] focus:bg-white focus:ring-2 focus:ring-[#134a9c]/20">
       </div>
       <div>
         <label class="mb-1.5 block text-[13px] font-bold text-zinc-700">내용</label>
-        <textarea name="message" required rows="5" placeholder="문의 내용을 입력하세요" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-sm outline-none focus:border-[#5b6ef5] focus:bg-white focus:ring-2 focus:ring-[#5b6ef5]/20"></textarea>
+        <textarea name="message" required rows="5" placeholder="문의 내용을 입력하세요" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-sm outline-none focus:border-[#134a9c] focus:bg-white focus:ring-2 focus:ring-[#134a9c]/20"></textarea>
       </div>
       <div id="h2b-inq-msg" class="hidden text-[13px] font-bold"></div>
     </form>
     <div class="flex gap-3 border-t border-zinc-100 px-6 py-4">
       <button type="button" id="h2b-inq-close" class="flex-1 rounded-lg border border-zinc-200 py-3 text-[15px] font-bold text-zinc-600 hover:bg-zinc-50">닫기</button>
-      <button type="submit" form="h2b-inq-form" class="flex-1 rounded-lg bg-[#5b6ef5] py-3 text-[15px] font-bold text-white hover:bg-[#4a5de0]">보내기</button>
+      <button type="submit" form="h2b-inq-form" class="flex-1 rounded-lg bg-[#134a9c] py-3 text-[15px] font-bold text-white hover:bg-[#0f3d82]">보내기</button>
     </div>
   </div>
 </div>
@@ -185,7 +185,7 @@ function render_foot(): void
   document.getElementById('h2b-inq-cats').addEventListener('click',function(e){
     var b=e.target.closest('.h2b-cat'); if(!b) return; cat=b.dataset.cat;
     modal.querySelectorAll('.h2b-cat').forEach(function(x){ x.className='h2b-cat rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors border-zinc-200 text-zinc-500'; });
-    b.className='h2b-cat rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors border-[#5b6ef5] text-[#5b6ef5]';
+    b.className='h2b-cat rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors border-[#134a9c] text-[#134a9c]';
   });
 
   document.getElementById('h2b-inq-form').addEventListener('submit',function(e){
