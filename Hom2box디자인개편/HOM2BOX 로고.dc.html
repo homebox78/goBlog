@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-6Bold.woff') format('woff');font-weight:700;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff');font-weight:800;font-display:swap;}
+body { margin:0; background:#f4f5f7; font-family:'Escoredream','Noto Sans KR',sans-serif; color:#18181b; }
+.wm { font-family:'Escoredream','Noto Sans KR',sans-serif; font-weight:800; letter-spacing:-0.045em; }
+</style>
+</helmet>
+<div class="mx-auto max-w-[1120px] p-12">
+  <div class="mb-8">
+    <div class="text-[13px] font-bold text-zinc-500">BRAND · v7</div>
+    <h1 class="wm m-0 text-[32px]">HOM2BOX 로고</h1>
+    <p class="mt-1 text-[14px] text-zinc-500">우측 하단 모서리를 대각선으로 접은 <b>신문 접지</b> 디테일 추가. 블랙&화이트 3줄 플랫 심볼.</p>
+  </div>
+
+  <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
+    <div class="mb-5 text-[12px] font-bold uppercase tracking-wider text-zinc-400">Primary · 기본 로고</div>
+    <div class="flex items-center gap-[13px]">
+      <svg width="66" height="66" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/>
+        <path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/>
+        <rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/>
+        <rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/>
+        <rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/>
+      </svg>
+      <div class="flex items-baseline">
+        <span class="wm text-[38px] leading-none text-[#16181d]">HOM2BOX</span>
+        <span class="ml-2.5 text-[23px] font-bold leading-none text-zinc-500">뉴스</span>
+      </div>
+    </div>
+    <div class="mt-4 text-[13px] text-zinc-400">경제 · IT · 생활 정보 가이드를 매일 아침·저녁 발행하는 매체</div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-6">
+    <div class="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
+      <div class="mb-5 text-[12px] font-bold uppercase tracking-wider text-zinc-400">Stacked · 세로형</div>
+      <div class="flex flex-col items-center gap-2 py-1">
+        <svg width="52" height="52" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/>
+          <path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/>
+          <rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/>
+          <rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/>
+          <rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/>
+        </svg>
+        <div class="wm text-[25px] leading-none text-[#16181d]">HOM2BOX</div>
+        <div class="text-[12px] font-bold tracking-[0.35em] text-zinc-500">N E W S</div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-zinc-800 bg-[#16181d] p-8 shadow-sm">
+      <div class="mb-5 text-[12px] font-bold uppercase tracking-wider text-zinc-500">Reversed · 다크</div>
+      <div class="flex h-full items-center gap-[10px]">
+        <svg width="46" height="46" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 8 H40 V33 L31 42 H8 Z" fill="#ffffff"/>
+          <path d="M40 33 L31 33 V42 Z" fill="#c7ccd4"/>
+          <rect x="14" y="15" width="16" height="5" rx="1" fill="#16181d"/>
+          <rect x="14" y="24" width="20" height="3.6" rx="1" fill="#16181d"/>
+          <rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#16181d"/>
+        </svg>
+        <div class="flex items-baseline">
+          <span class="wm text-[29px] leading-none text-white">HOM2BOX</span>
+          <span class="ml-2 text-[18px] font-bold leading-none text-zinc-400">뉴스</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
+      <div class="mb-5 text-[12px] font-bold uppercase tracking-wider text-zinc-400">Symbol · 심볼</div>
+      <div class="flex items-center gap-5">
+        <svg width="60" height="60" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/>
+          <path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/>
+          <rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/>
+          <rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/>
+          <rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/>
+        </svg>
+        <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/>
+          <path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/>
+          <rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/>
+          <rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/>
+          <rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
+      <div class="mb-5 text-[12px] font-bold uppercase tracking-wider text-zinc-400">In context · 헤더</div>
+      <div class="overflow-hidden rounded-lg border border-zinc-200">
+        <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+          <div class="flex items-center gap-[6px]">
+            <svg width="30" height="30" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/>
+              <path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/>
+              <rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/>
+              <rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/>
+              <rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/>
+            </svg>
+            <div class="flex items-baseline">
+              <span class="wm text-[19px] leading-none text-[#16181d]">HOM2BOX</span>
+              <span class="ml-1.5 text-[13px] font-bold leading-none text-zinc-500">뉴스</span>
+            </div>
+          </div>
+          <span class="text-[12px] text-zinc-400">2026.07.17 (금)</span>
+        </div>
+        <div class="px-4 py-6 text-center text-[12px] text-zinc-300">기사 영역</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

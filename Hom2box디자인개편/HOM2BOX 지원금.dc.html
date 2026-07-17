@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32.png">
+<link rel="apple-touch-icon" href="favicon/apple-touch-icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<style>
+body { margin:0; background:#fff; font-family:'Noto Sans KR',sans-serif; color:#18181b; }
+a { color:inherit; text-decoration:none; }
+a:hover { color:#134a9c; }
+.material-symbols-outlined { line-height:1; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; top:0.5px; }
+body:has(#h2brail:checked) .h2b-rail-items{display:none;}
+body:has(#h2brail:checked) .h2b-rail-chev{display:inline-block;transform:rotate(180deg);}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-3Light.woff') format('woff');font-weight:300;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff');font-weight:400;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-5Medium.woff') format('woff');font-weight:500;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-6Bold.woff') format('woff');font-weight:700;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff');font-weight:800;font-display:swap;}
+body, input, button, select, textarea, table { font-family:'Escoredream','Noto Sans KR',sans-serif !important; }
+@keyframes h2bticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+.h2b-track { display:inline-flex; white-space:nowrap; animation:h2bticker 36s linear infinite; }
+.h2b-track:hover { animation-play-state:paused; }
+[data-screen-label="상단 내비게이션"] .overflow-x-auto{scrollbar-width:none;-ms-overflow-style:none;}
+[data-screen-label="상단 내비게이션"] .overflow-x-auto::-webkit-scrollbar{display:none;}
+.h2b-pause { display:none; }
+.h2b-pause:checked ~ .h2b-bar .h2b-track { animation-play-state:paused !important; }
+.h2b-ico-play { display:none; }
+.h2b-pause:checked ~ label .h2b-ico-play { display:inline-flex; }
+.h2b-pause:checked ~ label .h2b-ico-pause { display:none; }
+</style>
+</helmet>
+<input type="checkbox" id="h2bnav" class="peer hidden">
+<label for="h2bnav" class="fixed inset-0 z-[80] hidden bg-black/50 backdrop-blur-sm peer-checked:block lg:!hidden"></label>
+<aside class="fixed left-0 top-0 z-[90] flex h-full w-[284px] max-w-[82%] -translate-x-full flex-col overflow-y-auto bg-white shadow-2xl transition-transform duration-300 ease-out peer-checked:translate-x-0 lg:hidden">
+  <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3.5">
+    <span class="flex items-center gap-1.5"><svg width="22" height="22" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/></svg><span class="text-[17px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[12px] font-bold text-zinc-500">뉴스</span></span>
+    <label for="h2bnav" class="flex h-9 w-9 cursor-pointer items-center justify-center text-zinc-500"><span class="material-symbols-outlined text-[24px]">close</span></label>
+  </div>
+  <nav class="flex flex-col p-2">
+    <a href="HOM2BOX 홈.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">홈</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=경제·금융" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">경제·금융</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=IT·게임" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">IT·게임</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=생활·건강" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">생활·건강</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=여행·문화" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">여행·문화</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=종합" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">종합</a>
+    <div class="my-1.5 border-t border-zinc-100"></div>
+    <a href="HOM2BOX 지원금.dc.html" class="rounded-lg bg-[#134a9c]/10 px-3 py-2.5 text-[14px] font-bold text-[#134a9c]">지원금</a>
+    <a href="HOM2BOX 계산기.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">계산기</a>
+    <a href="HOM2BOX 문서도구.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">문서도구</a>
+    <a href="HOM2BOX 언론사.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">언론사</a>
+    <a href="HOM2BOX 오피니언.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">오피니언</a>
+    <a href="HOM2BOX 검색.dc.html" class="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">search</span>검색</a>
+  </nav>
+</aside>
+<input type="checkbox" id="h2brail" class="hidden">
+<aside class="fixed left-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-zinc-200 bg-white/90 p-1.5 shadow-lg backdrop-blur 2xl:flex">
+  <label for="h2brail" title="접기/펼치기" class="flex h-9 w-11 flex-none cursor-pointer items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px] transition-transform h2b-rail-chev">chevron_left</span></label>
+  <div class="flex flex-col items-center gap-1 h2b-rail-items">
+  <a href="HOM2BOX 홈.dc.html" title="뉴스" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">public</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">뉴스</span></a>
+  <a href="HOM2BOX 오피니언.dc.html" title="리포트" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">description</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">리포트</span></a>
+  <a href="HOM2BOX 언론사.dc.html" title="커뮤니티" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">forum</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">커뮤니티</span></a>
+  <a href="HOM2BOX 계산기.dc.html" title="계산기" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">calculate</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">계산기</span></a>
+  <a href="HOM2BOX 지원금.dc.html" title="지원금" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-[#134a9c] bg-[#134a9c]/10 transition-colors"><span class="material-symbols-outlined text-[22px]">volunteer_activism</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">지원금</span></a>
+  </div>
+</aside>
+<aside class="fixed right-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-zinc-200 bg-white/90 p-1.5 shadow-lg backdrop-blur 2xl:flex">
+  <label for="h2brail" title="접기/펼치기" class="flex h-9 w-11 flex-none cursor-pointer items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px] transition-transform h2b-rail-chev">chevron_right</span></label>
+  <div class="flex flex-col items-center gap-1 h2b-rail-items">
+  <a href="HOM2BOX 언론사.dc.html" title="커뮤니티" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">chat_bubble</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">커뮤니티</span></a>
+  <a href="HOM2BOX 검색.dc.html" title="캘린더" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">event_available</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">캘린더</span></a>
+  <a href="HOM2BOX 구독신청.dc.html" title="구독" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">bookmark</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">구독</span></a>
+  <div class="my-0.5 h-px w-6 bg-zinc-200"></div>
+  <a href="#" title="맨 위로" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">arrow_upward</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">맨 위로</span></a>
+  </div>
+</aside>
+<div class="min-h-screen bg-white">
+  <div class="border-b border-zinc-200 bg-white">
+    <div class="mx-auto max-w-[1399px] flex items-stretch">
+      <input type="checkbox" id="h2btk" class="h2b-pause">
+      <label for="h2btk" title="클릭하면 멈춤/재생" class="flex flex-none cursor-pointer select-none items-center gap-1 bg-[#b91c1c] px-3 text-white">
+        <span class="h2b-ico-pause material-symbols-outlined text-[16px]">pause</span><span class="h2b-ico-play material-symbols-outlined text-[16px]">play_arrow</span>
+        <span class="whitespace-nowrap text-[12.5px] font-extrabold">속보</span>
+      </label>
+      <div class="h2b-bar min-w-0 flex-1 overflow-hidden py-2">
+        <div class="h2b-track">
+          <span class="inline-flex">
+            <a href="HOM2BOX 기사 상세.dc.html" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· PPI 발표 앞두고 코스피 6,800선 회복 시도…외국인 순매수 전환</a>
+            <a href="https://hom2box.com/article.php?id=72" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 경찰 과태료 국세청 이관…납부 창구·방법 전면 변경</a>
+            <a href="https://hom2box.com/article.php?id=65" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 태풍 바비 북상…제주공항 결항 105편 초과</a>
+            <a href="https://hom2box.com/article.php?id=36" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· SK하이닉스 주가 급락 -15%, 나스닥 상장 3일 만에</a>
+            <a href="https://hom2box.com/article.php?id=33" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 기후동행카드 혜택 9월 종료…충전 마감일 확인 필수</a>
+          </span>
+          <span class="inline-flex" aria-hidden="true">
+            <a href="HOM2BOX 기사 상세.dc.html" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· PPI 발표 앞두고 코스피 6,800선 회복 시도…외국인 순매수 전환</a>
+            <a href="https://hom2box.com/article.php?id=72" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 경찰 과태료 국세청 이관…납부 창구·방법 전면 변경</a>
+            <a href="https://hom2box.com/article.php?id=65" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 태풍 바비 북상…제주공항 결항 105편 초과</a>
+            <a href="https://hom2box.com/article.php?id=36" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· SK하이닉스 주가 급락 -15%, 나스닥 상장 3일 만에</a>
+            <a href="https://hom2box.com/article.php?id=33" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 기후동행카드 혜택 9월 종료…충전 마감일 확인 필수</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-screen-label="상단 내비게이션" class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-zinc-200">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 flex flex-wrap items-center gap-4 lg:flex-nowrap">
+      <label for="h2bnav" class="lg:hidden flex h-9 w-9 flex-none cursor-pointer items-center justify-center self-center text-zinc-700"><span class="material-symbols-outlined text-[26px]">menu</span></label>
+      <a href="HOM2BOX 홈.dc.html" class="flex flex-none items-center gap-1.5 py-3"><svg width="26" height="26" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/></svg><span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">뉴스</span></a>
+      <div class="hidden overflow-x-auto lg:flex lg:flex-1 lg:flex-row lg:items-center lg:gap-4">
+      <a href="HOM2BOX 홈.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">홈</a>
+      <a href="HOM2BOX 카테고리.dc.html?cat=경제·금융" class="flex-none whitespace-nowrap py-4 text-sm font-bold">경제·금융</a>
+      <a href="HOM2BOX 카테고리.dc.html?cat=IT·게임" class="flex-none whitespace-nowrap py-4 text-sm font-bold">IT·게임</a>
+      <a href="HOM2BOX 카테고리.dc.html?cat=생활·건강" class="flex-none whitespace-nowrap py-4 text-sm font-bold">생활·건강</a>
+      <a href="HOM2BOX 카테고리.dc.html?cat=여행·문화" class="flex-none whitespace-nowrap py-4 text-sm font-bold">여행·문화</a>
+      <a href="HOM2BOX 카테고리.dc.html?cat=종합" class="flex-none whitespace-nowrap py-4 text-sm font-bold">종합</a>
+      <span class="flex-none whitespace-nowrap py-4 text-sm font-bold text-[#134a9c] border-b-[3px] border-[#134a9c]">지원금</span>
+      <a href="HOM2BOX 계산기.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">계산기</a>
+      <a href="HOM2BOX 문서도구.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">문서도구</a>
+      <a href="HOM2BOX 언론사.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">언론사</a>
+      <a href="HOM2BOX 오피니언.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">오피니언</a>
+      <a href="HOM2BOX 검색.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold text-zinc-400 inline-flex items-center gap-1 ml-auto"><span class="material-symbols-outlined text-[16px]">search</span>검색</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="border-b border-zinc-100 bg-zinc-50">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-10">
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-[#134a9c]/10 px-3 py-1 text-xs font-bold text-[#134a9c]"><span class="material-symbols-outlined text-[15px]">volunteer_activism</span>복지로 공식 데이터</span>
+      <h1 class="mt-4 mb-2 text-[28px] sm:text-[34px] font-extrabold tracking-tight">정부 지원금·복지서비스 찾기</h1>
+      <p class="mb-6 text-[14px] leading-relaxed text-zinc-500">생애주기·지역으로 신청 가능한 정부·지자체 지원금 <b class="text-[#134a9c]">5,020</b>건을 한 번에. 조건을 좁혀 내게 맞는 지원을 찾아보세요.</p>
+      <div class="flex max-w-2xl items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 h-13 py-2.5 shadow-sm focus-within:ring-2 focus-within:ring-[#134a9c]/30">
+        <span class="material-symbols-outlined text-[22px] text-zinc-400">search</span>
+        <input placeholder="지원금·복지서비스 검색 (예: 월세, 출산, 청년)" value="{{ q }}" onInput="{{ onInput }}" onKeyDown="{{ onKey }}" class="flex-1 border-0 bg-transparent text-[15px] outline-none placeholder:text-zinc-400">
+        <button onClick="{{ doSearch }}" class="cursor-pointer rounded-lg bg-[#134a9c] px-4 py-1.5 text-[13.5px] font-bold text-white hover:bg-[#0f3d82]">검색</button>
+      </div>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <span class="text-[12.5px] font-bold text-zinc-400">인기</span>
+        <sc-for list="{{ tags }}" as="t" hint-placeholder-count="8">
+          <button onClick="{{ t.go }}" class="cursor-pointer rounded-full border border-zinc-200 bg-white px-3 py-1 text-[12.5px] font-semibold text-zinc-600 hover:border-[#134a9c] hover:text-[#134a9c]">{{ t.name }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-7">
+    <div class="mb-1.5 text-[12.5px] font-bold text-zinc-500">생애주기</div>
+    <div class="mb-4 flex flex-wrap gap-2">
+      <sc-for list="{{ lifeChips }}" as="c" hint-placeholder-count="8">
+        <button onClick="{{ c.go }}" class="{{ c.cls }}">{{ c.name }}</button>
+      </sc-for>
+    </div>
+    <div class="mb-1.5 text-[12.5px] font-bold text-zinc-500">지역</div>
+    <div class="mb-6 flex flex-wrap gap-2">
+      <sc-for list="{{ regionChips }}" as="c" hint-placeholder-count="6">
+        <button onClick="{{ c.go }}" class="{{ c.cls }}">{{ c.name }}</button>
+      </sc-for>
+    </div>
+
+    <div class="mb-4 flex items-center justify-between border-b border-zinc-200 pb-3">
+      <div class="text-[15px] font-bold">검색 결과 <span class="text-[#134a9c]">{{ total }}</span>건</div>
+      <div class="text-[12.5px] text-zinc-400">{{ filterNote }}</div>
+    </div>
+
+    <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <sc-for list="{{ items }}" as="g" hint-placeholder-count="9">
+          <a href="{{ g.url }}" target="_blank" class="group flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div class="mb-2.5 flex items-center gap-2">
+              <span class="inline-flex items-center gap-1 rounded-md bg-[#134a9c]/10 px-2 py-0.5 text-[11px] font-bold text-[#134a9c]"><span class="material-symbols-outlined text-[13px]">account_balance</span>{{ g.org }}</span>
+            </div>
+            <div class="mb-2 text-[15.5px] sm:text-[16.5px] font-bold leading-snug group-hover:text-[#134a9c]">{{ g.title }}</div>
+            <div class="mb-4 flex-1 text-[13px] leading-relaxed text-zinc-500 line-clamp-3">{{ g.desc }}</div>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="text-[11.5px] font-bold text-zinc-400">대상</span>
+              <sc-for list="{{ g.targets }}" as="t" hint-placeholder-count="3">
+                <span class="rounded-md bg-zinc-100 px-2 py-0.5 text-[11.5px] font-semibold text-zinc-600">{{ t }}</span>
+              </sc-for>
+            </div>
+            <div class="mt-4 inline-flex items-center gap-1 text-[13px] font-bold text-[#134a9c]">복지로에서 자세히<span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
+          </a>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+      <div class="py-20 text-center">
+        <span class="material-symbols-outlined text-[44px] text-zinc-300">search_off</span>
+        <div class="mt-3 text-[15px] text-zinc-400">조건에 맞는 지원금이 없습니다. 필터를 넓혀보세요.</div>
+      </div>
+    </sc-if>
+
+    <div class="mt-8 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-[12px] leading-relaxed text-zinc-500">
+      <span class="material-symbols-outlined mr-1 text-[15px] text-zinc-400">info</span>출처: 보건복지부·한국사회보장정보원 복지로(bokjiro.go.kr). 실제 신청·자격 요건은 각 소관기관 공고를 반드시 확인하세요.
+    </div>
+    <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <a href="HOM2BOX 문서도구.dc.html" class="group flex items-center gap-3.5 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md hover:border-[#134a9c]/40"><div class="flex h-12 w-12 flex-none items-center justify-center rounded-lg bg-[#134a9c]/10 text-[#134a9c]"><span class="material-symbols-outlined text-[26px]">draft</span></div><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5 text-[15px] font-extrabold group-hover:text-[#134a9c]">문서 도구<span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-bold text-zinc-500">10종</span></div><div class="mt-0.5 truncate text-[12.5px] leading-snug text-zinc-500">각서·위임장 등 10종 서식 바로 작성</div></div><span class="material-symbols-outlined flex-none text-[20px] text-zinc-300 transition-colors group-hover:text-[#134a9c]">arrow_forward</span></a>
+      <a href="HOM2BOX 계산기.dc.html" class="group flex items-center gap-3.5 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md hover:border-[#134a9c]/40"><div class="flex h-12 w-12 flex-none items-center justify-center rounded-lg bg-[#134a9c]/10 text-[#134a9c]"><span class="material-symbols-outlined text-[26px]">calculate</span></div><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5 text-[15px] font-extrabold group-hover:text-[#134a9c]">계산기<span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-bold text-zinc-500">27종</span></div><div class="mt-0.5 truncate text-[12.5px] leading-snug text-zinc-500">연봉·세금·대출 등 27종 바로 계산</div></div><span class="material-symbols-outlined flex-none text-[20px] text-zinc-300 transition-colors group-hover:text-[#134a9c]">arrow_forward</span></a>
+    </div>
+    <div class="my-8 h-24 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center font-mono text-xs text-zinc-400">AD · 구글 애드센스 반응형 배너</div>
+  </div>
+
+  <div class="border-t border-zinc-200 bg-zinc-50">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-10">
+      <div class="mb-6 grid grid-cols-2 gap-8 border-b border-zinc-200 pb-8 sm:grid-cols-[1.6fr_repeat(4,1fr)]">
+        <div class="col-span-2 sm:col-span-1">
+          <div class="text-[19px] font-extrabold">HOM2BOX <span class="text-[#134a9c]">뉴스</span></div>
+          <div class="mt-2 max-w-xs text-[12.5px] leading-relaxed text-zinc-500">매일 아침·저녁, 편집국이 선별한 이슈·경제·IT·생활 뉴스와 가이드를 발행합니다.</div>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">뉴스</div>
+          <a href="HOM2BOX 홈.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">홈</a>
+          <a href="HOM2BOX 오피니언.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">오피니언</a>
+          <a href="HOM2BOX 지원금.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">정부 지원금</a>
+          <a href="HOM2BOX 계산기.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">계산기</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">카테고리</div>
+          <a href="HOM2BOX 카테고리.dc.html?cat=경제·금융" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">경제·금융</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=IT·게임" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">IT·게임</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=생활·건강" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">생활·건강</a>
+          <a href="HOM2BOX 언론사.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">언론사</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">채널</div>
+          <a href="https://hom2box.com/wordpress/" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Wordpress</a>
+          <a href="https://hom2box.blogspot.com/" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">BlogSpot</a>
+          <a href="https://blog.naver.com/coreselect" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Naver Blog</a>
+          <a href="https://hom2box.tistory.com" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Tistory</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">약관·정책</div>
+          <a href="https://hom2box.com/about.php" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">소개</a>
+          <a href="HOM2BOX 개인정보처리방침.dc.html" class="block py-1 text-[13px] font-semibold text-zinc-600 hover:text-[#134a9c]">개인정보처리방침</a>
+          <a href="mailto:privacy@hom2box.com" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">문의하기</a>
+          <a href="https://hom2box.com/imgshop.php" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">AI 이미지샵</a>
+        </div>
+      </div>
+      <div class="text-xs leading-relaxed text-zinc-400">일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다.<br>© 2026 HOM2BOX. All rights reserved.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { q: "", life: "전체", region: "전국·중앙" };
+  componentDidMount() {
+    const p = new URLSearchParams(location.search).get("q");
+    if (p) this.setState({ q: p });
+  }
+  renderVals() {
+    const B = "https://www.bokjiro.go.kr/ssis-tbu/twataa/wlfareInfo/moveTWAT52011M.do?wlfareInfoId=";
+    const db = [
+      { org: "보건복지부", title: "정신건강 심리상담 바우처사업", desc: "우울·불안 등 정서적 어려움으로 심리상담이 필요한 국민에게 전문 심리상담 서비스를 제공합니다.", targets: ["청소년","청년","중장년","노년"], id: "WLF00005567", region: "전국·중앙", kw: "심리 상담 정신건강 바우처" },
+      { org: "교육부", title: "유아학비 지원(3~5세 누리과정)", desc: "국공사립유치원 재원 유아를 대상으로 소득수준과 관계없이 전 계층에 유아학비를 지원합니다.", targets: ["영유아"], id: "WLF00000969", region: "전국·중앙", kw: "유아 학비 누리과정 출산 육아" },
+      { org: "보건복지부", title: "긴급돌봄 지원사업", desc: "질병·부상, 주 돌봄자의 갑작스러운 부재 등 돌봄 공백을 신속히 보완해 돌봄 불안을 해소합니다.", targets: ["영유아","아동","청소년","청년","중장년"], id: "WLF00005442", region: "전국·중앙", kw: "돌봄 긴급 복지" },
+      { org: "교육부", title: "초·중·고 학생 교육정보화 지원", desc: "초중고 학생에게 PC·인터넷 통신비를 지원하여 정보 소외 계층의 교육 격차를 해소합니다.", targets: ["아동","청소년"], id: "WLF00003227", region: "전국·중앙", kw: "교육 정보화 PC 통신비 취업" },
+      { org: "보건복지부", title: "장애인 자립지원 시범사업", desc: "지역사회 자립을 희망하는 장애인 대상 주택 및 주거서비스를 지원해 안정적 정착을 돕습니다.", targets: ["청년","중장년"], id: "WLF00005024", region: "전국·중앙", kw: "장애인 자립 주거 주택" },
+      { org: "보건복지부", title: "치매검사비 지원", desc: "치매 조기검진을 통해 치매를 예방하고 진행을 완화하며 검사비 부담을 경감합니다.", targets: ["노년"], id: "WLF00005004", region: "전국·중앙", kw: "치매 검사 기초연금 노인 건강" },
+      { org: "보건복지부", title: "아동수당 지급", desc: "아동 양육에 따른 경제적 부담을 경감하고 건강한 성장 환경을 조성합니다.", targets: ["영유아","아동"], id: "WLF00001171", region: "전국·중앙", kw: "아동수당 출산 육아 양육" },
+      { org: "국토교통부", title: "버팀목 전세자금대출", desc: "무주택 세대주의 주택 전세자금 융자를 통해 주거안정을 지원합니다.", targets: ["청년","중장년","노년"], id: "WLF00003222", region: "전국·중앙", kw: "전세 주거 월세 대출 청년 주택" },
+      { org: "국토교통부", title: "주거안정 월세대출", desc: "월세 부담이 큰 사회초년생 등의 주택 월세자금 융자를 통해 주거안정을 지원합니다.", targets: ["청년","중장년","노년"], id: "WLF00001063", region: "전국·중앙", kw: "월세 주거 대출 청년 사회초년생" },
+      { org: "교육부", title: "시간제보육 지원", desc: "가정 양육 시에도 필요할 때 이용할 수 있는 보육 서비스를 제공해 양육 부담을 경감합니다.", targets: ["영유아"], id: "WLF00000037", region: "전국·중앙", kw: "보육 시간제 출산 육아" },
+      { org: "보건복지부", title: "차상위 본인부담 경감대상자 지원", desc: "차상위계층의 요양급여비 본인부담 비용 경감을 통해 의료보장을 강화합니다.", targets: ["중장년","노년"], id: "WLF00001119", region: "전국·중앙", kw: "차상위 의료 요양 건강" },
+      { org: "보건복지부", title: "노인장기요양 재가급여", desc: "독립적 일상생활이 어려운 노인과 부양가정에 각종 서비스를 제공해 부양 부담을 줄입니다.", targets: ["노년"], id: "WLF00003248", region: "전국·중앙", kw: "노인 요양 재가 기초연금 건강" },
+      { org: "교육부", title: "영유아보육료 지원", desc: "어린이집 이용 영유아 보육료 지원을 통해 부모의 양육 부담 경감과 경제활동을 지원합니다.", targets: ["영유아"], id: "WLF00003250", region: "전국·중앙", kw: "보육료 어린이집 출산 육아" },
+      { org: "보건복지부", title: "긴급복지 생계지원", desc: "생계곤란 등 위기상황에 처한 사람을 일시적으로 신속하게 지원해 위기에서 벗어나도록 합니다.", targets: ["중장년","노년"], id: "WLF00003180", region: "전국·중앙", kw: "긴급복지 생계 위기 에너지" },
+      { org: "보건복지부", title: "긴급복지 해산비 지원", desc: "긴급복지 대상자 중 조산 및 분만 후 필요한 조치와 보호를 위해 해산비를 지원합니다.", targets: ["임신·출산"], id: "WLF00003178", region: "전국·중앙", kw: "출산 해산 임신 긴급복지" },
+      { org: "서울특별시", title: "서울 청년 월세 한시 특별지원", desc: "서울 거주 청년의 주거비 부담 완화를 위해 월 최대 20만 원의 월세를 한시적으로 지원합니다.", targets: ["청년"], id: "WLF00005567", region: "서울특별시", kw: "청년 월세 주거 서울" },
+      { org: "경기도", title: "경기 청년 기본소득", desc: "경기도 거주 만 24세 청년에게 분기별 지역화폐로 청년 기본소득을 지급합니다.", targets: ["청년"], id: "WLF00005024", region: "경기도", kw: "청년 기본소득 경기 취업" },
+    ];
+    const lifes = ["전체","영유아","아동","청소년","청년","중장년","노년","임신·출산"];
+    const regions = ["전국·중앙","서울특별시","경기도","부산광역시","인천광역시","대구광역시"];
+    const tagList = ["청년","월세","출산","기초연금","에너지","한부모","취업","주거"];
+    const { q, life, region } = this.state;
+    const kw = q.trim();
+    let list = db.filter((g) => {
+      if (life !== "전체" && !g.targets.includes(life)) return false;
+      if (region !== "전국·중앙" && g.region !== region) return false;
+      if (kw && !(g.title + " " + g.desc + " " + g.kw + " " + g.org).toLowerCase().includes(kw.toLowerCase())) return false;
+      return true;
+    });
+    const chip = (on) => "cursor-pointer rounded-full border px-3.5 py-1.5 text-[13px] font-semibold " +
+      (on ? "border-[#134a9c] bg-[#134a9c] text-white" : "border-zinc-200 bg-white text-zinc-600 hover:border-[#134a9c] hover:text-[#134a9c]");
+    const notes = [];
+    if (life !== "전체") notes.push(life);
+    if (region !== "전국·중앙") notes.push(region);
+    if (kw) notes.push("'" + kw + "'");
+    return {
+      q,
+      onInput: (e) => this.setState({ q: e.target.value }),
+      onKey: (e) => { if (e.key === "Enter") this.forceUpdate(); },
+      doSearch: () => this.forceUpdate(),
+      tags: tagList.map((t) => ({ name: t, go: () => this.setState({ q: t, life: "전체" }) })),
+      lifeChips: lifes.map((l) => ({ name: l, cls: chip(l === life), go: () => this.setState({ life: l }) })),
+      regionChips: regions.map((r) => ({ name: r, cls: chip(r === region), go: () => this.setState({ region: r }) })),
+      total: list.length,
+      filterNote: notes.length ? notes.join(" · ") + " 필터 적용 중" : "전체 지원금 표시 중",
+      hasResults: list.length > 0,
+      noResults: list.length === 0,
+      items: list.map((g) => ({ ...g, url: B + g.id + "&wlfareInfoReldBztpCd=01" })),
+    };
+  }
+}
+</script>
+</body>
+</html>

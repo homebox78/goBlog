@@ -1,66 +1,138 @@
 <?php
+// 개인정보처리방침 — 시안(HOM2BOX 개인정보처리방침.dc.html) 기반: 브레드크럼 + 회색 밴드 헤더 + sticky 목차 2열.
 declare(strict_types=1);
-require_once __DIR__ . '/includes/legal-layout.php';
+require_once __DIR__ . '/includes/goblog-db.php';
+require_once __DIR__ . '/includes/layout.php';
 
-$today = date('Y-m-d');
 $contactEmail = 'homebox000001@gmail.com';
 
-$body = <<<HTML
-<h1>개인정보처리방침</h1>
-<p class="updated">시행일 {$today}</p>
+$toc = [
+    's1' => '1. 수집하는 개인정보 항목 및 목적',
+    's2' => '2. 개인정보의 수집 방법',
+    's3' => '3. 개인정보의 보유 및 이용 기간',
+    's4' => '4. 쿠키 및 광고에 관한 사항',
+    's5' => '5. 개인정보의 제3자 제공',
+    's6' => '6. 이용자의 권리와 행사 방법',
+    's7' => '7. 개인정보의 안전성 확보 조치',
+    's8' => '8. 개인정보 보호책임자',
+];
 
-<p>HOM2BOX(이하 "운영자")는 「개인정보 보호법」 등 관계 법령을 준수하며, hom2box.com(뉴스 및 부속 서비스, 이하 "본 사이트")을 이용하는 이용자의 개인정보를 보호하기 위해 다음과 같은 처리방침을 둡니다.</p>
+render_head('개인정보처리방침 — HOM2BOX 뉴스', 'HOM2BOX 개인정보처리방침 — 수집 항목, 쿠키·구글 애드센스 광고, 제휴 마케팅 고지, 이용자 권리 안내.');
+render_topbar();
+render_masthead();
+render_nav('');
+?>
+<style>html { scroll-behavior: smooth; }</style>
+<div class="min-h-screen bg-white">
+  <div class="border-b border-zinc-100 bg-zinc-50">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-10">
+      <div class="mb-2 flex items-center gap-1.5 text-[12.5px] text-zinc-400"><a href="/" class="hover:text-[#134a9c]">홈</a><span class="material-symbols-outlined text-[14px]">chevron_right</span><span>약관·정책</span><span class="material-symbols-outlined text-[14px]">chevron_right</span><span class="font-semibold text-zinc-600">개인정보처리방침</span></div>
+      <h1 class="m-0 text-[24px] sm:text-[30px] font-extrabold tracking-tight">개인정보처리방침</h1>
+      <div class="mt-2 text-[13px] text-zinc-400">시행일 2026.07.01 · 최종 개정 2026.07.15</div>
+    </div>
+  </div>
 
-<h2>1. 수집하는 정보와 방법</h2>
-<p>본 사이트는 회원가입 없이 열람할 수 있으며, 별도의 개인정보를 직접 입력받지 않습니다. 다만 서비스 운영 과정에서 다음 정보가 자동으로 수집될 수 있습니다.</p>
-<ul>
-  <li>접속 로그, 브라우저·기기·운영체제 정보, IP 주소, 방문 일시, 참조 페이지</li>
-  <li>쿠키 및 유사 기술을 통한 이용 기록(광고·통계 목적)</li>
-  <li>문의 시 이용자가 자발적으로 제공하는 이메일 주소 및 문의 내용</li>
-</ul>
+  <div class="mx-auto max-w-[1399px] grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-8 lg:gap-12 px-4 sm:px-6 py-10">
+    <div class="self-start lg:sticky lg:top-20">
+      <div class="mb-3 text-[13px] font-extrabold text-zinc-500">목차</div>
+      <?php foreach ($toc as $anchor => $label): ?>
+      <a href="#<?= $anchor ?>" class="block border-l-2 border-zinc-100 py-2 pl-4 text-[13.5px] font-semibold text-zinc-500 hover:border-[#134a9c] hover:text-[#134a9c]"><?= nh($label) ?></a>
+      <?php endforeach; ?>
+      <div class="mt-6 rounded-lg border border-zinc-200 bg-zinc-50/60 p-4 text-[12.5px] leading-relaxed text-zinc-500">
+        문의: 개인정보 보호책임자<br><a href="mailto:<?= nh($contactEmail) ?>" class="font-semibold text-[#134a9c] break-all"><?= nh($contactEmail) ?></a>
+      </div>
+    </div>
 
-<h2>2. 이용 목적</h2>
-<ul>
-  <li>서비스 제공, 콘텐츠 개선, 이용 통계 분석</li>
-  <li>광고 게재 및 성과 측정</li>
-  <li>보안·부정 이용 방지 및 서비스 안정성 유지</li>
-  <li>문의 대응</li>
-</ul>
+    <div>
+      <div class="mb-8 rounded-lg border-l-4 border-[#134a9c] bg-zinc-50 px-5 py-4 text-[13.5px] leading-loose text-zinc-700">
+        HOM2BOX(이하 '회사')는 이용자의 개인정보를 중요하게 생각하며, 「개인정보 보호법」 등 관련 법령을 준수합니다. 본 방침은 회사가 운영하는 hom2box.com 및 관련 서비스에 적용됩니다.
+      </div>
 
-<h2>3. 쿠키의 사용</h2>
-<p>본 사이트는 이용자 경험 개선과 광고·통계를 위해 쿠키(Cookie)를 사용합니다. 이용자는 브라우저 설정에서 쿠키 저장을 거부하거나 삭제할 수 있으며, 이 경우 일부 기능 이용에 제한이 있을 수 있습니다.</p>
+      <div id="s1" class="mb-9" style="scroll-margin-top:96px">
+        <h2 class="mb-3 border-b border-zinc-200 pb-2.5 text-[19px] font-extrabold">1. 수집하는 개인정보 항목 및 목적</h2>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">회사는 서비스 제공을 위해 아래와 같은 최소한의 개인정보를 수집합니다.</p>
+        <div class="mb-3 overflow-hidden rounded-lg border border-zinc-200">
+          <table class="w-full border-collapse text-[13.5px]">
+            <thead><tr class="bg-zinc-50 text-left">
+              <th class="border-b border-zinc-200 px-3.5 py-2.5 font-extrabold">항목</th>
+              <th class="border-b border-zinc-200 px-3.5 py-2.5 font-extrabold">수집 목적</th>
+              <th class="border-b border-zinc-200 px-3.5 py-2.5 font-extrabold">보유 기간</th>
+            </tr></thead>
+            <tbody>
+              <tr class="border-b border-zinc-100"><td class="px-3.5 py-2.5 font-semibold">이메일 주소</td><td class="px-3.5 py-2.5 text-zinc-600">뉴스레터 발송, 구독 인증</td><td class="px-3.5 py-2.5 whitespace-nowrap text-zinc-600">구독 해지 시까지</td></tr>
+              <tr class="border-b border-zinc-100"><td class="px-3.5 py-2.5 font-semibold">관심 분야·발송 시간</td><td class="px-3.5 py-2.5 text-zinc-600">맞춤형 뉴스레터 구성</td><td class="px-3.5 py-2.5 whitespace-nowrap text-zinc-600">구독 해지 시까지</td></tr>
+              <tr><td class="px-3.5 py-2.5 font-semibold">접속 로그·쿠키·기기 정보</td><td class="px-3.5 py-2.5 text-zinc-600">서비스 이용 통계, 부정 이용 방지</td><td class="px-3.5 py-2.5 whitespace-nowrap text-zinc-600">최대 1년</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-<h2>4. 광고 — 구글 애드센스 및 제3자 광고</h2>
-<div class="box">
-  <p style="margin:0 0 8px;">본 사이트는 제3자 광고 사업자인 <b>구글(Google AdSense)</b>을 통해 광고를 게재할 수 있습니다.</p>
-  <ul style="margin-bottom:0;">
-    <li>구글을 포함한 제3자 광고 사업자는 쿠키를 사용하여 이용자의 본 사이트 및 다른 사이트 방문 기록을 바탕으로 맞춤형 광고를 제공할 수 있습니다.</li>
-    <li>구글은 광고 쿠키(DoubleClick DART 쿠키 등)를 사용합니다. 이용자는 <a href="https://adssettings.google.com/" target="_blank" rel="noopener">구글 광고 설정</a>에서 맞춤 광고를 해제할 수 있습니다.</li>
-    <li>제3자 광고 사업자의 쿠키 사용에 대한 자세한 내용과 선택권은 <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">구글 광고 정책</a> 및 <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">www.aboutads.info</a>에서 확인할 수 있습니다.</li>
-  </ul>
+      <div id="s2" class="mb-9" style="scroll-margin-top:96px">
+        <h2 class="mb-3 border-b border-zinc-200 pb-2.5 text-[19px] font-extrabold">2. 개인정보의 수집 방법</h2>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">회사는 다음의 방법으로 개인정보를 수집합니다.</p>
+        <ul class="mb-3 space-y-1.5 pl-1">
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>뉴스레터 구독 신청 폼을 통한 이용자의 직접 입력</span></li>
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>서비스 이용 과정에서 자동으로 생성·수집되는 접속 정보(쿠키, 로그)</span></li>
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>제휴 광고 및 통계 도구를 통한 비식별 이용 데이터</span></li>
+        </ul>
+      </div>
+
+      <div id="s3" class="mb-9" style="scroll-margin-top:96px">
+        <h2 class="mb-3 border-b border-zinc-200 pb-2.5 text-[19px] font-extrabold">3. 개인정보의 보유 및 이용 기간</h2>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">원칙적으로 개인정보의 수집·이용 목적이 달성되면 지체 없이 파기합니다. 다만 관련 법령에 따라 보존할 필요가 있는 경우 해당 기간 동안 보관합니다.</p>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">뉴스레터 구독 정보는 이용자가 구독을 해지하는 즉시 파기됩니다.</p>
+      </div>
+
+      <div id="s4" class="mb-9" style="scroll-margin-top:96px">
+        <h2 class="mb-3 border-b border-zinc-200 pb-2.5 text-[19px] font-extrabold">4. 쿠키 및 광고에 관한 사항</h2>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">회사는 서비스 개선과 맞춤형 콘텐츠·광고 제공을 위해 쿠키를 사용합니다. 본 사이트는 Google AdSense 등 제3자 광고를 게재하며, 광고 사업자는 쿠키를 통해 이용자의 관심에 기반한 광고를 제공할 수 있습니다.</p>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">이용자는 브라우저 설정에서 쿠키 저장을 거부할 수 있으며, <a href="https://adssettings.google.com/" target="_blank" rel="noopener" class="font-semibold text-[#134a9c] underline">Google 광고 설정</a> 페이지에서 맞춤 광고를 해제할 수 있습니다.</p>
+        <ul class="mb-3 space-y-1.5 pl-1">
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>쿠키 거부 시 일부 맞춤형 서비스 이용에 제한이 있을 수 있습니다.</span></li>
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>제휴 링크를 통한 구매 시 회사는 일정 수수료를 제공받을 수 있으며, 이는 이용자에게 추가 비용을 발생시키지 않습니다.</span></li>
+        </ul>
+      </div>
+
+      <div id="s5" class="mb-9" style="scroll-margin-top:96px">
+        <h2 class="mb-3 border-b border-zinc-200 pb-2.5 text-[19px] font-extrabold">5. 개인정보의 제3자 제공</h2>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">회사는 이용자의 개인정보를 본 방침에서 고지한 범위를 초과하여 이용하거나 제3자에게 제공하지 않습니다. 다만 법령의 규정에 의거하거나 수사 목적으로 관계 기관의 적법한 요구가 있는 경우는 예외로 합니다.</p>
+      </div>
+
+      <div id="s6" class="mb-9" style="scroll-margin-top:96px">
+        <h2 class="mb-3 border-b border-zinc-200 pb-2.5 text-[19px] font-extrabold">6. 이용자의 권리와 행사 방법</h2>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">이용자는 언제든지 본인의 개인정보에 대한 열람·정정·삭제·처리정지를 요청할 수 있습니다.</p>
+        <ul class="mb-3 space-y-1.5 pl-1">
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>뉴스레터 하단의 '구독 해지' 링크를 통한 즉시 해지</span></li>
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>개인정보 보호책임자 이메일을 통한 열람·정정·삭제 요청</span></li>
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>요청 접수 시 지체 없이(최대 10일 이내) 조치</span></li>
+        </ul>
+      </div>
+
+      <div id="s7" class="mb-9" style="scroll-margin-top:96px">
+        <h2 class="mb-3 border-b border-zinc-200 pb-2.5 text-[19px] font-extrabold">7. 개인정보의 안전성 확보 조치</h2>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">회사는 개인정보의 안전한 처리를 위해 다음의 조치를 취합니다.</p>
+        <ul class="mb-3 space-y-1.5 pl-1">
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>개인정보 접근 권한의 최소화 및 접근 통제</span></li>
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>전송 구간 암호화(SSL/TLS) 적용</span></li>
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>접속 기록의 보관 및 위·변조 방지</span></li>
+        </ul>
+      </div>
+
+      <div id="s8" class="mb-9" style="scroll-margin-top:96px">
+        <h2 class="mb-3 border-b border-zinc-200 pb-2.5 text-[19px] font-extrabold">8. 개인정보 보호책임자</h2>
+        <p class="mb-3 text-[14.5px] leading-loose text-zinc-700">개인정보 처리에 관한 문의, 불만 처리, 피해 구제 등에 관한 사항은 아래 보호책임자에게 연락하실 수 있습니다.</p>
+        <ul class="mb-3 space-y-1.5 pl-1">
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>개인정보 보호책임자: HOM2BOX 운영팀</span></li>
+          <li class="flex items-start gap-2 text-[14px] leading-relaxed text-zinc-600"><span class="mt-2 h-1 w-1 flex-none rounded-full bg-[#134a9c]"></span><span>이메일: <a href="mailto:<?= nh($contactEmail) ?>" class="font-semibold text-[#134a9c] underline"><?= nh($contactEmail) ?></a></span></li>
+        </ul>
+      </div>
+
+      <div class="mt-4 rounded-lg border border-zinc-200 bg-zinc-50/60 p-5 text-[13px] leading-loose text-zinc-500">
+        본 개인정보처리방침은 2026년 7월 1일부터 적용됩니다. 법령·정책 변경 또는 서비스 개선에 따라 내용이 추가·삭제·수정될 수 있으며, 개정 시 시행일 7일 전부터 웹사이트 공지사항을 통해 고지합니다.
+      </div>
+    </div>
+  </div>
+
+  <?php render_footer(); ?>
 </div>
-
-<h2>5. 제휴 마케팅 고지</h2>
-<p>본 사이트의 일부 기사에는 <b>쿠팡 파트너스, 네이버 쇼핑 제휴</b> 등 제휴 마케팅 링크가 포함될 수 있습니다. 이용자가 해당 링크를 통해 상품을 구매하는 경우, 운영자는 판매자로부터 일정액의 수수료를 제공받습니다. 이는 이용자의 구매 가격에 영향을 주지 않으며, 관련 기사에는 대가성 문구를 표기합니다.</p>
-
-<h2>6. 통계 도구</h2>
-<p>본 사이트는 서비스 개선을 위해 구글 서치 콘솔, 구글 애널리틱스 등 통계 분석 도구를 사용할 수 있습니다. 이들 도구는 쿠키를 통해 비식별 통계 정보를 수집합니다.</p>
-
-<h2>7. 제3자 제공 및 처리 위탁</h2>
-<p>운영자는 법령에 근거하거나 이용자의 동의가 있는 경우를 제외하고 개인정보를 제3자에게 제공하지 않습니다. 광고·통계 서비스 이용에 따라 위 사업자에게 관련 정보가 처리될 수 있으며, 각 사업자의 개인정보 처리는 해당 사업자의 방침을 따릅니다.</p>
-
-<h2>8. 보관 및 파기</h2>
-<p>수집된 접속 로그 등은 관계 법령에서 정한 기간 동안 보관 후 파기하며, 보관 목적이 달성되면 지체 없이 파기합니다.</p>
-
-<h2>9. 이용자의 권리</h2>
-<p>이용자는 자신의 개인정보에 대한 열람·정정·삭제·처리정지를 요청할 수 있습니다. 요청은 아래 연락처로 접수할 수 있으며, 운영자는 관련 법령에 따라 지체 없이 처리합니다.</p>
-
-<h2>10. 개인정보 보호책임자 및 문의</h2>
-<div class="box">
-  <p style="margin:0;">개인정보 관련 문의: <a href="mailto:{$contactEmail}">{$contactEmail}</a></p>
-</div>
-
-<p style="color:#888;font-size:13px;margin-top:24px;">본 방침은 {$today}부터 적용됩니다. 내용이 변경되는 경우 본 페이지를 통해 고지합니다.</p>
-HTML;
-
-render_legal_page('개인정보처리방침', $body, 'HOM2BOX 개인정보처리방침 — 쿠키, 구글 애드센스 광고, 제휴 마케팅 고지 포함.');
+<?php render_foot();

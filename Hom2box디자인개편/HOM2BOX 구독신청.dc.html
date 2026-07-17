@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32.png">
+<link rel="apple-touch-icon" href="favicon/apple-touch-icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<style>
+body { margin:0; background:#fff; font-family:'Noto Sans KR',sans-serif; color:#18181b; }
+a { color:inherit; text-decoration:none; }
+a:hover { color:#134a9c; }
+input { font-family:'Noto Sans KR',sans-serif; }
+.material-symbols-outlined { line-height:1; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; top:0.5px; }
+body:has(#h2brail:checked) .h2b-rail-items{display:none;}
+body:has(#h2brail:checked) .h2b-rail-chev{display:inline-block;transform:rotate(180deg);}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-3Light.woff') format('woff');font-weight:300;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff');font-weight:400;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-5Medium.woff') format('woff');font-weight:500;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-6Bold.woff') format('woff');font-weight:700;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff');font-weight:800;font-display:swap;}
+body, input, button, select, textarea, table { font-family:'Escoredream','Noto Sans KR',sans-serif !important; }
+@keyframes h2bticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+.h2b-track { display:inline-flex; white-space:nowrap; animation:h2bticker 36s linear infinite; }
+.h2b-track:hover { animation-play-state:paused; }
+.h2b-pause { display:none; }
+.h2b-pause:checked ~ .h2b-bar .h2b-track { animation-play-state:paused !important; }
+.h2b-ico-play { display:none; }
+.h2b-pause:checked ~ label .h2b-ico-play { display:inline-flex; }
+.h2b-pause:checked ~ label .h2b-ico-pause { display:none; }
+</style>
+<script>
+document.addEventListener('click',function(e){var b=e.target.closest('.h2b-bar');if(!b||e.target.closest('a'))return;var t=b.querySelector('.h2b-track');if(t)t.classList.toggle('h2b-paused');});
+</script>
+</helmet>
+<input type="checkbox" id="h2bnav" class="peer hidden">
+<label for="h2bnav" class="fixed inset-0 z-[80] hidden bg-black/50 backdrop-blur-sm peer-checked:block lg:!hidden"></label>
+<aside class="fixed left-0 top-0 z-[90] flex h-full w-[284px] max-w-[82%] -translate-x-full flex-col overflow-y-auto bg-white shadow-2xl transition-transform duration-300 ease-out peer-checked:translate-x-0 lg:hidden">
+  <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3.5">
+    <span class="flex items-center gap-1.5"><svg width="22" height="22" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/></svg><span class="text-[17px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[12px] font-bold text-zinc-500">뉴스</span></span>
+    <label for="h2bnav" class="flex h-9 w-9 cursor-pointer items-center justify-center text-zinc-500"><span class="material-symbols-outlined text-[24px]">close</span></label>
+  </div>
+  <nav class="flex flex-col p-2">
+    <a href="HOM2BOX 홈.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">홈</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=경제·금융" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">경제·금융</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=IT·게임" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">IT·게임</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=생활·건강" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">생활·건강</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=여행·문화" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">여행·문화</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=종합" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">종합</a>
+    <div class="my-1.5 border-t border-zinc-100"></div>
+    <a href="HOM2BOX 지원금.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">지원금</a>
+    <a href="HOM2BOX 계산기.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">계산기</a>
+    <a href="HOM2BOX 문서도구.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">문서도구</a>
+    <a href="HOM2BOX 언론사.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">언론사</a>
+    <a href="HOM2BOX 오피니언.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">오피니언</a>
+    <a href="HOM2BOX 검색.dc.html" class="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">search</span>검색</a>
+  </nav>
+</aside>
+<input type="checkbox" id="h2brail" class="hidden">
+<aside class="fixed left-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-zinc-200 bg-white/90 p-1.5 shadow-lg backdrop-blur 2xl:flex">
+  <label for="h2brail" title="접기/펼치기" class="flex h-9 w-11 flex-none cursor-pointer items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px] transition-transform h2b-rail-chev">chevron_left</span></label>
+  <div class="flex flex-col items-center gap-1 h2b-rail-items">
+  <a href="HOM2BOX 홈.dc.html" title="뉴스" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">public</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">뉴스</span></a>
+  <a href="HOM2BOX 오피니언.dc.html" title="리포트" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">description</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">리포트</span></a>
+  <a href="HOM2BOX 언론사.dc.html" title="커뮤니티" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">forum</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">커뮤니티</span></a>
+  <a href="HOM2BOX 계산기.dc.html" title="계산기" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">calculate</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">계산기</span></a>
+  <a href="HOM2BOX 지원금.dc.html" title="지원금" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">volunteer_activism</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">지원금</span></a>
+  </div>
+</aside>
+<aside class="fixed right-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-zinc-200 bg-white/90 p-1.5 shadow-lg backdrop-blur 2xl:flex">
+  <label for="h2brail" title="접기/펼치기" class="flex h-9 w-11 flex-none cursor-pointer items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px] transition-transform h2b-rail-chev">chevron_right</span></label>
+  <div class="flex flex-col items-center gap-1 h2b-rail-items">
+  <a href="HOM2BOX 언론사.dc.html" title="커뮤니티" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">chat_bubble</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">커뮤니티</span></a>
+  <a href="HOM2BOX 검색.dc.html" title="캘린더" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">event_available</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">캘린더</span></a>
+  <a href="HOM2BOX 구독신청.dc.html" title="구독" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-[#134a9c] bg-[#134a9c]/10 transition-colors"><span class="material-symbols-outlined text-[22px]">bookmark</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">구독</span></a>
+  <div class="my-0.5 h-px w-6 bg-zinc-200"></div>
+  <a href="#" title="맨 위로" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">arrow_upward</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">맨 위로</span></a>
+  </div>
+</aside>
+<div class="min-h-screen bg-white">
+  <div class="border-b border-zinc-200 bg-white">
+    <div class="mx-auto max-w-[1399px] flex items-stretch">
+      <input type="checkbox" id="h2btk" class="h2b-pause">
+      <label for="h2btk" title="클릭하면 멈춤/재생" class="flex flex-none cursor-pointer select-none items-center gap-1 bg-[#b91c1c] px-3 text-white">
+        <span class="h2b-ico-pause material-symbols-outlined text-[16px]">pause</span><span class="h2b-ico-play material-symbols-outlined text-[16px]">play_arrow</span>
+        <span class="whitespace-nowrap text-[12.5px] font-extrabold">속보</span>
+      </label>
+      <div class="h2b-bar min-w-0 flex-1 overflow-hidden py-2">
+        <div class="h2b-track">
+          <span class="inline-flex">
+            <a href="HOM2BOX 기사 상세.dc.html" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· PPI 발표 앞두고 코스피 6,800선 회복 시도…외국인 순매수 전환</a>
+            <a href="https://hom2box.com/article.php?id=72" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 경찰 과태료 국세청 이관…납부 창구·방법 전면 변경</a>
+            <a href="https://hom2box.com/article.php?id=65" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 태풍 바비 북상…제주공항 결항 105편 초과</a>
+            <a href="https://hom2box.com/article.php?id=36" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· SK하이닉스 주가 급락 -15%, 나스닥 상장 3일 만에</a>
+            <a href="https://hom2box.com/article.php?id=33" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 기후동행카드 혜택 9월 종료…충전 마감일 확인 필수</a>
+          </span>
+          <span class="inline-flex" aria-hidden="true">
+            <a href="HOM2BOX 기사 상세.dc.html" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· PPI 발표 앞두고 코스피 6,800선 회복 시도…외국인 순매수 전환</a>
+            <a href="https://hom2box.com/article.php?id=72" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 경찰 과태료 국세청 이관…납부 창구·방법 전면 변경</a>
+            <a href="https://hom2box.com/article.php?id=65" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 태풍 바비 북상…제주공항 결항 105편 초과</a>
+            <a href="https://hom2box.com/article.php?id=36" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· SK하이닉스 주가 급락 -15%, 나스닥 상장 3일 만에</a>
+            <a href="https://hom2box.com/article.php?id=33" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 기후동행카드 혜택 9월 종료…충전 마감일 확인 필수</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-screen-label="상단 내비게이션" class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-zinc-200">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 flex flex-wrap items-center gap-5 lg:flex-nowrap">
+      <label for="h2bnav" class="lg:hidden flex h-9 w-9 flex-none cursor-pointer items-center justify-center self-center text-zinc-700"><span class="material-symbols-outlined text-[26px]">menu</span></label>
+      <a href="HOM2BOX 홈.dc.html" class="flex flex-none items-center gap-1.5 py-3"><svg width="26" height="26" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/></svg><span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">뉴스</span></a>
+      <div class="hidden overflow-x-auto lg:flex lg:flex-1 lg:flex-row lg:items-center lg:gap-5">
+      <a href="HOM2BOX 홈.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">홈</a>
+      <a href="HOM2BOX 카테고리.dc.html?cat=경제·금융" class="flex-none whitespace-nowrap py-4 text-sm font-bold">경제·금융</a>
+      <a href="HOM2BOX 지원금.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">지원금</a>
+      <a href="HOM2BOX 계산기.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">계산기</a>
+      <a href="HOM2BOX 문서도구.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">문서도구</a>
+      <a href="HOM2BOX 언론사.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">언론사</a>
+      <a href="HOM2BOX 오피니언.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">오피니언</a>
+      <span class="flex-none whitespace-nowrap py-4 text-sm font-bold text-[#134a9c] border-b-[3px] border-[#134a9c]">구독 신청</span>
+      <a href="HOM2BOX 검색.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold text-zinc-400 inline-flex items-center gap-1 ml-auto"><span class="material-symbols-outlined text-[16px]">search</span>검색</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="border-b border-zinc-100 bg-zinc-50">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-14 text-center">
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-[#134a9c]/10 px-3 py-1 text-xs font-bold text-[#134a9c]"><span class="material-symbols-outlined text-[15px]">mail</span>무료 뉴스레터</span>
+      <h1 class="mx-auto mt-4 mb-3 max-w-2xl text-[28px] sm:text-[36px] font-extrabold leading-tight tracking-tight">아침·저녁, 편집국이 고른 뉴스를<br>메일함에서 받아보세요</h1>
+      <p class="mx-auto max-w-xl text-[15px] leading-relaxed text-zinc-500">매일 오전 7시·오후 6시, 분야별 핵심 기사 5건씩을 정리해 보내드립니다. 광고성 스팸 없이 뉴스만. 구독 해지는 언제든 한 번의 클릭으로.</p>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-[1399px] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-8 lg:gap-12 px-4 sm:px-6 py-12">
+    <div data-screen-label="구독 폼">
+      <sc-if value="{{ notDone }}" hint-placeholder-val="{{ true }}">
+        <div class="rounded-xl border border-zinc-200 bg-white p-7 shadow-sm">
+          <h2 class="mb-1 text-[20px] font-extrabold">구독 정보 입력</h2>
+          <p class="mb-6 text-[13px] text-zinc-400">이메일과 받아볼 분야, 발송 시간을 선택하세요.</p>
+
+          <label class="mb-1.5 block text-[13px] font-bold">이메일 주소</label>
+          <div class="mb-1 flex items-center gap-2 rounded-lg border-2 px-3.5 h-12 {{ emailBorder }}">
+            <span class="material-symbols-outlined text-[20px] text-zinc-400">mail</span>
+            <input type="email" placeholder="you@example.com" value="{{ email }}" onInput="{{ onEmail }}" class="flex-1 border-0 outline-none bg-transparent text-[15px] placeholder:text-zinc-300">
+          </div>
+          <sc-if value="{{ emailError }}" hint-placeholder-val="{{ false }}"><div class="mb-2 text-[12px] font-semibold text-red-600">{{ emailError }}</div></sc-if>
+
+          <div class="mb-2 mt-6 text-[13px] font-bold">받아볼 분야 <span class="font-medium text-zinc-400">(복수 선택)</span></div>
+          <div class="mb-1 flex flex-wrap gap-2">
+            <sc-for list="{{ topics }}" as="t" hint-placeholder-count="6">
+              <button onClick="{{ t.toggle }}" class="{{ t.cls }}">
+                <sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}"><span class="material-symbols-outlined text-[16px]">check</span></sc-if>
+                {{ t.name }}
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ topicError }}" hint-placeholder-val="{{ false }}"><div class="mb-2 text-[12px] font-semibold text-red-600">{{ topicError }}</div></sc-if>
+
+          <div class="mb-2 mt-6 text-[13px] font-bold">발송 시간</div>
+          <div class="mb-2 grid grid-cols-3 gap-2">
+            <sc-for list="{{ schedules }}" as="s" hint-placeholder-count="3">
+              <button onClick="{{ s.pick }}" class="{{ s.cls }}">
+                <span class="material-symbols-outlined text-[20px]">{{ s.icon }}</span>
+                <span class="text-[13.5px] font-bold">{{ s.label }}</span>
+                <span class="text-[11px] {{ s.subCls }}">{{ s.sub }}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <label onClick="{{ toggleAgree }}" class="mt-6 flex cursor-pointer items-start gap-2.5">
+            <span class="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded border-2 {{ agreeBox }}"><sc-if value="{{ agree }}" hint-placeholder-val="{{ false }}"><span class="material-symbols-outlined text-[15px] text-white">check</span></sc-if></span>
+            <span class="text-[13px] leading-relaxed text-zinc-500">개인정보 수집·이용(이메일, 뉴스레터 발송 목적)에 동의합니다. 수신 동의는 선택이며, 언제든 해지할 수 있습니다.</span>
+          </label>
+          <sc-if value="{{ agreeError }}" hint-placeholder-val="{{ false }}"><div class="mt-2 text-[12px] font-semibold text-red-600">{{ agreeError }}</div></sc-if>
+
+          <button onClick="{{ submit }}" class="mt-7 inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#134a9c] text-[15px] font-bold text-white shadow-sm hover:bg-[#0f3d82]">
+            <span class="material-symbols-outlined text-[20px]">send</span>무료 구독 신청하기
+          </button>
+          <div class="mt-3 flex items-center justify-center gap-1 text-[11.5px] text-zinc-400"><span class="material-symbols-outlined text-[13px]">lock</span>입력하신 정보는 뉴스레터 발송 외 용도로 사용되지 않습니다.</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+        <div class="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
+          <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#134a9c]/10"><span class="material-symbols-outlined text-[36px] text-[#134a9c]">mark_email_read</span></div>
+          <h2 class="mb-2 text-[24px] font-extrabold">구독 신청이 완료되었습니다</h2>
+          <p class="mx-auto mb-6 max-w-md text-[14px] leading-relaxed text-zinc-500"><b class="text-zinc-800">{{ email }}</b> 로 확인 메일을 보냈습니다. 메일의 인증 버튼을 눌러 구독을 완료해 주세요.</p>
+          <div class="mx-auto mb-7 max-w-sm rounded-lg border border-zinc-100 bg-zinc-50 px-5 py-4 text-left text-[13px] leading-relaxed text-zinc-600">
+            <div class="mb-1 font-bold text-zinc-800">구독 요약</div>
+            <div>분야 · {{ summaryTopics }}</div>
+            <div>발송 · {{ summarySchedule }}</div>
+          </div>
+          <div class="flex justify-center gap-2">
+            <button onClick="{{ reset }}" class="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-5 text-[14px] font-bold text-zinc-600 shadow-sm hover:bg-zinc-50">다시 신청</button>
+            <a href="HOM2BOX 홈.dc.html" class="inline-flex h-11 items-center gap-1.5 rounded-lg bg-[#134a9c] px-5 text-[14px] font-bold text-white shadow-sm hover:bg-[#0f3d82]">홈으로 <span class="material-symbols-outlined text-[18px]">arrow_forward</span></a>
+          </div>
+        </div>
+      </sc-if>
+
+      <div class="mt-8">
+        <div class="mb-4 text-[15px] font-extrabold">자주 묻는 질문</div>
+        <sc-for list="{{ faq }}" as="f" hint-placeholder-count="4">
+          <div class="border-b border-zinc-100 py-4">
+            <div class="mb-1.5 flex items-start gap-2 text-[14.5px] font-bold"><span class="text-[#134a9c]">Q</span>{{ f.q }}</div>
+            <div class="pl-5 text-[13.5px] leading-relaxed text-zinc-500">{{ f.a }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div data-screen-label="사이드바" class="flex flex-col gap-5 self-start sticky top-16">
+      <div class="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <div class="mb-3 text-[14px] font-extrabold">뉴스레터에 담기는 것</div>
+        <sc-for list="{{ benefits }}" as="b" hint-placeholder-count="4">
+          <div class="flex items-start gap-2.5 py-1.5">
+            <span class="material-symbols-outlined mt-0.5 text-[18px] text-[#134a9c]">{{ b.icon }}</span>
+            <span class="text-[13.5px] leading-relaxed text-zinc-600">{{ b.text }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div class="rounded-xl border border-zinc-200 bg-zinc-50/60 p-5">
+        <div class="mb-1 text-[26px] font-extrabold text-[#134a9c]">12,800<span class="text-[15px] text-zinc-500">명</span></div>
+        <div class="text-[13px] text-zinc-500">이미 HOM2BOX 뉴스레터를 구독 중입니다.</div>
+      </div>
+      <div class="h-[280px] rounded-lg border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center text-center font-mono text-xs text-zinc-400">AD · 사이드바 (300×250)</div>
+    </div>
+  </div>
+
+  <div class="border-t border-zinc-200 bg-zinc-50">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-10">
+      <div class="mb-6 grid grid-cols-2 gap-8 border-b border-zinc-200 pb-8 sm:grid-cols-[1.6fr_repeat(4,1fr)]">
+        <div class="col-span-2 sm:col-span-1">
+          <div class="text-[19px] font-extrabold">HOM2BOX <span class="text-[#134a9c]">뉴스</span></div>
+          <div class="mt-2 max-w-xs text-[12.5px] leading-relaxed text-zinc-500">매일 아침·저녁, 편집국이 선별한 이슈·경제·IT·생활 뉴스와 가이드를 발행합니다.</div>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">뉴스</div>
+          <a href="HOM2BOX 홈.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">홈</a>
+          <a href="HOM2BOX 오피니언.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">오피니언</a>
+          <a href="HOM2BOX 검색.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">뉴스 검색</a>
+          <a href="HOM2BOX 구독신청.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">뉴스레터 구독</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">카테고리</div>
+          <a href="HOM2BOX 카테고리.dc.html?cat=경제·금융" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">경제·금융</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=IT·게임" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">IT·게임</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=생활·건강" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">생활·건강</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=여행·문화" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">여행·문화</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=종합" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">종합</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">채널</div>
+          <a href="https://hom2box.com/wordpress/" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Wordpress</a>
+          <a href="https://hom2box.blogspot.com/" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">BlogSpot</a>
+          <a href="https://blog.naver.com/coreselect" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Naver Blog</a>
+          <a href="https://hom2box.tistory.com" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Tistory</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">약관·정책</div>
+          <a href="https://hom2box.com/about.php" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">소개</a>
+          <a href="HOM2BOX 개인정보처리방침.dc.html" class="block py-1 text-[13px] font-semibold text-zinc-600 hover:text-[#134a9c]">개인정보처리방침</a>
+          <a href="mailto:privacy@hom2box.com" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">문의하기</a>
+          <a href="https://hom2box.com/imgshop.php" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">AI 이미지샵</a>
+        </div>
+      </div>
+      <div class="text-xs leading-relaxed text-zinc-400">일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다.<br>© 2026 HOM2BOX. All rights reserved.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { email: "", topics: ["경제·금융", "IT·게임"], schedule: "both", agree: false, done: false, touched: false };
+  renderVals() {
+    const { email, topics, schedule, agree, done, touched } = this.state;
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    const allTopics = ["경제·금융", "IT·게임", "생활·건강", "여행·문화", "종합", "오피니언"];
+    const toggleTopic = (t) => this.setState((s) => ({ topics: s.topics.includes(t) ? s.topics.filter((x) => x !== t) : [...s.topics, t] }));
+    const schedDefs = [
+      { key: "morning", label: "아침", sub: "매일 07:00", icon: "wb_twilight" },
+      { key: "evening", label: "저녁", sub: "매일 18:00", icon: "bedtime" },
+      { key: "both", label: "아침+저녁", sub: "하루 2회", icon: "schedule" },
+    ];
+    const chipCls = (on) => "cursor-pointer inline-flex whitespace-nowrap items-center gap-1 rounded-full border px-3.5 py-2 text-[13px] font-semibold shadow-sm " +
+      (on ? "bg-[#134a9c] text-white border-[#134a9c]" : "bg-white text-zinc-600 border-zinc-200 hover:border-[#134a9c] hover:text-[#134a9c]");
+    const schedLabel = { morning: "아침 (매일 07:00)", evening: "저녁 (매일 18:00)", both: "아침+저녁 (하루 2회)" };
+    return {
+      email, agree,
+      notDone: !done, done,
+      onEmail: (e) => this.setState({ email: e.target.value }),
+      emailBorder: touched && !emailValid ? "border-red-400" : "border-zinc-900 focus-within:border-[#134a9c]",
+      emailError: touched && !emailValid ? "올바른 이메일 주소를 입력해 주세요." : "",
+      topics: allTopics.map((name) => ({ name, on: topics.includes(name), cls: chipCls(topics.includes(name)), toggle: () => toggleTopic(name) })),
+      topicError: touched && topics.length === 0 ? "최소 한 개 분야를 선택해 주세요." : "",
+      schedules: schedDefs.map((s) => ({
+        label: s.label, sub: s.sub, icon: s.icon,
+        cls: "cursor-pointer flex flex-col items-center gap-1 rounded-lg border-2 py-3.5 shadow-sm " +
+          (schedule === s.key ? "border-[#134a9c] bg-[#134a9c]/5 text-[#134a9c]" : "border-zinc-200 bg-white text-zinc-600 hover:border-[#134a9c]"),
+        subCls: schedule === s.key ? "text-[#134a9c]/70" : "text-zinc-400",
+        pick: () => this.setState({ schedule: s.key }),
+      })),
+      toggleAgree: () => this.setState((s) => ({ agree: !s.agree })),
+      agreeBox: agree ? "border-[#134a9c] bg-[#134a9c]" : (touched && !agree ? "border-red-400 bg-white" : "border-zinc-300 bg-white"),
+      agreeError: touched && !agree ? "개인정보 수집·이용에 동의해 주세요." : "",
+      submit: () => {
+        this.setState({ touched: true });
+        if (emailValid && topics.length > 0 && agree) { this.setState({ done: true }); window.scrollTo({ top: 0, behavior: "smooth" }); }
+      },
+      reset: () => this.setState({ done: false, touched: false, email: "", topics: ["경제·금융", "IT·게임"], schedule: "both", agree: false }),
+      summaryTopics: topics.join(", "),
+      summarySchedule: schedLabel[schedule],
+      benefits: [
+        { icon: "article", text: "분야별 핵심 기사 5건씩 — 편집국이 직접 선별" },
+        { icon: "bolt", text: "속보성 이슈는 발송 시간과 별개로 즉시 알림" },
+        { icon: "block", text: "광고성 스팸 없이 뉴스와 가이드만" },
+        { icon: "logout", text: "메일 하단 링크로 한 번에 구독 해지" },
+      ],
+      faq: [
+        { q: "구독은 정말 무료인가요?", a: "네, 뉴스레터 구독과 발송은 전액 무료입니다. 별도 결제 정보가 필요하지 않습니다." },
+        { q: "발송 시간을 바꿀 수 있나요?", a: "구독 후에도 메일 하단의 설정 링크에서 분야와 발송 시간을 언제든 변경할 수 있습니다." },
+        { q: "제휴 매체 기사도 포함되나요?", a: "자체 기사와 함께 제휴 매체 RSS로 제공되는 주요 헤드라인을 분야별로 정리해 담습니다." },
+        { q: "구독 해지는 어떻게 하나요?", a: "모든 메일 하단의 '구독 해지' 링크를 한 번 누르면 즉시 해지됩니다." },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

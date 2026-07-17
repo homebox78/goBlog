@@ -65,6 +65,12 @@ foreach (TOOLS as $id => $t) {
     $out('/tool.php?id=' . urlencode((string) $id), null, 'monthly', '0.6');
 }
 
+// 3-1) 문서도구 허브·서식 10종
+$out('/docs.php', null, 'weekly', '0.8');
+foreach (['pledge','poa','loan','settle','resign','incident','empcert','labor','quote','receipt'] as $dk) {
+    $out('/docs.php?doc=' . $dk, null, 'monthly', '0.6');
+}
+
 // 4) 기사 (최근 48시간이면 news 태그, 대표 이미지 있으면 image 태그)
 $newsCutoff = time() - 48 * 3600;
 foreach ($articles as $a) {

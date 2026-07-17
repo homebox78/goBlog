@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32.png">
+<link rel="apple-touch-icon" href="favicon/apple-touch-icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<style>
+body { margin:0; background:#fff; font-family:'Noto Sans KR',sans-serif; color:#18181b; }
+a { color:inherit; text-decoration:none; }
+a:hover { color:#134a9c; }
+.material-symbols-outlined { line-height:1; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; top:0.5px; }
+body:has(#h2brail:checked) .h2b-rail-items{display:none;}
+body:has(#h2brail:checked) .h2b-rail-chev{display:inline-block;transform:rotate(180deg);}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-3Light.woff') format('woff');font-weight:300;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff');font-weight:400;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-5Medium.woff') format('woff');font-weight:500;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-6Bold.woff') format('woff');font-weight:700;font-display:swap;}
+@font-face{font-family:'Escoredream';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff');font-weight:800;font-display:swap;}
+body, input, button, select, textarea, table { font-family:'Escoredream','Noto Sans KR',sans-serif !important; }
+@keyframes h2bticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+.h2b-track { display:inline-flex; white-space:nowrap; animation:h2bticker 36s linear infinite; }
+.h2b-track:hover { animation-play-state:paused; }
+[data-screen-label="상단 내비게이션"] .overflow-x-auto{scrollbar-width:none;-ms-overflow-style:none;}
+[data-screen-label="상단 내비게이션"] .overflow-x-auto::-webkit-scrollbar{display:none;}
+.h2b-pause { display:none; }
+.h2b-pause:checked ~ .h2b-bar .h2b-track { animation-play-state:paused !important; }
+.h2b-ico-play { display:none; }
+.h2b-pause:checked ~ label .h2b-ico-play { display:inline-flex; }
+.h2b-pause:checked ~ label .h2b-ico-pause { display:none; }
+</style>
+<script>
+document.addEventListener('click',function(e){var b=e.target.closest('.h2b-bar');if(!b||e.target.closest('a'))return;var t=b.querySelector('.h2b-track');if(t)t.classList.toggle('h2b-paused');});
+</script>
+</helmet>
+<input type="checkbox" id="h2bnav" class="peer hidden">
+<label for="h2bnav" class="fixed inset-0 z-[80] hidden bg-black/50 backdrop-blur-sm peer-checked:block lg:!hidden"></label>
+<aside class="fixed left-0 top-0 z-[90] flex h-full w-[284px] max-w-[82%] -translate-x-full flex-col overflow-y-auto bg-white shadow-2xl transition-transform duration-300 ease-out peer-checked:translate-x-0 lg:hidden">
+  <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3.5">
+    <span class="flex items-center gap-1.5"><svg width="22" height="22" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/></svg><span class="text-[17px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[12px] font-bold text-zinc-500">뉴스</span></span>
+    <label for="h2bnav" class="flex h-9 w-9 cursor-pointer items-center justify-center text-zinc-500"><span class="material-symbols-outlined text-[24px]">close</span></label>
+  </div>
+  <nav class="flex flex-col p-2">
+    <a href="HOM2BOX 홈.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">홈</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=경제·금융" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">경제·금융</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=IT·게임" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">IT·게임</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=생활·건강" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">생활·건강</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=여행·문화" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">여행·문화</a>
+    <a href="HOM2BOX 카테고리.dc.html?cat=종합" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">종합</a>
+    <div class="my-1.5 border-t border-zinc-100"></div>
+    <a href="HOM2BOX 지원금.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">지원금</a>
+    <a href="HOM2BOX 계산기.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">계산기</a>
+    <a href="HOM2BOX 문서도구.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">문서도구</a>
+    <a href="HOM2BOX 언론사.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">언론사</a>
+    <a href="HOM2BOX 오피니언.dc.html" class="rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50">오피니언</a>
+    <a href="HOM2BOX 검색.dc.html" class="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-[14px] font-bold text-zinc-700 hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">search</span>검색</a>
+  </nav>
+</aside>
+<input type="checkbox" id="h2brail" class="hidden">
+<aside class="fixed left-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-zinc-200 bg-white/90 p-1.5 shadow-lg backdrop-blur 2xl:flex">
+  <label for="h2brail" title="접기/펼치기" class="flex h-9 w-11 flex-none cursor-pointer items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px] transition-transform h2b-rail-chev">chevron_left</span></label>
+  <div class="flex flex-col items-center gap-1 h2b-rail-items">
+  <a href="HOM2BOX 홈.dc.html" title="뉴스" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-[#134a9c] bg-[#134a9c]/10 transition-colors"><span class="material-symbols-outlined text-[22px]">public</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">뉴스</span></a>
+  <a href="HOM2BOX 오피니언.dc.html" title="리포트" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">description</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">리포트</span></a>
+  <a href="HOM2BOX 언론사.dc.html" title="커뮤니티" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">forum</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">커뮤니티</span></a>
+  <a href="HOM2BOX 계산기.dc.html" title="계산기" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">calculate</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">계산기</span></a>
+  <a href="HOM2BOX 지원금.dc.html" title="지원금" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">volunteer_activism</span><span class="pointer-events-none absolute left-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">지원금</span></a>
+  </div>
+</aside>
+<aside class="fixed right-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-zinc-200 bg-white/90 p-1.5 shadow-lg backdrop-blur 2xl:flex">
+  <label for="h2brail" title="접기/펼치기" class="flex h-9 w-11 flex-none cursor-pointer items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px] transition-transform h2b-rail-chev">chevron_right</span></label>
+  <div class="flex flex-col items-center gap-1 h2b-rail-items">
+  <a href="HOM2BOX 언론사.dc.html" title="커뮤니티" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">chat_bubble</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">커뮤니티</span></a>
+  <a href="HOM2BOX 검색.dc.html" title="캘린더" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">event_available</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">캘린더</span></a>
+  <a href="HOM2BOX 구독신청.dc.html" title="구독" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">bookmark</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">구독</span></a>
+  <div class="my-0.5 h-px w-6 bg-zinc-200"></div>
+  <a href="#" title="맨 위로" class="group relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"><span class="material-symbols-outlined text-[22px]">arrow_upward</span><span class="pointer-events-none absolute right-[52px] whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">맨 위로</span></a>
+  </div>
+</aside>
+<div class="min-h-screen bg-white">
+  <div class="border-b border-zinc-200 bg-white">
+    <div class="mx-auto max-w-[1399px] flex items-stretch">
+      <input type="checkbox" id="h2btk" class="h2b-pause">
+      <label for="h2btk" title="클릭하면 멈춤/재생" class="flex flex-none cursor-pointer select-none items-center gap-1 bg-[#b91c1c] px-3 text-white">
+        <span class="h2b-ico-pause material-symbols-outlined text-[16px]">pause</span><span class="h2b-ico-play material-symbols-outlined text-[16px]">play_arrow</span>
+        <span class="whitespace-nowrap text-[12.5px] font-extrabold">속보</span>
+      </label>
+      <div class="h2b-bar min-w-0 flex-1 overflow-hidden py-2">
+        <div class="h2b-track">
+          <span class="inline-flex">
+            <a href="HOM2BOX 기사 상세.dc.html" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· PPI 발표 앞두고 코스피 6,800선 회복 시도…외국인 순매수 전환</a>
+            <a href="https://hom2box.com/article.php?id=72" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 경찰 과태료 국세청 이관…납부 창구·방법 전면 변경</a>
+            <a href="https://hom2box.com/article.php?id=65" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 태풍 바비 북상…제주공항 결항 105편 초과</a>
+            <a href="https://hom2box.com/article.php?id=36" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· SK하이닉스 주가 급락 -15%, 나스닥 상장 3일 만에</a>
+            <a href="https://hom2box.com/article.php?id=33" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 기후동행카드 혜택 9월 종료…충전 마감일 확인 필수</a>
+          </span>
+          <span class="inline-flex" aria-hidden="true">
+            <a href="HOM2BOX 기사 상세.dc.html" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· PPI 발표 앞두고 코스피 6,800선 회복 시도…외국인 순매수 전환</a>
+            <a href="https://hom2box.com/article.php?id=72" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 경찰 과태료 국세청 이관…납부 창구·방법 전면 변경</a>
+            <a href="https://hom2box.com/article.php?id=65" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 태풍 바비 북상…제주공항 결항 105편 초과</a>
+            <a href="https://hom2box.com/article.php?id=36" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· SK하이닉스 주가 급락 -15%, 나스닥 상장 3일 만에</a>
+            <a href="https://hom2box.com/article.php?id=33" target="_blank" class="mx-6 text-[11px] font-normal text-zinc-700 hover:text-[#134a9c]">· 기후동행카드 혜택 9월 종료…충전 마감일 확인 필수</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-screen-label="상단 내비게이션" class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-zinc-200">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 flex flex-wrap items-center gap-5 lg:flex-nowrap">
+      <label for="h2bnav" class="lg:hidden flex h-9 w-9 flex-none cursor-pointer items-center justify-center self-center text-zinc-700"><span class="material-symbols-outlined text-[26px]">menu</span></label>
+      <a href="HOM2BOX 홈.dc.html" class="flex flex-none items-center gap-1.5 py-3"><svg width="26" height="26" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#ffffff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#ffffff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#ffffff"/></svg><span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">뉴스</span></a>
+      <div class="hidden overflow-x-auto lg:flex lg:flex-1 lg:flex-row lg:items-center lg:gap-5">
+      <a href="HOM2BOX 홈.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">홈</a>
+      <span class="flex-none whitespace-nowrap py-4 text-sm font-bold text-[#134a9c] border-b-[3px] border-[#134a9c]">경제·금융</span>
+      <a href="HOM2BOX 홈.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">IT·게임</a>
+      <a href="HOM2BOX 홈.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">생활·건강</a>
+      <a href="HOM2BOX 홈.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">여행·문화</a>
+      <a href="HOM2BOX 홈.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">종합</a>
+      <a href="HOM2BOX 지원금.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">지원금</a>
+      <a href="HOM2BOX 계산기.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">계산기</a>
+      <a href="HOM2BOX 문서도구.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">문서도구</a>
+      <a href="HOM2BOX 언론사.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold">언론사</a>
+      <a href="HOM2BOX 홈.dc.html" class="flex-none whitespace-nowrap py-4 text-sm font-bold text-zinc-400 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">arrow_back</span>홈으로</a>
+      </div>
+    </div>
+  </div>
+  <div class="mx-auto max-w-[1399px] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 lg:gap-10 px-4 sm:px-6 py-8">
+    <div data-screen-label="기사 본문">
+      <div class="pointer-events-none fixed left-[max(8px,calc((100vw-1399px)/2-62px))] top-1/2 z-40 hidden -translate-y-1/2 2xl:block">
+        <div class="pointer-events-auto flex flex-col items-center gap-2.5">
+          <div class="mb-0.5 text-center leading-tight"><div class="text-[15px] font-extrabold tracking-tight">1.2K</div><div class="text-[9.5px] font-bold uppercase tracking-[0.14em] text-zinc-400">Shares</div></div>
+          <button onClick="{{ railX }}" title="X(트위터)" class="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-900 hover:text-white"><span class="material-symbols-outlined text-[19px]">share</span></button>
+          <button onClick="{{ railFb }}" title="페이스북" class="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-[#1877f2] hover:bg-[#1877f2] hover:text-white"><span class="material-symbols-outlined text-[19px]">public</span></button>
+          <a href="{{ mailHref }}" title="메일" class="flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-zinc-900 hover:bg-zinc-900 hover:text-white"><span class="material-symbols-outlined text-[19px]">mail</span></a>
+          <button onClick="{{ copyLink }}" title="링크 복사" class="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-[#134a9c] hover:bg-[#134a9c] hover:text-white"><span class="material-symbols-outlined text-[19px]">link</span></button>
+        </div>
+      </div>
+      <div class="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-[#e0392b]"><span class="h-[13px] w-[3px] rounded-full bg-[#e0392b]"></span>경제·금융</div>
+      <h1 class="mb-4 text-[26px] sm:text-[36px] font-extrabold leading-[1.28] tracking-tight">PPI 발표 주식 시장 영향 보는 법 2026 완전 정리</h1>
+      <div class="flex justify-between items-center pb-4 border-b border-zinc-200">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[#134a9c] text-sm font-extrabold text-white">H</div>
+          <div>
+            <div class="text-[13.5px] font-bold">HOM2BOX 편집국 <span class="ml-1 inline-flex items-center rounded-md bg-[#134a9c] px-2 py-0.5 text-[10.5px] font-bold text-white">자체기사</span></div>
+            <div class="mt-0.5 text-xs text-zinc-400">입력 2026.07.16 23:11 · 읽기 7분</div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <div class="relative">
+            <button onClick="{{ toggleShare }}" title="공유" aria-expanded="{{ shareOpen }}" class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-white text-sm text-zinc-500 shadow-sm hover:bg-zinc-50 aria-expanded:border-[#134a9c] aria-expanded:text-[#134a9c]"><span class="material-symbols-outlined text-[18px]">share</span></button>
+            <sc-if value="{{ shareOpen }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ closeShare }}" class="fixed inset-0 z-40"></div>
+              <div class="absolute right-0 top-11 z-50 w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-xl">
+                <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">공유하기</div>
+                <sc-for list="{{ shareItems }}" as="s" hint-placeholder-count="4">
+                  <button onClick="{{ s.act }}" class="flex w-full cursor-pointer items-center gap-2.5 border-0 bg-transparent px-3 py-2 text-left text-[13.5px] font-semibold text-zinc-700 hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px] text-zinc-400">{{ s.icon }}</span>{{ s.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+          <a href="{{ mailHref }}" title="메일로 보내기" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-sm text-zinc-500 shadow-sm hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">mail</span></a>
+          <div class="relative">
+            <button onClick="{{ copyLink }}" title="링크 복사" class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-white text-sm text-zinc-500 shadow-sm hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">link</span></button>
+            <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+              <div class="absolute right-0 top-11 z-50 flex items-center gap-1 whitespace-nowrap rounded-lg bg-[#134a9c] px-3 py-1.5 text-[12.5px] font-bold text-white shadow-lg"><span class="material-symbols-outlined text-[15px]">check</span>링크 복사됨</div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+        <div class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg">{{ toast }}</div>
+      </sc-if>
+      <div class="my-7 overflow-hidden rounded-xl border border-zinc-200">
+        <div class="border-b border-zinc-200 px-5 py-3.5"><div class="flex items-center gap-2 text-[15px] font-bold tracking-tight"><span class="material-symbols-outlined text-[19px] text-[#e0392b]">bolt</span>핵심 요약</div></div>
+        <div class="divide-y divide-zinc-100">
+          <div class="flex gap-3.5 px-5 py-3.5"><span class="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-zinc-900 text-[12px] font-bold text-white">1</span><p class="m-0 text-[14.5px] leading-relaxed text-zinc-700">PPI는 CPI보다 1~3개월 앞서 움직이는 선행 물가 지표이며, 연준 금리 결정의 선제 신호로 작동합니다.</p></div>
+          <div class="flex gap-3.5 px-5 py-3.5"><span class="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-zinc-900 text-[12px] font-bold text-white">2</span><p class="m-0 text-[14.5px] leading-relaxed text-zinc-700">시장 반응의 기준은 절대 수치가 아닌 컨센서스 대비 격차 — 0.1%p 차이도 장중 1~2% 변동을 유발할 수 있습니다.</p></div>
+          <div class="flex gap-3.5 px-5 py-3.5"><span class="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-zinc-900 text-[12px] font-bold text-white">3</span><p class="m-0 text-[14.5px] leading-relaxed text-zinc-700">PPI 상승 시 에너지·원자재는 수혜, 성장주·소비재는 마진 압박 — 발표 당일 10년물 금리와 달러인덱스를 함께 확인해야 합니다.</p></div>
+        </div>
+      </div>
+      <div class="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-zinc-200 px-4 py-3 text-xs text-zinc-500">
+        <span class="flex items-center gap-1.5 font-bold text-zinc-900"><span class="material-symbols-outlined text-[16px] text-zinc-400">list</span>목차</span>
+        <sc-for list="{{ toc }}" as="t" hint-placeholder-count="6">
+          <button onClick="{{ t.go }}" class="cursor-pointer border-0 bg-transparent p-0 text-xs text-zinc-500 hover:text-[#134a9c] hover:underline">{{ t.label }}</button>
+        </sc-for>
+      </div>
+      <img src="https://hom2box.com/goBlog/media/a69-m229-1784128572937.webp" class="block w-full aspect-video rounded-lg object-cover">
+      <div class="mt-2 mb-6 text-xs text-zinc-400">PPI 발표 직후 시장 반응을 모니터링하는 투자자 · AI 생성 이미지</div>
+      <p class="mb-4 text-[15px] sm:text-[16.5px] leading-relaxed sm:leading-loose [&::first-letter]:float-left [&::first-letter]:mr-3 [&::first-letter]:mt-1 [&::first-letter]:font-extrabold [&::first-letter]:text-[44px] sm:[&::first-letter]:text-[58px] [&::first-letter]:leading-[0.82] [&::first-letter]:text-zinc-900">PPI 발표 주식 시장 영향을 제대로 읽으려면 숫자 하나가 아니라 <b>예상치와의 격차</b>를 봐야 합니다. 발표 당일 코스피가 1% 이상 출렁이는 경우도 적지 않습니다. 이 글 하나로 PPI 개념부터 실전 투자 판단까지 끝냅니다.</p>
+      <h2 id="toc-1" class="mt-8 mb-3 border-t border-zinc-100 pt-6 text-[19px] sm:text-[22px] font-extrabold">PPI, 한 줄로 정리하면?</h2>
+      <p class="mb-4 text-[15px] sm:text-[16.5px] leading-relaxed sm:leading-loose">PPI(생산자물가지수, Producer Price Index)는 기업이 제품을 출하할 때 받는 가격 변동을 측정하는 지표입니다. 소비자가 직접 느끼는 CPI(소비자물가지수)보다 <b>1~3개월 앞서 움직이는 선행 지표</b>입니다. PPI가 오르면 그 압력이 시간차를 두고 CPI로 전이됩니다.</p>
+      <p class="mb-4 text-[15px] sm:text-[16.5px] leading-relaxed sm:leading-loose">미국 PPI는 <a href="https://www.bls.gov" target="_blank" class="text-[#134a9c] underline">노동통계국(BLS)</a>이 매월 발표하며, 한국 PPI는 한국은행이 매월 발표해 <a href="https://ecos.bok.or.kr" target="_blank" class="text-[#134a9c] underline">ECOS</a>에서 조회할 수 있습니다. 헤드라인 PPI 외에 <b>에너지·식품을 제외한 근원 PPI(Core PPI)</b>를 반드시 함께 확인해야 합니다.</p>
+      <h2 id="toc-2" class="mt-8 mb-3 border-t border-zinc-100 pt-6 text-[19px] sm:text-[22px] font-extrabold">시장이 PPI에 반응하는 이유는?</h2>
+      <p class="mb-4 text-[15px] sm:text-[16.5px] leading-relaxed sm:leading-loose">연준(Fed)의 기준금리 결정이 인플레이션 경로에 달려 있기 때문입니다. PPI 상승 → 소비자 물가 상승 기대 → 금리 인하 지연 → 주가 하락 압력. 이 인과 체인이 시장 참가자들의 머릿속에 공식처럼 깔려 있습니다. 반대로 PPI 하락 → 물가 둔화 기대 → 금리 인하 가능성 상승 → 위험자산 선호 → 주가 상승입니다.</p>
+      <img src="https://hom2box.com/goBlog/media/a69-m230-1784128580424.webp" class="block w-full aspect-video rounded-lg object-cover">
+      <div class="mt-2 mb-6 text-xs text-zinc-400">예상치 대비 결과에 따라 시장 반응이 달라진다 · AI 생성 이미지</div>
+      <div class="my-6 flex h-28 items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 font-mono text-xs text-zinc-400">AD · 본문 중간 인아티클 (반응형)</div>
+      <h2 id="toc-3" class="mt-8 mb-3 border-t border-zinc-100 pt-6 text-[19px] sm:text-[22px] font-extrabold">PPI 발표 결과별 시나리오 — 예상치가 기준입니다</h2>
+      <p class="mb-4 text-[15px] sm:text-[16.5px] leading-relaxed sm:leading-loose">시장은 <b>절대 수치가 아닌 컨센서스(시장 예상치) 대비 결과</b>에 반응합니다.</p>
+      <div class="mb-4 overflow-x-auto rounded-lg border border-zinc-200">
+        <table class="w-full min-w-[480px] border-collapse text-sm">
+          <thead><tr class="bg-zinc-50 text-left">
+            <th class="border-b border-zinc-200 px-3.5 py-2.5 font-extrabold">결과</th>
+            <th class="border-b border-zinc-200 px-3.5 py-2.5 font-extrabold">시장 해석</th>
+            <th class="border-b border-zinc-200 px-3.5 py-2.5 font-extrabold">주식 반응</th>
+            <th class="border-b border-zinc-200 px-3.5 py-2.5 font-extrabold">금리·달러</th>
+          </tr></thead>
+          <tbody>
+            <tr class="border-b border-zinc-100"><td class="px-3.5 py-2.5 font-bold">예상치 하회</td><td class="px-3.5 py-2.5">물가 둔화, 금리 인하 기대 상승</td><td class="px-3.5 py-2.5">나스닥·성장주 강세</td><td class="px-3.5 py-2.5">금리↓ 달러↓</td></tr>
+            <tr class="border-b border-zinc-100"><td class="px-3.5 py-2.5 font-bold">예상치 부합</td><td class="px-3.5 py-2.5">시장 중립, 방향성 없음</td><td class="px-3.5 py-2.5">변동성 제한적</td><td class="px-3.5 py-2.5">큰 변화 없음</td></tr>
+            <tr><td class="px-3.5 py-2.5 font-bold">예상치 상회</td><td class="px-3.5 py-2.5">인플레 재점화 우려, 긴축 지속</td><td class="px-3.5 py-2.5">기술주·성장주 약세</td><td class="px-3.5 py-2.5">금리↑ 달러↑</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mb-4 text-[15px] sm:text-[16.5px] leading-relaxed sm:leading-loose">예상치 대비 <b>0.1%p 차이</b>도 장중 1~2% 급등락을 유발할 수 있습니다. 단, 같은 날 고용보고서나 CPI가 함께 발표될 경우 PPI 단독 효과는 희석됩니다.</p>
+      <h2 id="toc-4" class="mt-8 mb-3 border-t border-zinc-100 pt-6 text-[19px] sm:text-[22px] font-extrabold">업종별로 반응이 다릅니다</h2>
+      <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="rounded-lg border border-zinc-200 p-4 shadow-sm">
+          <div class="mb-2 text-sm font-extrabold text-emerald-800">PPI 상승 시 상대적으로 유리</div>
+          <div class="text-sm leading-loose text-zinc-700">· 에너지(원유·가스) — 투입 가격 상승이 매출로 직결<br>· 원자재·소재(철강, 화학) — 가격 전가 용이<br>· 농업 관련주 — 곡물 PPI 급등 구간 수혜</div>
+        </div>
+        <div class="rounded-lg border border-zinc-200 p-4 shadow-sm">
+          <div class="mb-2 text-sm font-extrabold text-red-800">PPI 상승 시 상대적으로 불리</div>
+          <div class="text-sm leading-loose text-zinc-700">· 반도체·IT 하드웨어 — 부품 원가 상승, 마진 압박<br>· 소비재 — 원가 전가 지연으로 이익률 하락<br>· 부동산·유틸리티 — 금리 상승 압박 직격</div>
+        </div>
+      </div>
+      <h2 id="toc-5" class="mt-8 mb-3 border-t border-zinc-100 pt-6 text-[19px] sm:text-[22px] font-extrabold">실전 투자자의 PPI 발표일 체크리스트</h2>
+      <p class="mb-3 text-[15.5px] leading-loose"><b>발표 전 (D-1)</b> — 시장 컨센서스 확인(전월·전년 대비), 근원 PPI 예상치 별도 확인, 같은 주 발표 지표 파악(CPI·FOMC·고용보고서), 포트폴리오 내 금리 민감 비중 점검.</p>
+      <p class="mb-4 text-[15.5px] leading-loose"><b>발표 직후 (당일)</b> — 헤드라인 vs 근원 PPI 동시 비교, 0.2%p 이상 괴리 시 변동성 경계, 미국 10년물 국채 금리 즉시 확인, 달러인덱스(DXY) 변화로 국내 수출주 판단.</p>
+      <img src="https://hom2box.com/goBlog/media/a69-m231-1784128585781.webp" class="block w-full aspect-video rounded-lg object-cover">
+      <div class="mt-2 mb-6 text-xs text-zinc-400">발표 당일 체크리스트를 점검하면 흔들리지 않는다 · AI 생성 이미지</div>
+      <h2 id="toc-6" class="mt-8 mb-3 border-t border-zinc-100 pt-6 text-[19px] sm:text-[22px] font-extrabold">PPI와 CPI, 무엇이 더 중요한가요?</h2>
+      <p class="mb-4 text-[15px] sm:text-[16.5px] leading-relaxed sm:leading-loose">연준이 최우선으로 참고하는 지표는 PCE이며 그 다음이 CPI입니다. PPI는 CPI의 선행 지표로서 '앞으로 CPI가 어떻게 될지' 예측하는 데 활용합니다. 시장 반응 강도는 <b>CPI &gt; PPI &gt; PCE</b> 순서로 나타나는 경향이 있으며, 세 지표가 같은 방향을 가리킬 때 연준 정책 전환 가능성이 높아집니다.</p>
+      <p class="mb-4 text-[15px] sm:text-[16.5px] leading-relaxed sm:leading-loose">미국 PPI는 한국 시간 기준 보통 <b>밤 9시 30분</b>(서머타임 적용 시)에 발표되어 익일 코스피 시초가에 선반영되는 경우가 많습니다. PPI 상승 → 달러 강세 → 원화 약세 → 수입 원자재 원가 상승 → 국내 제조업 마진 압박. 이 체인이 국내 시장에 직접 연결됩니다.</p>
+      <div class="my-7 flex flex-wrap gap-2">
+        <sc-for list="{{ tags }}" as="tag" hint-placeholder-count="6">
+          <span class="inline-flex items-center rounded-full bg-[#134a9c]/10 px-3 py-1 text-xs font-medium text-[#134a9c]">{{ tag }}</span>
+        </sc-for>
+      </div>
+      <div class="flex items-center gap-3.5 rounded-lg border border-zinc-200 bg-zinc-50/50 px-5 py-4">
+        <div class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#134a9c] text-[15px] font-extrabold text-white">H</div>
+        <div class="text-[13px] leading-relaxed text-zinc-500"><b class="text-zinc-900">HOM2BOX 편집국</b><br>매일 아침·저녁 경제·IT·생활 분야의 자체 기사와 제휴 매체 제공 기사를 선별해 발행합니다. 일부 기사에는 제휴 링크가 포함될 수 있습니다.</div>
+      </div>
+      <div class="mt-8 border-t border-zinc-200 pt-6">
+        <div class="mb-4 flex items-center gap-2.5"><span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span><span class="text-[17px] font-bold tracking-tight">관련 기사 <span class="ml-1 text-xs font-medium text-zinc-400">경제·금융 최신</span></span></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <sc-for list="{{ related }}" as="rel" hint-placeholder-count="3">
+            <a href="{{ rel.href }}" target="_blank" class="block group rounded-lg border border-zinc-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+              <div class="w-full aspect-[16/10] bg-cover bg-center bg-zinc-100 flex items-center justify-center font-mono text-[11px] text-zinc-400" style="{{ rel.thumbStyle }}">{{ rel.thumbLabel }}</div>
+              <div class="p-3">
+                <div class="text-sm font-bold leading-normal group-hover:text-[#134a9c]">{{ rel.title }}</div>
+                <div class="mt-1.5 text-[11.5px] text-zinc-400">{{ rel.date }}</div>
+              </div>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div data-screen-label="사이드바" class="flex flex-col gap-5 self-start sticky top-16">
+      <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div class="border-b border-zinc-100 px-4 pt-3.5 pb-2.5 text-[15.5px] font-extrabold">많이 본 뉴스</div>
+        <div class="px-4 py-1.5">
+          <sc-for list="{{ popular }}" as="p" hint-placeholder-count="5">
+            <a href="{{ p.href }}" target="_blank" class="flex items-baseline gap-3 border-b border-zinc-50 py-2.5 last:border-0 group">
+              <span class="w-4 flex-none text-[15px] font-extrabold text-[#134a9c]">{{ p.n }}</span>
+              <span class="flex-1 text-[13px] font-semibold leading-normal group-hover:text-[#134a9c]">{{ p.title }}</span>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+      <div class="flex h-[280px] items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-center font-mono text-xs text-zinc-400">AD · 사이드바 (300×250)</div>
+      <a href="https://hom2box.com/article.php?id=15" target="_blank" class="block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div class="mb-2.5 flex items-center justify-between"><span class="text-[13px] font-extrabold text-[#134a9c]">파트너스 추천</span><span class="inline-flex items-center rounded border border-zinc-200 px-1.5 text-[10.5px] text-zinc-400">AD</span></div>
+        <div class="flex h-28 w-full items-center justify-center rounded-md bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)] font-mono text-[11px] text-zinc-400">쿠팡파트너스 상품 이미지</div>
+        <div class="mt-2.5 text-sm font-bold leading-normal">모나미 153 메탈 볼펜 0.7mm 블랙 2개</div>
+        <div class="mt-1.5 flex items-center gap-1 text-[11px] text-zinc-400"><span class="material-symbols-outlined text-[13px]">info</span>구매 시 운영자가 수수료를 제공받을 수 있습니다</div>
+      </a>
+      <a href="HOM2BOX 구독신청.dc.html" class="block rounded-lg border border-[#134a9c] bg-[#134a9c] p-4 text-white transition-colors hover:bg-[#0f3d82]">
+        <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">mail</span>무료 뉴스레터 구독</div>
+        <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/80">매일 아침·저녁, 분야별 핵심 기사를 메일함에서 받아보세요.</div>
+        <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[#134a9c]">구독하기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
+      </a>
+      <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div class="border-b border-zinc-100 px-4 pt-3.5 pb-2.5 text-[15.5px] font-extrabold">바로가기</div>
+        <div class="flex flex-col p-2">
+          <a href="HOM2BOX 문서도구.dc.html" class="group flex items-center gap-3 rounded-lg px-2.5 py-2.5 hover:bg-zinc-50">
+            <span class="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-[#134a9c]/10 text-[#134a9c]"><span class="material-symbols-outlined text-[19px]">draft</span></span>
+            <span class="min-w-0 flex-1"><span class="block text-[13.5px] font-bold text-zinc-700 group-hover:text-[#134a9c]">문서 도구</span><span class="block text-[11.5px] text-zinc-400">각서·위임장 등 10종 서식</span></span>
+            <span class="material-symbols-outlined flex-none text-[18px] text-zinc-300 group-hover:text-[#134a9c]">chevron_right</span>
+          </a>
+          <a href="HOM2BOX 계산기.dc.html" class="group flex items-center gap-3 rounded-lg px-2.5 py-2.5 hover:bg-zinc-50">
+            <span class="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-[#134a9c]/10 text-[#134a9c]"><span class="material-symbols-outlined text-[19px]">calculate</span></span>
+            <span class="min-w-0 flex-1"><span class="block text-[13.5px] font-bold text-zinc-700 group-hover:text-[#134a9c]">계산기</span><span class="block text-[11.5px] text-zinc-400">연봉·세금·대출 등 27종</span></span>
+            <span class="material-symbols-outlined flex-none text-[18px] text-zinc-300 group-hover:text-[#134a9c]">chevron_right</span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-10">
+      <div class="mb-6 grid grid-cols-2 gap-8 border-b border-zinc-200 pb-8 sm:grid-cols-[1.6fr_repeat(4,1fr)]">
+        <div class="col-span-2 sm:col-span-1">
+          <div class="text-[19px] font-extrabold">HOM2BOX <span class="text-[#134a9c]">뉴스</span></div>
+          <div class="mt-2 max-w-xs text-[12.5px] leading-relaxed text-zinc-500">매일 아침·저녁, 편집국이 선별한 이슈·경제·IT·생활 뉴스와 가이드를 발행합니다.</div>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">뉴스</div>
+          <a href="HOM2BOX 홈.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">홈</a>
+          <a href="HOM2BOX 오피니언.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">오피니언</a>
+          <a href="HOM2BOX 검색.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">뉴스 검색</a>
+          <a href="HOM2BOX 구독신청.dc.html" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">뉴스레터 구독</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">카테고리</div>
+          <a href="HOM2BOX 카테고리.dc.html?cat=경제·금융" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">경제·금융</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=IT·게임" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">IT·게임</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=생활·건강" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">생활·건강</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=여행·문화" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">여행·문화</a>
+          <a href="HOM2BOX 카테고리.dc.html?cat=종합" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">종합</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">채널</div>
+          <a href="https://hom2box.com/wordpress/" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Wordpress</a>
+          <a href="https://hom2box.blogspot.com/" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">BlogSpot</a>
+          <a href="https://blog.naver.com/coreselect" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Naver Blog</a>
+          <a href="https://hom2box.tistory.com" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">Tistory</a>
+        </div>
+        <div>
+          <div class="mb-2.5 text-[13px] font-extrabold">약관·정책</div>
+          <a href="https://hom2box.com/about.php" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">소개</a>
+          <a href="HOM2BOX 개인정보처리방침.dc.html" class="block py-1 text-[13px] font-semibold text-zinc-600 hover:text-[#134a9c]">개인정보처리방침</a>
+          <a href="mailto:privacy@hom2box.com" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">문의하기</a>
+          <a href="https://hom2box.com/imgshop.php" target="_blank" class="block py-1 text-[13px] text-zinc-500 hover:text-[#134a9c]">AI 이미지샵</a>
+        </div>
+      </div>
+      <div class="text-xs leading-relaxed text-zinc-400">일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다.<br>© 2026 HOM2BOX. All rights reserved.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { toast: "", shareOpen: false, copied: false };
+  showToast(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: "" }), 2200);
+  }
+  async copyText(t) {
+    try { await navigator.clipboard.writeText(t); }
+    catch (e) {
+      try { const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); } catch (_) {}
+    }
+  }
+  flashCopied() {
+    this.setState({ copied: true });
+    clearTimeout(this._c);
+    this._c = setTimeout(() => this.setState({ copied: false }), 1800);
+  }
+  renderVals() {
+    const A = (id) => "https://hom2box.com/article.php?id=" + id;
+    const M = "https://hom2box.com/goBlog/media/";
+    const title = "PPI 발표 주식 시장 영향 보는 법 2026 완전 정리";
+    const url = "https://hom2box.com/article.php?id=69";
+    const tocDefs = ["PPI 한 줄 정리", "시장이 반응하는 이유", "시나리오별 반응", "업종별 영향", "발표일 체크리스트", "PPI vs CPI"];
+    const openWin = (u) => { window.open(u, "_blank", "noopener,width=600,height=520"); this.setState({ shareOpen: false }); };
+    return {
+      toast: this.state.toast,
+      shareOpen: this.state.shareOpen,
+      copied: this.state.copied,
+      toggleShare: () => this.setState((s) => ({ shareOpen: !s.shareOpen })),
+      closeShare: () => this.setState({ shareOpen: false }),
+      shareItems: [
+        { icon: "content_copy", label: "링크 복사", act: async () => { await this.copyText(url); this.setState({ shareOpen: false }); this.flashCopied(); } },
+        { icon: "mail", label: "메일로 보내기", act: () => { this.setState({ shareOpen: false }); location.href = "mailto:?subject=" + encodeURIComponent(title) + "&body=" + encodeURIComponent(title + "\n" + url); } },
+        { icon: "share", label: "X(트위터)", act: () => openWin("https://twitter.com/intent/tweet?text=" + encodeURIComponent(title) + "&url=" + encodeURIComponent(url)) },
+        { icon: "public", label: "페이스북", act: () => openWin("https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(url)) },
+      ],
+      mailHref: "mailto:?subject=" + encodeURIComponent(title) + "&body=" + encodeURIComponent(title + "\n" + url),
+      copyLink: async () => { await this.copyText(url); this.flashCopied(); },
+      railX: () => openWin("https://twitter.com/intent/tweet?text=" + encodeURIComponent(title) + "&url=" + encodeURIComponent(url)),
+      railFb: () => openWin("https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(url)),
+      toc: tocDefs.map((label, i) => ({
+        label: "\u2460\u2461\u2462\u2463\u2464\u2465"[i] + " " + label,
+        go: () => {
+          const el = document.getElementById("toc-" + (i + 1));
+          if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 70, behavior: "smooth" });
+        },
+      })),
+      tags: ["#PPI발표", "#생산자물가지수", "#연준금리", "#근원PPI", "#코스피영향", "#달러인덱스"],
+      related: [
+        { title: "코스피 패닉셀 원인 대처법 2026 완전 정리", date: "2026.07.16", img: M + "a50-m171-1783957980856.webp", href: A(50) },
+        { title: "국민성장펀드 100만원 저리대출 금리 조건 2026", date: "2026.07.16", img: M + "a68-m226-1784127987389.webp", href: A(68) },
+        { title: "달러 예금 가입 은행 금리 비교 2026 — 어디가 유리할까", date: "2026.07.15", href: A(24) },
+      ].map((r) => ({ ...r, thumbStyle: { backgroundImage: r.img ? "url(" + r.img + ")" : "repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5 8px,#e4e4e7 8px,#e4e4e7 16px)" }, thumbLabel: r.img ? "" : "기사 썸네일" })),
+      popular: [
+        [72, "경찰 과태료 국세청 이관 납부 방법 2026 완전 정리"],
+        [36, "SK하이닉스 주가 폭락 -15%, 나스닥 상장 3일 만에 무슨 일이"],
+        [65, "태풍 바비 결항 환불 절차 항공사별 완전 정리 2026"],
+        [64, "닌텐도 스위치2 OLED 스위치1 차이 비교 2026"],
+        [33, "기후동행카드 혜택 종료 2026 — 충전 마감일 총정리"],
+      ].map(([id, t], i) => ({ n: i + 1, title: t, href: A(id) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

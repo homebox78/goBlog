@@ -156,6 +156,16 @@ if (preg_match_all('/<h2\b[^>]*>(.*?)<\/h2>(.*?)(?=<h2\b|$)/is', $html, $mm, PRE
     }
 }
 
+// 본문 끝 해시태그 문단 → 칩 섹션으로 분리(시안). #태그 위주 문단이면 추출 후 본문에서 제거.
+$hashtags = [];
+if (preg_match('/<p\b[^>]*>((?:\s|&nbsp;|#[^\s<#]+)+)<\/p>\s*$/u', $html, $hm)) {
+    preg_match_all('/#([^\s<#&]+)/u', $hm[1], $tm);
+    if (count($tm[1] ?? []) >= 3) {
+        $hashtags = array_slice($tm[1], 0, 12);
+        $html = substr($html, 0, -strlen($hm[0]));
+    }
+}
+
 // 관련 기사 — 같은 섹션 최신 6 (자기 제외)
 $related = [];
 try {
@@ -230,6 +240,8 @@ html { scroll-behavior:smooth; }
 .article-body h3 { font-size:18px; font-weight:700; margin:24px 0 10px; }
 .article-body p { font-size:16.5px; line-height:1.95; margin:14px 0; color:#222; }
 .article-body a { color:<?= NEWS_PRIMARY ?>; text-decoration:underline; }
+/* 리드 문단 드롭캡(시안) */
+.article-body > p:first-of-type::first-letter { float:left; margin:6px 10px 0 0; font-size:52px; line-height:0.85; font-weight:800; color:#16181d; }
 </style>
 
 <div class="min-h-screen bg-white">
@@ -241,7 +253,7 @@ html { scroll-behavior:smooth; }
   <div class="mx-auto max-w-[1399px] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-10 px-6 py-8">
     <!-- 기사 본문 -->
     <div class="min-w-0">
-      <div class="mb-3 text-[13px] font-bold text-[<?= NEWS_PRIMARY ?>]"><?= nh($section) ?></div>
+      <div class="mb-3 flex items-center gap-2"><span class="h-[14px] w-[3px] rounded-full bg-[#e0392b]"></span><span class="text-[12.5px] font-extrabold uppercase tracking-wider text-[#e0392b]"><?= nh($section) ?></span></div>
       <h1 class="mb-4 text-[30px] md:text-[33px] font-extrabold leading-snug tracking-tight"><?= nh($article['title']) ?></h1>
       <div class="flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-zinc-200">
         <div class="flex items-center gap-3">
@@ -279,12 +291,12 @@ html { scroll-behavior:smooth; }
         $sumParts = array_map(fn($l) => ltrim(trim($l), '·•-* '), $sumLines);
         $sumParts = array_values(array_filter($sumParts, fn($l) => $l !== ''));
       ?>
-      <div class="my-6 rounded-lg border-l-4 border-[<?= NEWS_PRIMARY ?>] bg-zinc-50 px-5 py-4">
-        <div class="mb-2 text-xs font-extrabold text-[<?= NEWS_PRIMARY ?>]">핵심 요약</div>
+      <div class="my-6 rounded-xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
+        <div class="mb-2.5 flex items-center gap-1.5 text-[13px] font-extrabold"><span class="material-symbols-outlined text-[17px] text-[#e0392b]">bolt</span>핵심 요약</div>
         <?php if (count($sumParts) >= 2): ?>
-          <ul class="space-y-1.5 text-sm leading-relaxed text-zinc-700">
-            <?php foreach ($sumParts as $sp): ?>
-              <li class="flex gap-2"><span class="mt-0.5 text-[<?= NEWS_PRIMARY ?>] font-bold">·</span><span><?= nh($sp) ?></span></li>
+          <ul class="space-y-2 text-sm leading-relaxed text-zinc-700">
+            <?php foreach ($sumParts as $si => $sp): ?>
+              <li class="flex gap-2.5"><span class="mt-0.5 flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full bg-zinc-900 text-[10.5px] font-extrabold text-white"><?= $si + 1 ?></span><span class="min-w-0 flex-1"><?= nh($sp) ?></span></li>
             <?php endforeach; ?>
           </ul>
         <?php else: ?>
@@ -310,6 +322,14 @@ html { scroll-behavior:smooth; }
 
       <article class="article-body pb-8"><?= $html /* goBlog 생성 HTML — 이스케이프 안 함 */ ?></article>
 
+      <?php if ($hashtags): ?>
+      <div class="my-7 flex flex-wrap gap-2">
+        <?php foreach ($hashtags as $tg): ?>
+          <a href="/search.php?q=<?= urlencode($tg) ?>" class="inline-flex items-center rounded-full bg-[<?= NEWS_PRIMARY ?>]/10 px-3 py-1 text-xs font-medium text-[<?= NEWS_PRIMARY ?>] hover:bg-[<?= NEWS_PRIMARY ?>]/20">#<?= nh($tg) ?></a>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+
       <!-- 저자 소개 (E-E-A-T) -->
       <div class="mt-8 flex items-center gap-3.5 rounded-lg border border-zinc-200 bg-zinc-50/50 px-5 py-4">
         <div class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[<?= NEWS_PRIMARY ?>] text-[15px] font-extrabold text-white">H</div>
@@ -319,13 +339,19 @@ html { scroll-behavior:smooth; }
       <?php render_ad("article-bottom"); ?>
 
       <?php if ($related): ?>
-      <section class="border-t-2 border-zinc-900 pt-6 pb-4">
-        <h3 class="text-[19px] font-extrabold mb-4"><?= nh($section) ?> 최신 기사</h3>
+      <section class="border-t border-zinc-200 pt-6 pb-4">
+        <div class="mb-4 flex items-center gap-2.5">
+          <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
+          <h3 class="text-[17px] font-bold tracking-tight">관련 기사 <span class="ml-1 text-xs font-medium text-zinc-400"><?= nh($section) ?> 최신</span></h3>
+        </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <?php foreach ($related as $a): ?>
             <a href="/article.php?id=<?= (int) $a['id'] ?>" class="block group rounded-lg border border-zinc-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <?php if (!empty($a['image'])): ?><div class="w-full aspect-[16/10] bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($a['image']) ?>')"></div><?php endif; ?>
-              <div class="p-3"><div class="text-[14.5px] font-bold leading-normal group-hover:text-[<?= NEWS_PRIMARY ?>] line-clamp-2"><?= nh($a['title']) ?></div></div>
+              <div class="p-3">
+                <div class="text-[14.5px] font-bold leading-normal group-hover:text-[<?= NEWS_PRIMARY ?>] line-clamp-2"><?= nh($a['title']) ?></div>
+                <div class="mt-1.5 text-[11.5px] text-zinc-400"><?= nh(news_date($a['publishedAt'])) ?></div>
+              </div>
             </a>
           <?php endforeach; ?>
         </div>
@@ -335,8 +361,25 @@ html { scroll-behavior:smooth; }
 
     <!-- 사이드바 -->
     <div class="flex flex-col gap-5 self-start lg:sticky lg:top-16">
+      <!-- 바로가기 (시안) -->
       <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
-        <div class="px-4 pt-3.5 pb-2.5 text-[15.5px] font-extrabold border-b border-zinc-100">주요 기사</div>
+        <div class="border-b border-zinc-100 px-4 pt-3.5 pb-2.5 text-[15px] font-extrabold">바로가기</div>
+        <div class="px-2 py-1.5">
+          <a href="/docs.php" class="group flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-zinc-50">
+            <span class="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-[<?= NEWS_PRIMARY ?>]/10 text-[<?= NEWS_PRIMARY ?>]"><span class="material-symbols-outlined text-[18px]">draft</span></span>
+            <span class="min-w-0 flex-1"><span class="block text-[13.5px] font-bold group-hover:text-[<?= NEWS_PRIMARY ?>]">문서 도구</span><span class="block text-[11.5px] text-zinc-400">각서·위임장 등 10종 서식</span></span>
+            <span class="material-symbols-outlined text-[16px] text-zinc-300">chevron_right</span>
+          </a>
+          <a href="/tools.php" class="group flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-zinc-50">
+            <span class="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-[<?= NEWS_PRIMARY ?>]/10 text-[<?= NEWS_PRIMARY ?>]"><span class="material-symbols-outlined text-[18px]">calculate</span></span>
+            <span class="min-w-0 flex-1"><span class="block text-[13.5px] font-bold group-hover:text-[<?= NEWS_PRIMARY ?>]">계산기</span><span class="block text-[11.5px] text-zinc-400">연봉·세금·대출 등 바로 계산</span></span>
+            <span class="material-symbols-outlined text-[16px] text-zinc-300">chevron_right</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div class="px-4 pt-3.5 pb-2.5 text-[15.5px] font-extrabold border-b border-zinc-100">많이 본 뉴스</div>
         <div class="px-4 py-1.5">
           <?php foreach ($topRanked as $i => $r): ?>
             <a href="/article.php?id=<?= (int) $r['id'] ?>" class="flex gap-3 items-baseline py-2 border-b border-zinc-50 last:border-0 group">
