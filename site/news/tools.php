@@ -13,7 +13,7 @@ $groups = [];
 foreach (TOOLS as $id => $t) {
     $groups[$t['category'] ?? '기타'][$id] = $t;
 }
-$catOrder = ['급여·노무', '금융·부동산', '크리에이터 수익', '생활·건강'];
+$catOrder = ['급여·노무', '세금', '금융·부동산', '크리에이터 수익', '생활·건강'];
 uksort($groups, function ($a, $b) use ($catOrder) {
     $ia = array_search($a, $catOrder, true);
     $ib = array_search($b, $catOrder, true);

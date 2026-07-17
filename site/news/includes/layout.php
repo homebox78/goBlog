@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718d';
+const TW_CSS_VER = '20260718e';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
