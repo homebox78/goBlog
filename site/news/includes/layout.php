@@ -96,7 +96,7 @@ function render_masthead(string $q = ''): void
 {
     ?>
 <div class="border-t border-zinc-100">
-  <div class="mx-auto max-w-[1399px] flex justify-between items-center px-6 pt-5 pb-4">
+  <div class="mx-auto max-w-[1399px] flex flex-wrap justify-between items-center gap-3 px-6 pt-5 pb-4">
     <div class="flex items-baseline gap-3">
       <a href="/" class="flex items-center gap-2">
         <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg>
@@ -104,7 +104,7 @@ function render_masthead(string $q = ''): void
       </a>
       <span class="hidden sm:inline text-[13px] text-zinc-400">매일 아침·저녁 발행 · 이슈 · 경제 · IT · 생활</span>
     </div>
-    <form action="/search.php" method="get" class="flex items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 h-10 w-64 shadow-sm focus-within:ring-2 focus-within:ring-[<?= NEWS_PRIMARY ?>]/30">
+    <form action="/search.php" method="get" class="flex items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 h-10 w-full sm:w-64 shadow-sm focus-within:ring-2 focus-within:ring-[<?= NEWS_PRIMARY ?>]/30">
       <input name="q" value="<?= nh($q) ?>" placeholder="뉴스 검색" class="flex-1 border-0 outline-none bg-transparent text-sm placeholder:text-zinc-400">
       <button type="submit" class="cursor-pointer border-0 bg-transparent p-0"><span class="material-symbols-outlined text-[20px] text-zinc-400 hover:text-[<?= NEWS_PRIMARY ?>]">search</span></button>
     </form>
