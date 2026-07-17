@@ -144,15 +144,28 @@ $topRanked = array_slice(array_filter($topRanked, fn($a) => $a['id'] !== $id), 0
 
 render_head($article['title'] . ' — HOM2BOX 뉴스', $desc, $image ?: '');
 ?>
-<link rel="canonical" href="https://hom2box.com/article.php?id=<?= $id ?>">
-<script type="application/ld+json"><?= json_encode([
+<script type="application/ld+json"><?php
+$ldImage = $image;
+if ($ldImage && str_starts_with($ldImage, '/')) $ldImage = 'https://hom2box.com' . $ldImage;
+$ldPub = $publishedAt ? date('c', strtotime($publishedAt)) : date('c');
+echo json_encode([
     '@context' => 'https://schema.org',
     '@type' => 'NewsArticle',
-    'headline' => $article['title'],
-    'datePublished' => $publishedAt,
-    'image' => $image ? [$image] : [],
-    'author' => ['@type' => 'Organization', 'name' => 'HOM2BOX 뉴스'],
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
+    'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => 'https://hom2box.com/article.php?id=' . $id],
+    'headline' => mb_substr($article['title'], 0, 110),
+    'description' => $desc,
+    'articleSection' => $section,
+    'datePublished' => $ldPub,
+    'dateModified' => $ldPub,
+    'image' => $ldImage ? [$ldImage] : [],
+    'author' => ['@type' => 'Organization', 'name' => 'HOM2BOX 편집국', 'url' => 'https://hom2box.com/'],
+    'publisher' => [
+        '@type' => 'Organization',
+        'name' => 'HOM2BOX 뉴스',
+        'logo' => ['@type' => 'ImageObject', 'url' => 'https://hom2box.com/favicon/favicon-32.png'],
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+?></script>
 <style>
 /* 생성 본문(contentHtml)의 인라인 폰트를 통일하고 이미지·표를 반응형으로 */
 .article-body, .article-body * { font-family:'Escoredream','Noto Sans KR',sans-serif !important; }

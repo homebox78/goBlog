@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /goBlog/
+Disallow: /login.php
+Disallow: /mypage.php
+Disallow: /checkout.php
+Disallow: /cart.php
+Disallow: /*?*ajax=
+Disallow: /*?*offset=
+
+Sitemap: https://hom2box.com/sitemap.xml
+Sitemap: https://hom2box.com/wordpress/wp-sitemap.xml

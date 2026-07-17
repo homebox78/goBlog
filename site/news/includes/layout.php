@@ -8,8 +8,25 @@ if (!function_exists('nh')) {
 
 const NEWS_PRIMARY = '#134a9c';
 
-function render_head(string $title, string $desc = '', string $ogImage = ''): void
+/** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
+function news_canonical(): string
 {
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $parts = explode('?', $uri, 2);
+    $path = $parts[0];
+    if (empty($parts[1])) return 'https://hom2box.com' . $path;
+    parse_str($parts[1], $q);
+    foreach (array_keys($q) as $k) {
+        if ($k === 'v' || $k === 'ajax' || $k === 'offset' || str_starts_with($k, 'utm_')) unset($q[$k]);
+    }
+    $qs = http_build_query($q);
+    return 'https://hom2box.com' . $path . ($qs ? '?' . $qs : '');
+}
+
+function render_head(string $title, string $desc = '', string $ogImage = '', string $canonical = ''): void
+{
+    $canonical = $canonical !== '' ? $canonical : news_canonical();
+    $isArticle = str_contains($canonical, '/article.php');
     ?>
 <!DOCTYPE html>
 <html lang="ko">
@@ -18,9 +35,19 @@ function render_head(string $title, string $desc = '', string $ogImage = ''): vo
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= nh($title) ?></title>
 <meta name="description" content="<?= nh($desc !== '' ? $desc : $title) ?>">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<link rel="canonical" href="<?= nh($canonical) ?>">
+<meta property="og:type" content="<?= $isArticle ? 'article' : 'website' ?>">
+<meta property="og:site_name" content="HOM2BOX 뉴스">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:url" content="<?= nh($canonical) ?>">
 <meta property="og:title" content="<?= nh($title) ?>">
 <meta property="og:description" content="<?= nh($desc) ?>">
-<?php if ($ogImage): ?><meta property="og:image" content="<?= nh($ogImage) ?>"><?php endif; ?>
+<meta name="twitter:card" content="<?= $ogImage ? 'summary_large_image' : 'summary' ?>">
+<meta name="twitter:title" content="<?= nh($title) ?>">
+<meta name="twitter:description" content="<?= nh($desc) ?>">
+<?php if ($ogImage): ?><meta property="og:image" content="<?= nh($ogImage) ?>">
+<meta name="twitter:image" content="<?= nh($ogImage) ?>"><?php endif; ?>
 <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32.png">
 <link rel="apple-touch-icon" href="/favicon/apple-touch-icon-180.png">

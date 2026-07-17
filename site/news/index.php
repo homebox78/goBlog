@@ -66,6 +66,31 @@ try {
 $P = '#134a9c';
 render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스와 가이드. HOM2BOX 편집국 자체 기사.');
 ?>
+<script type="application/ld+json"><?= json_encode([
+    '@context' => 'https://schema.org',
+    '@graph' => [
+        [
+            '@type' => 'NewsMediaOrganization',
+            '@id' => 'https://hom2box.com/#org',
+            'name' => 'HOM2BOX 뉴스',
+            'url' => 'https://hom2box.com/',
+            'logo' => ['@type' => 'ImageObject', 'url' => 'https://hom2box.com/favicon/favicon-32.png'],
+        ],
+        [
+            '@type' => 'WebSite',
+            '@id' => 'https://hom2box.com/#website',
+            'url' => 'https://hom2box.com/',
+            'name' => 'HOM2BOX 뉴스',
+            'publisher' => ['@id' => 'https://hom2box.com/#org'],
+            'inLanguage' => 'ko',
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => ['@type' => 'EntryPoint', 'urlTemplate' => 'https://hom2box.com/search.php?q={search_term_string}'],
+                'query-input' => 'required name=search_term_string',
+            ],
+        ],
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <div class="min-h-screen bg-white">
   <?php render_ticker($ticker); ?>
   <?php render_topbar(); ?>
