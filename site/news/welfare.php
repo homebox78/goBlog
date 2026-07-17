@@ -1,8 +1,8 @@
 <?php
-// 정부 지원금(복지서비스) 브라우즈 — 복지로 오픈API로 적재된 welfare_services 테이블을 읽는다.
-// 생애주기·지역 필터 + 검색. 실데이터 유틸리티 페이지(애드센스 친화).
+// 정부 지원금(복지서비스) 찾기 — 복지로 오픈API 적재분. 검색 시안 스타일(대형 검색창+칩+카드).
 declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
+require_once __DIR__ . '/includes/layout.php';
 
 $q = trim((string) ($_GET['q'] ?? ''));
 $life = trim((string) ($_GET['life'] ?? ''));
@@ -12,22 +12,13 @@ $perPage = 24;
 $offset = ($page - 1) * $perPage;
 
 $LIFE_CYCLES = ['영유아', '아동', '청소년', '청년', '중장년', '노년', '임신·출산'];
+$HOT = ['청년', '월세', '출산', '기초연금', '에너지', '한부모', '취업', '주거'];
 
 $where = [];
 $params = [];
-if ($q !== '') {
-    $where[] = '(name LIKE ? OR summary LIKE ?)';
-    $params[] = "%$q%";
-    $params[] = "%$q%";
-}
-if ($life !== '') {
-    $where[] = 'lifeCycle LIKE ?';
-    $params[] = '%' . str_replace('·', '', $life) . '%';
-}
-if ($sido !== '') {
-    $where[] = 'sido = ?';
-    $params[] = $sido;
-}
+if ($q !== '') { $where[] = '(name LIKE ? OR summary LIKE ?)'; $params[] = "%$q%"; $params[] = "%$q%"; }
+if ($life !== '') { $where[] = 'lifeCycle LIKE ?'; $params[] = '%' . str_replace('·', '', $life) . '%'; }
+if ($sido !== '') { $where[] = 'sido = ?'; $params[] = $sido; }
 $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
 $items = [];
@@ -38,150 +29,100 @@ try {
     $cnt = $db->prepare("SELECT COUNT(*) FROM welfare_services $whereSql");
     $cnt->execute($params);
     $total = (int) $cnt->fetchColumn();
-
-    $st = $db->prepare(
-        "SELECT id, source, name, summary, dept, region, lifeCycle, target, theme, applyMethod, supportType, detailLink
-         FROM welfare_services $whereSql
-         ORDER BY (source='CENTRAL') DESC, id DESC
-         LIMIT $perPage OFFSET $offset",
-    );
+    $st = $db->prepare("SELECT id, source, name, summary, dept, region, lifeCycle, applyMethod, detailLink FROM welfare_services $whereSql ORDER BY (source='CENTRAL') DESC, id DESC LIMIT $perPage OFFSET $offset");
     $st->execute($params);
     $items = $st->fetchAll();
-
     $sidos = $db->query("SELECT DISTINCT sido FROM welfare_services WHERE sido IS NOT NULL AND sido<>'' ORDER BY sido")->fetchAll(PDO::FETCH_COLUMN);
 } catch (Throwable $e) {
-    $items = [];
 }
-
 $totalPages = (int) ceil($total / $perPage);
-function wq(array $over): string
+function wq2(array $over): string
 {
-    return '?' . http_build_query(array_merge(['q' => $_GET['q'] ?? '', 'life' => $_GET['life'] ?? '', 'sido' => $_GET['sido'] ?? ''], $over));
+    return '/welfare.php?' . http_build_query(array_merge(['q' => $_GET['q'] ?? '', 'life' => $_GET['life'] ?? '', 'sido' => $_GET['sido'] ?? ''], $over));
 }
+$P = NEWS_PRIMARY;
+
+$ticker = [];
+try { $ticker = array_slice(news_articles(), 0, 6); } catch (Throwable) {}
+
+render_head('정부 지원금·복지서비스 찾기 — HOM2BOX 뉴스', '생애주기·지역별 신청 가능한 정부·지자체 지원금을 한 번에. 복지로 공식 데이터 기반.');
+render_ticker($ticker);
+render_topbar();
+render_masthead();
+render_nav('지원금', [], true);
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>정부 지원금·복지서비스 찾기 — HOM2BOX 뉴스</title>
-<meta name="description" content="생애주기·지역별로 신청 가능한 정부·지자체 지원금과 복지서비스를 한 번에 찾아보세요. 복지로 공식 데이터 기반.">
-<style>
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff'); font-weight:400; font-display:swap; }
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-7ExtraBold.woff') format('woff'); font-weight:700; font-display:swap; }
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff'); font-weight:800; font-display:swap; }
-:root { --ink:#111; --sub:#666; --line:#e5e5e5; --accent:#0b5fd9; --title-font:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; }
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; color:var(--ink); background:#fff; }
-a { color:inherit; text-decoration:none; }
-.wrap { max-width:1140px; margin:0 auto; padding:0 16px; }
-.masthead { text-align:center; padding:18px 0 12px; border-bottom:2px solid var(--ink); }
-.masthead .logo { font-family:var(--title-font); font-weight:800; font-size:26px; letter-spacing:1px; }
-.masthead .logo .b { color:var(--accent); }
-.hero { padding:26px 0 6px; }
-.hero h1 { font-family:var(--title-font); font-size:26px; font-weight:800; }
-.hero p { color:var(--sub); font-size:14px; margin-top:6px; }
-form.search { display:flex; gap:8px; margin:18px 0 12px; }
-form.search input[type=text] { flex:1; padding:11px 14px; border:1px solid var(--line); border-radius:8px; font-size:15px; font-family:inherit; }
-form.search button { padding:11px 22px; border:0; background:var(--ink); color:#fff; border-radius:8px; font-weight:700; cursor:pointer; }
-.chips { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:8px; }
-.chips a { border:1px solid var(--line); border-radius:16px; padding:5px 13px; font-size:13px; color:var(--sub); }
-.chips a.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
-.count { color:var(--sub); font-size:13px; margin:10px 0 16px; }
-.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-.card { border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height:150px; }
-.card .src { font-size:11px; font-weight:700; color:var(--accent); }
-.card .src.local { color:#0a8f5b; }
-.card h3 { font-family:var(--title-font); font-size:16px; font-weight:700; line-height:1.4; margin:6px 0; }
-.card p { font-size:13px; color:#555; line-height:1.6; flex:1; display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-.card .meta { margin-top:10px; font-size:11.5px; color:var(--sub); display:flex; flex-wrap:wrap; gap:6px; }
-.card .meta b { color:#333; font-weight:700; }
-.card a.more { margin-top:10px; font-size:13px; font-weight:700; color:var(--accent); }
-.pager { display:flex; justify-content:center; gap:6px; margin:28px 0 40px; }
-.pager a, .pager span { padding:7px 12px; border:1px solid var(--line); border-radius:6px; font-size:13px; }
-.pager .cur { background:var(--ink); color:#fff; border-color:var(--ink); }
-.empty { padding:50px 0; text-align:center; color:var(--sub); }
-footer { border-top:2px solid var(--ink); padding:22px 0 40px; font-size:12.5px; color:var(--sub); }
-footer a { color:#111; font-weight:600; margin-right:14px; }
-@media (max-width:860px){ .grid { grid-template-columns:repeat(2,1fr); } }
-@media (max-width:560px){ .grid { grid-template-columns:1fr; } }
-</style>
-</head>
-<body>
-<header class="masthead"><a class="logo" href="/">HOM2BOX <span class="b">뉴스</span></a></header>
-
-<main class="wrap">
-  <div class="hero">
-    <h1>정부 지원금·복지서비스 찾기</h1>
-    <p>생애주기·지역으로 신청 가능한 정부·지자체 지원금을 찾아보세요. 복지로(bokjiro) 공식 데이터 기반 · 총 <?= number_format($total) ?>건</p>
-  </div>
-
-  <form class="search" method="get">
-    <input type="text" name="q" value="<?= nh($q) ?>" placeholder="지원금·복지서비스 검색 (예: 청년, 주거, 출산)">
-    <?php if ($life !== ''): ?><input type="hidden" name="life" value="<?= nh($life) ?>"><?php endif; ?>
-    <?php if ($sido !== ''): ?><input type="hidden" name="sido" value="<?= nh($sido) ?>"><?php endif; ?>
-    <button type="submit">검색</button>
-  </form>
-
-  <div class="chips">
-    <a href="<?= nh(wq(['life' => '', 'page' => 1])) ?>" class="<?= $life === '' ? 'on' : '' ?>">전체 생애주기</a>
-    <?php foreach ($LIFE_CYCLES as $lc): ?>
-      <a href="<?= nh(wq(['life' => $lc, 'page' => 1])) ?>" class="<?= $life === $lc ? 'on' : '' ?>"><?= nh($lc) ?></a>
-    <?php endforeach; ?>
-  </div>
-  <?php if ($sidos): ?>
-  <div class="chips">
-    <a href="<?= nh(wq(['sido' => '', 'page' => 1])) ?>" class="<?= $sido === '' ? 'on' : '' ?>">전국·중앙</a>
-    <?php foreach ($sidos as $s): ?>
-      <a href="<?= nh(wq(['sido' => $s, 'page' => 1])) ?>" class="<?= $sido === $s ? 'on' : '' ?>"><?= nh($s) ?></a>
-    <?php endforeach; ?>
-  </div>
-  <?php endif; ?>
-
-  <?php if (!$items): ?>
-    <div class="empty"><?= $total === 0 ? '아직 적재된 복지서비스가 없습니다. (데이터 준비 중)' : '조건에 맞는 지원금이 없습니다.' ?></div>
-  <?php else: ?>
-    <p class="count"><?= number_format($total) ?>건 중 <?= $offset + 1 ?>–<?= min($offset + $perPage, $total) ?></p>
-    <div class="grid">
-      <?php foreach ($items as $it): $isCentral = $it['source'] === 'CENTRAL'; ?>
-        <div class="card">
-          <span class="src <?= $isCentral ? '' : 'local' ?>"><?= $isCentral ? '정부 (' . nh($it['dept'] ?? '중앙부처') . ')' : nh($it['region'] ?? '지자체') ?></span>
-          <h3><?= nh($it['name']) ?></h3>
-          <p><?= nh($it['summary'] ?? '') ?></p>
-          <div class="meta">
-            <?php if (!empty($it['lifeCycle'])): ?><span><b>대상</b> <?= nh(mb_substr($it['lifeCycle'], 0, 20)) ?></span><?php endif; ?>
-            <?php if (!empty($it['applyMethod'])): ?><span><b>신청</b> <?= nh(mb_substr($it['applyMethod'], 0, 16)) ?></span><?php endif; ?>
-          </div>
-          <?php if (!empty($it['detailLink'])): ?>
-            <a class="more" href="<?= nh($it['detailLink']) ?>" target="_blank" rel="noopener">자세히 보기 →</a>
-          <?php endif; ?>
+<div class="min-h-screen bg-white">
+  <div class="mx-auto max-w-[1399px] px-6">
+    <!-- 검색 헤더 -->
+    <div class="py-9 border-b-2 border-zinc-900">
+      <div class="mx-auto max-w-2xl text-center">
+        <h1 class="text-[24px] font-extrabold mb-1">정부 지원금·복지서비스 찾기</h1>
+        <p class="text-sm text-zinc-500 mb-5">생애주기·지역으로 신청 가능한 정부·지자체 지원금 <b class="text-[<?= $P ?>]"><?= number_format($total) ?></b>건 · 복지로 공식 데이터</p>
+        <form method="get" action="/welfare.php" class="flex items-center gap-2 rounded-lg border-2 border-zinc-900 bg-white px-4 h-14 shadow-sm focus-within:ring-2 focus-within:ring-[<?= $P ?>]/30">
+          <span class="material-symbols-outlined text-[22px] text-zinc-400">search</span>
+          <input name="q" value="<?= nh($q) ?>" placeholder="지원금·복지서비스 검색 (예: 청년 월세, 출산)" class="flex-1 border-0 outline-none bg-transparent text-base placeholder:text-zinc-400">
+          <?php if ($life !== ''): ?><input type="hidden" name="life" value="<?= nh($life) ?>"><?php endif; ?>
+          <?php if ($sido !== ''): ?><input type="hidden" name="sido" value="<?= nh($sido) ?>"><?php endif; ?>
+          <button type="submit" class="rounded-md bg-[<?= $P ?>] text-white px-4 py-1.5 text-sm font-bold">검색</button>
+        </form>
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <span class="text-xs text-zinc-400">인기</span>
+          <?php foreach ($HOT as $k): ?>
+            <a href="/welfare.php?q=<?= urlencode($k) ?>" class="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 shadow-sm hover:border-[<?= $P ?>] hover:text-[<?= $P ?>]"><?= nh($k) ?></a>
+          <?php endforeach; ?>
         </div>
-      <?php endforeach; ?>
+      </div>
     </div>
 
-    <?php if ($totalPages > 1): ?>
-    <div class="pager">
-      <?php if ($page > 1): ?><a href="<?= nh(wq(['page' => $page - 1])) ?>">이전</a><?php endif; ?>
-      <?php
-      $start = max(1, $page - 2);
-      $end = min($totalPages, $start + 4);
-      for ($p = $start; $p <= $end; $p++): ?>
-        <?php if ($p === $page): ?><span class="cur"><?= $p ?></span>
-        <?php else: ?><a href="<?= nh(wq(['page' => $p])) ?>"><?= $p ?></a><?php endif; ?>
-      <?php endfor; ?>
-      <?php if ($page < $totalPages): ?><a href="<?= nh(wq(['page' => $page + 1])) ?>">다음</a><?php endif; ?>
-    </div>
-    <?php endif; ?>
-  <?php endif; ?>
-</main>
+    <div class="py-6">
+      <!-- 생애주기 칩 -->
+      <div class="flex flex-wrap gap-2 mb-2">
+        <a href="<?= nh(wq2(['life' => '', 'page' => 1])) ?>" class="rounded-full border px-3 py-1 text-[13px] <?= $life === '' ? 'border-zinc-900 bg-zinc-900 text-white font-bold' : 'border-zinc-200 text-zinc-500' ?>">전체 생애주기</a>
+        <?php foreach ($LIFE_CYCLES as $lc): ?>
+          <a href="<?= nh(wq2(['life' => $lc, 'page' => 1])) ?>" class="rounded-full border px-3 py-1 text-[13px] <?= $life === $lc ? 'border-zinc-900 bg-zinc-900 text-white font-bold' : 'border-zinc-200 text-zinc-500 hover:border-['.$P.']' ?>"><?= nh($lc) ?></a>
+        <?php endforeach; ?>
+      </div>
+      <?php if ($sidos): ?>
+      <div class="flex flex-wrap gap-2 mb-6">
+        <a href="<?= nh(wq2(['sido' => '', 'page' => 1])) ?>" class="rounded-full border px-3 py-1 text-[13px] <?= $sido === '' ? 'border-['.$P.'] bg-['.$P.'] text-white font-bold' : 'border-zinc-200 text-zinc-500' ?>">전국·중앙</a>
+        <?php foreach ($sidos as $s): ?>
+          <a href="<?= nh(wq2(['sido' => $s, 'page' => 1])) ?>" class="rounded-full border px-3 py-1 text-[13px] <?= $sido === $s ? 'border-['.$P.'] bg-['.$P.'] text-white font-bold' : 'border-zinc-200 text-zinc-500 hover:border-['.$P.']' ?>"><?= nh($s) ?></a>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
 
-<footer><div class="wrap">
-  <a href="/">HOM2BOX 뉴스</a>
-  <a href="/about.php">소개</a>
-  <a href="/privacy.php">개인정보처리방침</a>
-  <a href="/contact.php">문의</a>
-  <p style="margin-top:10px;">복지서비스 정보 출처: 보건복지부·한국사회보장정보원 복지로(bokjiro.go.kr). 실제 신청·자격 요건은 각 소관기관 공고를 확인하세요.</p>
-  <p>© <?= date('Y') ?> HOM2BOX</p>
-</div></footer>
-</body>
-</html>
+      <?php if (!$items): ?>
+        <div class="py-16 text-center text-zinc-400"><?= $total === 0 ? '데이터 준비 중입니다.' : '조건에 맞는 지원금이 없습니다.' ?></div>
+      <?php else: ?>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <?php foreach ($items as $it): $central = $it['source'] === 'CENTRAL'; ?>
+            <div class="rounded-lg border border-zinc-200 bg-white shadow-sm p-4 flex flex-col hover:shadow-md transition-shadow" style="border-top:3px solid <?= $central ? $P : '#0a8f5b' ?>">
+              <div class="text-[11px] font-bold <?= $central ? 'text-['.$P.']' : 'text-[#0a8f5b]' ?>"><?= $central ? '정부 · ' . nh($it['dept'] ?? '중앙부처') : nh($it['region'] ?? '지자체') ?></div>
+              <div class="mt-1.5 text-[16px] font-extrabold leading-snug"><?= nh($it['name']) ?></div>
+              <p class="mt-1.5 text-[13px] text-zinc-500 leading-relaxed line-clamp-3 flex-1"><?= nh($it['summary'] ?? '') ?></p>
+              <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px] text-zinc-400">
+                <?php if (!empty($it['lifeCycle'])): ?><span><b class="text-zinc-600">대상</b> <?= nh(mb_substr($it['lifeCycle'], 0, 18)) ?></span><?php endif; ?>
+                <?php if (!empty($it['applyMethod'])): ?><span><b class="text-zinc-600">신청</b> <?= nh(mb_substr($it['applyMethod'], 0, 14)) ?></span><?php endif; ?>
+              </div>
+              <?php if (!empty($it['detailLink'])): ?><a href="<?= nh($it['detailLink']) ?>" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1 text-[13px] font-bold text-[#0a8f5b]">복지로에서 자세히 <span class="material-symbols-outlined text-[15px]">arrow_forward</span></a><?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
+
+        <?php if ($totalPages > 1): ?>
+        <div class="flex justify-center gap-1.5 mt-8">
+          <?php if ($page > 1): ?><a href="<?= nh(wq2(['page' => $page - 1])) ?>" class="px-3 py-1.5 rounded-md border border-zinc-200 text-sm">이전</a><?php endif; ?>
+          <?php $start = max(1, $page - 2); $end = min($totalPages, $start + 4); for ($p = $start; $p <= $end; $p++): ?>
+            <?php if ($p === $page): ?><span class="px-3 py-1.5 rounded-md bg-zinc-900 text-white text-sm"><?= $p ?></span>
+            <?php else: ?><a href="<?= nh(wq2(['page' => $p])) ?>" class="px-3 py-1.5 rounded-md border border-zinc-200 text-sm"><?= $p ?></a><?php endif; ?>
+          <?php endfor; ?>
+          <?php if ($page < $totalPages): ?><a href="<?= nh(wq2(['page' => $page + 1])) ?>" class="px-3 py-1.5 rounded-md border border-zinc-200 text-sm">다음</a><?php endif; ?>
+        </div>
+        <?php endif; ?>
+        <p class="mt-6 text-xs text-zinc-400">출처: 보건복지부·한국사회보장정보원 복지로(bokjiro.go.kr). 실제 신청·자격 요건은 각 소관기관 공고를 확인하세요.</p>
+      <?php endif; ?>
+    </div>
+  </div>
+  <?php render_footer(); ?>
+</div>
+<?php render_foot();
