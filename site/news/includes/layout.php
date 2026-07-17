@@ -8,7 +8,7 @@ if (!function_exists('nh')) {
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260717c';
+const TW_CSS_VER = '20260717d';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -92,6 +92,10 @@ a { text-decoration:none; color:inherit; }
 @keyframes h2bticker { from { transform:translateX(0);} to { transform:translateX(-50%);} }
 .h2b-track { display:inline-flex; white-space:nowrap; animation:h2bticker 40s linear infinite; }
 .h2b-track:hover { animation-play-state:paused; }
+/* 계산기 가로 마퀴 */
+@keyframes h2bmq { from { transform:translateX(0);} to { transform:translateX(-50%);} }
+.h2b-mq { display:inline-flex; white-space:nowrap; animation:h2bmq 55s linear infinite; }
+.h2b-mq:hover { animation-play-state:paused; }
 /* 속보 티커 일시정지/재생 (시안 동일 — 체크박스 CSS 토글, JS 불필요) */
 .h2b-pause { display:none; }
 .h2b-pause:checked ~ .h2b-bar .h2b-track { animation-play-state:paused !important; }

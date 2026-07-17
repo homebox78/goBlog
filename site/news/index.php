@@ -125,22 +125,66 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
       </div>
     </div>
 
-    <!-- 계산기 도구 배너 -->
-    <div class="mt-6 rounded-xl border border-zinc-200 bg-gradient-to-r from-[<?= $P ?>]/[0.04] to-[#0a8f5b]/[0.04] p-4">
-      <div class="flex items-center gap-2 mb-3">
+    <!-- 계산기 도구 — 그룹별 가로 마퀴 -->
+    <?php
+    $toolGroups = [];
+    foreach (TOOLS as $tid => $tt) { $toolGroups[$tt['category'] ?? '기타'][$tid] = $tt; }
+    $catOrder = ['급여·노무', '금융·부동산', '크리에이터 수익', '생활·건강'];
+    uksort($toolGroups, function ($a, $b) use ($catOrder) {
+        $ia = array_search($a, $catOrder, true);
+        $ib = array_search($b, $catOrder, true);
+        return ($ia === false ? 99 : $ia) <=> ($ib === false ? 99 : $ib);
+    });
+    $renderMq = function () use ($toolGroups, $P) {
+        foreach ($toolGroups as $cat => $tools): ?>
+          <span class="mx-3 inline-flex items-center gap-1 rounded-md bg-[<?= $P ?>]/10 px-2.5 py-1 text-[12px] font-extrabold text-[<?= $P ?>] whitespace-nowrap"><?= nh($cat) ?></span>
+          <?php foreach ($tools as $tid => $tt): ?>
+            <a href="/tool.php?id=<?= nh($tid) ?>" class="mx-1 inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-bold text-zinc-700 hover:border-[<?= $P ?>] hover:text-[<?= $P ?>] whitespace-nowrap">
+              <span class="material-symbols-outlined text-[16px] text-[<?= $P ?>]"><?= nh($tt['icon']) ?></span><?= nh(str_replace([' 계산기', ' ↔ ㎡ 변환기'], ['', ' 변환'], $tt['name'])) ?>
+            </a>
+          <?php endforeach;
+        endforeach;
+    };
+    ?>
+    <div class="mt-6 rounded-xl border border-zinc-200 bg-gradient-to-r from-[<?= $P ?>]/[0.04] to-[#0a8f5b]/[0.04] py-3">
+      <div class="flex items-center gap-2 px-4 mb-2.5">
         <span class="material-symbols-outlined text-[20px] text-[<?= $P ?>]">calculate</span>
-        <span class="text-[15px] font-extrabold">자주 쓰는 계산기</span>
+        <span class="text-[15px] font-extrabold">자주 쓰는 계산기 <span class="text-xs font-medium text-zinc-400"><?= count(TOOLS) ?>종</span></span>
         <a href="/tools.php" class="ml-auto text-xs text-zinc-400 hover:text-[<?= $P ?>] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        <?php foreach (array_slice(TOOLS, 0, 6, true) as $tid => $tt): ?>
-          <a href="/tool.php?id=<?= nh($tid) ?>" class="flex flex-col items-center gap-1.5 rounded-lg border border-zinc-200 bg-white py-3 hover:border-[<?= $P ?>] hover:shadow-sm transition-all group">
-            <span class="material-symbols-outlined text-[24px] text-[<?= $P ?>]"><?= nh($tt['icon']) ?></span>
-            <span class="text-[12px] font-bold text-zinc-700 group-hover:text-[<?= $P ?>] text-center px-1 leading-tight"><?= nh(str_replace([' 계산기', ' ↔ ㎡ 변환기'], ['', ' 변환'], $tt['name'])) ?></span>
+      <div class="overflow-hidden">
+        <div class="h2b-mq py-0.5">
+          <span class="inline-flex items-center"><?php $renderMq(); ?></span>
+          <span class="inline-flex items-center" aria-hidden="true"><?php $renderMq(); ?></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 정부 지원금·복지 최근 소식 -->
+    <?php $welfare = welfare_recent(4); if ($welfare): ?>
+    <div class="mt-6">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-[20px] text-[#0a8f5b]">volunteer_activism</span>
+        <span class="text-[15px] font-extrabold">정부 지원금·복지 소식</span>
+        <a href="/welfare.php" class="ml-auto text-xs text-zinc-400 hover:text-[#0a8f5b] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <?php foreach ($welfare as $w):
+          $wlink = !empty($w['detailLink']) ? $w['detailLink'] : '/welfare.php';
+          $wext = !empty($w['detailLink']); ?>
+          <a href="<?= nh($wlink) ?>"<?= $wext ? ' target="_blank" rel="noopener"' : '' ?> class="block rounded-lg border border-zinc-200 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-[#0a8f5b] transition-all group">
+            <div class="mb-1.5 flex items-center gap-1.5">
+              <span class="inline-flex items-center rounded bg-[#0a8f5b]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#0a8f5b]"><?= $w['source'] === 'CENTRAL' ? '중앙부처' : '지자체' ?></span>
+              <?php if (!empty($w['lifeCycle'])): ?><span class="text-[10.5px] text-zinc-400"><?= nh($w['lifeCycle']) ?></span><?php endif; ?>
+            </div>
+            <div class="text-[14px] font-bold leading-snug text-zinc-900 group-hover:text-[#0a8f5b] line-clamp-2"><?= nh($w['name']) ?></div>
+            <?php if (!empty($w['summary'])): ?><div class="mt-1.5 text-[12px] leading-relaxed text-zinc-500 line-clamp-2"><?= nh($w['summary']) ?></div><?php endif; ?>
+            <?php if (!empty($w['dept'])): ?><div class="mt-2 text-[11px] text-zinc-400 truncate"><?= nh($w['dept']) ?></div><?php endif; ?>
           </a>
         <?php endforeach; ?>
       </div>
     </div>
+    <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-9 pt-7 pb-2">
       <!-- 분야별 섹션 -->

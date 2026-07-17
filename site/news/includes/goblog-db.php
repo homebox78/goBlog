@@ -160,6 +160,22 @@ function news_date(string $dt): string
     return date('Y.m.d H:i', $t + 9 * 3600); // KST
 }
 
+/** 최근 등록된 정부 지원금·복지서비스 N건 (메인 노출용) */
+function welfare_recent(int $limit = 4): array
+{
+    try {
+        $st = goblog_db()->prepare(
+            "SELECT id, source, name, summary, dept, region, lifeCycle, applyMethod, detailLink
+             FROM welfare_services ORDER BY id DESC LIMIT ?",
+        );
+        $st->bindValue(1, $limit, PDO::PARAM_INT);
+        $st->execute();
+        return $st->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
 /** 방문 IP — 프록시/CDN 뒤에 있어도 원 IP를 얻는다 */
 function client_ip(): string
 {
