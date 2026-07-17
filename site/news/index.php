@@ -63,12 +63,14 @@ $todayKst .= ' (' . $weekKo[(int) date('w', time() + 9 * 3600)] . ')';
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활</title>
 <meta name="description" content="매일 갱신되는 이슈·경제·IT·생활 뉴스와 가이드. HOM2BOX 편집국이 발행하는 자체 기사.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root { --ink:#111; --sub:#666; --line:#e5e5e5; --accent:#0b5fd9; --red:#c0392b; }
+/* 전체 페이지 폰트 — 에스코어드림 (눈누, 웹사이트 사용 가능 라이선스). 본문 400 · 제목 700/800 */
+@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff'); font-weight:400; font-display:swap; }
+@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-7ExtraBold.woff') format('woff'); font-weight:700; font-display:swap; }
+@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff'); font-weight:800; font-display:swap; }
+:root { --ink:#111; --sub:#666; --line:#e5e5e5; --accent:#0b5fd9; --red:#c0392b; --title-font:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; }
 * { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Noto Sans KR',-apple-system,'Malgun Gothic',sans-serif; color:var(--ink); background:#fff; }
+body { font-family:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; color:var(--ink); background:#fff; }
 a { color:inherit; text-decoration:none; }
 a:hover .t, a:hover.t { text-decoration:underline; }
 img { max-width:100%; display:block; }
@@ -78,7 +80,7 @@ img { max-width:100%; display:block; }
 .topbar a { margin-left:14px; color:var(--sub); }
 .topbar a:hover { color:var(--ink); }
 .masthead { text-align:center; padding:26px 0 18px; }
-.masthead h1 { font-family:'Noto Serif KR',serif; font-weight:800; font-size:42px; letter-spacing:2px; }
+.masthead h1 { font-family:var(--title-font); font-weight:800; font-size:42px; letter-spacing:2px; }
 .masthead h1 .b { color:var(--accent); }
 .masthead p { margin-top:6px; font-size:12.5px; color:var(--sub); letter-spacing:.4px; }
 nav.sections { border-top:2px solid var(--ink); border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; z-index:20; }
@@ -88,40 +90,40 @@ nav.sections a:hover { color:var(--accent); }
 .grid-lead { display:grid; grid-template-columns:1.6fr 1fr; gap:28px; padding:24px 0; border-bottom:1px solid var(--line); }
 .lead .thumb { aspect-ratio:16/10; overflow:hidden; background:#f4f4f4; }
 .lead .thumb img { width:100%; height:100%; object-fit:cover; }
-.lead h2 { font-family:'Noto Serif KR',serif; font-size:30px; line-height:1.35; margin-top:14px; font-weight:800; }
+.lead h2 { font-family:var(--title-font); font-size:30px; line-height:1.4; margin-top:14px; font-weight:800; }
 .lead p.x { margin-top:10px; color:#444; font-size:15px; line-height:1.7; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 .lead .meta, .card .meta, .list .meta { margin-top:8px; font-size:12px; color:var(--sub); }
 .badge { display:inline-block; font-size:11px; font-weight:700; color:var(--accent); border:1px solid currentColor; border-radius:3px; padding:1px 6px; margin-right:6px; vertical-align:1px; }
 .subleads { display:flex; flex-direction:column; }
 .subleads a { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
 .subleads a:last-child { border-bottom:0; }
-.subleads .t { font-size:15.5px; font-weight:600; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; flex:1; }
+.subleads .t { font-family:var(--title-font); font-size:15.5px; font-weight:600; line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; flex:1; }
 .subleads .thumb { width:96px; height:64px; flex:none; overflow:hidden; background:#f4f4f4; border-radius:4px; }
 .subleads .thumb img { width:100%; height:100%; object-fit:cover; }
 .section-block { padding:26px 0 8px; }
 .section-block .head { display:flex; align-items:baseline; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:8px; margin-bottom:18px; }
-.section-block .head h3 { font-family:'Noto Serif KR',serif; font-size:22px; font-weight:800; }
+.section-block .head h3 { font-family:var(--title-font); font-size:22px; font-weight:800; }
 .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
 .card .thumb { aspect-ratio:16/10; overflow:hidden; background:#f4f4f4; border-radius:4px; }
 .card .thumb img { width:100%; height:100%; object-fit:cover; transition:transform .25s; }
 .card:hover .thumb img { transform:scale(1.04); }
-.card .t { margin-top:10px; font-size:16.5px; font-weight:700; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.card .t { font-family:var(--title-font); margin-top:10px; font-size:16.5px; font-weight:700; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .card p.x { margin-top:6px; font-size:13.5px; color:var(--sub); line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .two-col { display:grid; grid-template-columns:2.2fr 1fr; gap:32px; align-items:start; padding-bottom:30px; }
 aside.rank { border:1px solid var(--line); border-top:2px solid var(--ink); padding:16px; position:sticky; top:56px; }
-aside.rank h3 { font-family:'Noto Serif KR',serif; font-size:18px; font-weight:800; margin-bottom:4px; }
+aside.rank h3 { font-family:var(--title-font); font-size:18px; font-weight:800; margin-bottom:4px; }
 aside.rank ol { list-style:none; counter-reset:rk; }
 aside.rank li { counter-increment:rk; border-bottom:1px solid var(--line); }
 aside.rank li:last-child { border-bottom:0; }
-aside.rank a { display:flex; gap:10px; padding:10px 0; font-size:14px; line-height:1.5; }
-aside.rank a::before { content:counter(rk); font-family:'Noto Serif KR',serif; font-weight:800; font-size:17px; color:var(--accent); min-width:18px; }
+aside.rank a { font-family:var(--title-font); display:flex; gap:10px; padding:10px 0; font-size:14px; line-height:1.55; }
+aside.rank a::before { content:counter(rk); font-family:var(--title-font); font-weight:800; font-size:17px; color:var(--accent); min-width:18px; }
 aside.rank .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .yna { border-top:2px solid var(--ink); padding:24px 0 10px; }
 .yna .head { display:flex; align-items:baseline; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
 .yna .tabs { margin-left:auto; display:flex; gap:6px; }
 .yna .ptab { border:1px solid var(--line); background:#fff; padding:5px 14px; font-size:13px; font-weight:700; cursor:pointer; border-radius:16px; color:var(--sub); }
 .yna .ptab.on { background:var(--ink); border-color:var(--ink); color:#fff; }
-.yna .head h3 { font-family:'Noto Serif KR',serif; font-size:22px; font-weight:800; }
+.yna .head h3 { font-family:var(--title-font); font-size:22px; font-weight:800; }
 .yna .head .src { font-size:12px; color:var(--sub); }
 .yna .boxes { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
 /* min-width:0 — 제목이 nowrap이라 그리드 아이템 최소폭이 제목 길이가 돼 컨테이너를 뚫던 문제 방지 */

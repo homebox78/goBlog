@@ -142,8 +142,6 @@ $desc = $article['metaDescription'] ?: ($article['excerpt'] ?: mb_substr(strip_t
 <meta property="og:title" content="<?= nh($article['title']) ?>">
 <meta property="og:description" content="<?= nh($desc) ?>">
 <?php if ($image): ?><meta property="og:image" content="<?= nh($image) ?>"><?php endif; ?>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <script type="application/ld+json"><?= json_encode([
     '@context' => 'https://schema.org',
     '@type' => 'NewsArticle',
@@ -153,29 +151,35 @@ $desc = $article['metaDescription'] ?: ($article['excerpt'] ?: mb_substr(strip_t
     'author' => ['@type' => 'Organization', 'name' => 'HOM2BOX 뉴스'],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <style>
-:root { --ink:#111; --sub:#666; --line:#e5e5e5; --accent:#0b5fd9; }
+/* 전체 페이지 폰트 — 에스코어드림 (눈누, 웹사이트 사용 가능 라이선스). 본문 400 · 제목 700/800 */
+@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff'); font-weight:400; font-display:swap; }
+@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-7ExtraBold.woff') format('woff'); font-weight:700; font-display:swap; }
+@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff'); font-weight:800; font-display:swap; }
+:root { --ink:#111; --sub:#666; --line:#e5e5e5; --accent:#0b5fd9; --title-font:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; }
 * { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Noto Sans KR',-apple-system,'Malgun Gothic',sans-serif; color:var(--ink); background:#fff; }
+body { font-family:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; color:var(--ink); background:#fff; }
+/* 본문(contentHtml)은 생성 시점 인라인 font-family(Pretendard)가 박혀 있어 상속 강제로 통일한다 */
+.content, .content * { font-family:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif !important; }
 a { color:inherit; text-decoration:none; }
 img { max-width:100%; }
 .wrap { max-width:820px; margin:0 auto; padding:0 16px; }
 .masthead { text-align:center; padding:18px 0 12px; border-bottom:2px solid var(--ink); }
-.masthead .logo { font-family:'Noto Serif KR',serif; font-weight:800; font-size:26px; letter-spacing:1px; }
+.masthead .logo { font-family:var(--title-font); font-weight:800; font-size:26px; letter-spacing:1px; }
 .masthead .logo .b { color:var(--accent); }
 .art-head { padding:30px 0 18px; border-bottom:1px solid var(--line); }
 .art-head .sec { font-size:13px; font-weight:700; color:var(--accent); }
-.art-head h1 { font-family:'Noto Serif KR',serif; font-size:32px; line-height:1.4; font-weight:800; margin:10px 0 14px; }
+.art-head h1 { font-family:var(--title-font); font-size:32px; line-height:1.45; font-weight:800; margin:10px 0 14px; }
 .art-head .meta { font-size:13px; color:var(--sub); display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
 .pbadge { display:inline-block; font-size:11px; font-weight:700; color:#fff; border-radius:3px; padding:2px 7px; }
 .figure { margin:22px 0 6px; }
 .figure img { width:100%; border-radius:6px; }
 .content { padding:10px 0 30px; }
 .related { border-top:2px solid var(--ink); padding:20px 0 40px; }
-.related h3 { font-family:'Noto Serif KR',serif; font-size:20px; font-weight:800; margin-bottom:14px; }
+.related h3 { font-family:var(--title-font); font-size:20px; font-weight:800; margin-bottom:14px; }
 .related .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
 .related .card .thumb { aspect-ratio:16/10; overflow:hidden; background:#f4f4f4; border-radius:4px; }
 .related .card img { width:100%; height:100%; object-fit:cover; }
-.related .t { margin-top:8px; font-size:14.5px; font-weight:600; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.related .t { font-family:var(--title-font); margin-top:8px; font-size:14.5px; font-weight:600; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 footer { border-top:2px solid var(--ink); padding:20px 0 40px; font-size:12.5px; color:var(--sub); }
 @media (max-width:640px){ .art-head h1 { font-size:24px; } .related .cards { grid-template-columns:1fr 1fr; } }
 </style>
