@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718k';
+const TW_CSS_VER = '20260718l';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -141,6 +141,7 @@ function render_foot(): void
       $item('/press.php', '언론사', 'forum', $act(['press.php']), 'left');
       $item('/tools.php', '계산기', 'calculate', $act(['tools.php', 'tool.php']), 'left');
       $item('/welfare.php', '지원금', 'volunteer_activism', $act(['welfare.php']), 'left');
+      $item('/jobs.php', '노인일자리', 'elderly', $act(['jobs.php']), 'left');
     ?>
   </div>
 </aside>
@@ -302,6 +303,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
         $tabs[] = [$s, '/category.php?cat=' . urlencode($s)];
     }
     $tabs[] = ['지원금', '/welfare.php'];
+    $tabs[] = ['노인일자리', '/jobs.php'];
     $tabs[] = ['계산기', '/tools.php'];
     $tabs[] = ['문서도구', '/docs.php'];
     $tabs[] = ['언론사', '/press.php'];

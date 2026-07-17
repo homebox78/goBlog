@@ -21,3 +21,4 @@ storage/
 
 # 이미지 프롬프트 내보내기 결과 (작업물 — 소스가 아님)
 image-prompts/
+site/news/includes/senuri.key
