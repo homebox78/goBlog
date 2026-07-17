@@ -339,6 +339,10 @@ export interface CitationInsightData {
   gaps: string[];
   /** 글 생성 시 바로 쓸 수 있는 지시문 */
   writingRules: string[];
+  /** 인용 글들이 '경험'을 어떻게 녹이는가 — 실제 표현 사례 (2026-07-17 추가, 구버전 행엔 없음) */
+  personalVoice?: string[];
+  /** 흔한 글과 차별화되는 독창 포인트 — 무엇이 이 글을 뻔하지 않게 만드는가 */
+  originality?: string[];
 }
 
 /** 인용된 글들을 읽고 Claude 로 분석해 인사이트를 뽑는다. */
@@ -392,6 +396,10 @@ export async function studyKeyword(keywordText: string, maxPosts = 5): Promise<C
         coveredAngles: ["이미 다뤄진 각도 (우리가 반복하면 안 되는 것)"],
         gaps: ["아직 안 다뤄진 각도 — 우리가 공략할 틈 2~4개"],
         writingRules: ["글 생성 프롬프트에 그대로 넣을 지시문 5~8개 (명령형 한 문장씩)"],
+        personalVoice: [
+          "이 글들이 '경험'을 어떻게 녹이는지 — 실제 문장 사례와 함께 3~4개 (예: 신청 화면을 캡처하며 단계별 서술, 직접 계산한 금액 제시, 시행착오 고백)",
+        ],
+        originality: ["이 글들이 뻔한 정보 글과 달라지는 지점 2~4개 (자기만의 기준·비교 방식·구체 시나리오 등 관찰 근거 포함)"],
       },
     }),
   });

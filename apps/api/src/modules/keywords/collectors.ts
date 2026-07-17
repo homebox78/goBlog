@@ -111,7 +111,19 @@ export async function collectNaverNews(): Promise<IssueItem[]> {
   const clientSecret = values["naver.datalabClientSecret"];
   if (!clientId || !clientSecret) return [];
 
-  const queries = ["오늘 이슈", "정부 지원금", "신제품 출시"];
+  // 지원금·혜택 특화 쿼리 강화 (2026-07-17) — 정책브리핑 RSS가 중단돼 네이버 뉴스 검색으로 커버.
+  // 지원금 글감은 검색 수요가 꾸준하고 애드센스형 콘텐츠의 핵심이라 쿼리를 넉넉히 돌린다.
+  const queries = [
+    "오늘 이슈",
+    "정부 지원금",
+    "신제품 출시",
+    "지원금 신청",
+    "보조금 지급",
+    "정부 혜택 대상",
+    "환급 신청",
+    "바우처 지원",
+    "청년 지원 정책",
+  ];
   const items: IssueItem[] = [];
 
   for (const query of queries) {
