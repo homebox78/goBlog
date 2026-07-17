@@ -213,12 +213,16 @@ model CitationInsight {
 model Product {
   id               Int      @id @default(autoincrement())
   source           String // COUPANG | BRANDCONNECT
+  externalKey      String?  @db.VarChar(64) // 크롤 업서트 키 — 쿠팡: "productId:vendorItemId" (수동 등록은 null)
   name             String
   brand            String?
   price            Int?
+  originPrice      Int? // 할인 전 가격 (배너 취소선·할인율 표기용)
   imageUrl         String?  @db.Text
   productUrl       String   @db.Text
   description      String?  @db.Text
+  categoryName     String? // 쿠팡 파트너스 카테고리 (뷰티·가전디지털…) — 상품 페이지 필터용
+  ratingCount      Int? // 리뷰 수 — 매칭 후보가 여럿일 때 신뢰도 높은 상품 우선
   isRocket         Boolean  @default(false)
   status           String   @default("ACTIVE") // ACTIVE | USED | DISABLED
   matchedKeywordId Int?
@@ -227,8 +231,10 @@ model Product {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@unique([source, externalKey])
   @@index([status])
   @@index([matchedKeywordId])
+  @@index([categoryName])
   @@map("products")
 }
 

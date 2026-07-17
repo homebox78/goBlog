@@ -697,7 +697,8 @@ export async function generateArticle(
   // 상품 배너·딥링크·대가성 문구 삽입
   if (product) {
     let linkUrl = product.productUrl;
-    if (product.source === "COUPANG" && /coupang\.com/i.test(linkUrl)) {
+    // link.coupang.com·coupa.ng는 이미 제휴 트래킹 단축링크 — 다시 딥링크 변환하면 안 된다
+    if (product.source === "COUPANG" && /(?:www\.)?coupang\.com/i.test(linkUrl) && !/link\.coupang\.com|coupa\.ng/i.test(linkUrl)) {
       try {
         linkUrl = await createCoupangDeeplink(linkUrl);
       } catch {
@@ -930,7 +931,8 @@ export async function buildManualBanner(input: string): Promise<{ banner: string
   const { analyzeProductInput } = await import("../products/analyze.js");
   const product = await analyzeProductInput(trimmed);
   let linkUrl = product.productUrl;
-  if (product.source === "COUPANG" && /coupang\.com/i.test(linkUrl)) {
+  // link.coupang.com·coupa.ng는 이미 제휴 단축링크 — 변환 스킵
+  if (product.source === "COUPANG" && /(?:www\.)?coupang\.com/i.test(linkUrl) && !/link\.coupang\.com|coupa\.ng/i.test(linkUrl)) {
     try {
       linkUrl = await createCoupangDeeplink(linkUrl);
     } catch {

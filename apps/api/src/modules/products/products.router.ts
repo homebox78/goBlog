@@ -36,16 +36,42 @@ const saveProductSchema = z.object({
   isRocket: z.boolean().nullish(),
 });
 
-/** 등록 상품 목록 (매칭된 키워드 포함) */
+/**
+ * 등록 상품 목록 (매칭된 키워드 포함) — 크롤 적재로 수천 건이 되므로 페이지네이션+필터.
+ * ?q=검색어 &category=카테고리명 &matched=1(매칭된 것만) &source= &offset= &take=
+ */
 productsRouter.get(
   "/",
-  asyncHandler(async (_req, res) => {
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      include: { matchedKeyword: { select: { id: true, text: true } } },
-    });
-    res.json({ products });
+  asyncHandler(async (req, res) => {
+    const q = String(req.query.q ?? "").trim();
+    const category = String(req.query.category ?? "").trim();
+    const source = String(req.query.source ?? "").trim();
+    const matchedOnly = req.query.matched === "1";
+    const take = Math.min(100, Math.max(1, Number(req.query.take) || 30));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+
+    const where = {
+      ...(q ? { OR: [{ name: { contains: q } }, { brand: { contains: q } }] } : {}),
+      ...(category ? { categoryName: category } : {}),
+      ...(source === "COUPANG" || source === "BRANDCONNECT" ? { source } : {}),
+      ...(matchedOnly ? { matchedKeywordId: { not: null } } : {}),
+    };
+    const [products, total, categoriesRaw] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: [{ matchedAt: "desc" }, { createdAt: "desc" }],
+        skip: offset,
+        take,
+        include: { matchedKeyword: { select: { id: true, text: true } } },
+      }),
+      prisma.product.count({ where }),
+      prisma.product.groupBy({ by: ["categoryName"], _count: { _all: true } }),
+    ]);
+    const categories = categoriesRaw
+      .filter((c) => c.categoryName)
+      .map((c) => ({ name: c.categoryName as string, count: c._count._all }))
+      .sort((a, b) => b.count - a.count);
+    res.json({ products, total, nextOffset: offset + take < total ? offset + take : null, categories });
   }),
 );
 
@@ -73,6 +99,83 @@ productsRouter.post(
       include: { matchedKeyword: { select: { id: true, text: true } } },
     });
     res.json({ product, matched: match ? { keyword: match.keyword.text, score: match.score } : null });
+  }),
+);
+
+// 크롤 대량 적재 — 쿠팡 파트너스/브랜드커넥트에서 긁은 상품을 통째로 업서트한다.
+const bulkImportProductsSchema = z.object({
+  source: z.enum(["COUPANG", "BRANDCONNECT"]),
+  items: z
+    .array(
+      z.object({
+        externalKey: z.string().min(1).max(64),
+        name: z.string().min(1),
+        brand: z.string().nullish(),
+        price: z.number().int().positive().nullish(),
+        originPrice: z.number().int().positive().nullish(),
+        imageUrl: z.string().nullish(),
+        productUrl: z.string().min(1),
+        categoryName: z.string().nullish(),
+        ratingCount: z.number().int().nonnegative().nullish(),
+        isRocket: z.boolean().nullish(),
+      }),
+    )
+    .min(1)
+    .max(1000),
+});
+
+/**
+ * 상품 대량 적재(업서트) + 키워드 자동 매칭.
+ * externalKey 기준으로 이미 있으면 가격·링크·이미지 갱신(status·매칭은 보존), 없으면 생성.
+ * 매칭은 신규 생성분에만 수행한다 — 기존 상품의 매칭·USED 이력을 크롤이 덮어쓰지 않게.
+ */
+productsRouter.post(
+  "/bulk-import",
+  asyncHandler(async (req, res) => {
+    const { source, items } = parseBody(bulkImportProductsSchema, req.body);
+    const keywords = await matchableKeywords();
+
+    const existing = await prisma.product.findMany({
+      where: { source, externalKey: { in: items.map((it) => it.externalKey) } },
+      select: { id: true, externalKey: true },
+    });
+    const existingByKey = new Map(existing.map((p) => [p.externalKey as string, p.id]));
+
+    let created = 0;
+    let updated = 0;
+    let matched = 0;
+    for (const it of items) {
+      const id = existingByKey.get(it.externalKey);
+      const common = {
+        name: it.name,
+        brand: it.brand ?? null,
+        price: it.price ?? null,
+        originPrice: it.originPrice ?? null,
+        imageUrl: it.imageUrl ?? null,
+        productUrl: it.productUrl,
+        categoryName: it.categoryName ?? null,
+        ratingCount: it.ratingCount ?? null,
+        isRocket: it.isRocket ?? false,
+      };
+      if (id) {
+        await prisma.product.update({ where: { id }, data: common });
+        updated += 1;
+      } else {
+        const match = bestKeywordForProduct({ name: it.name, brand: it.brand }, keywords);
+        if (match) matched += 1;
+        await prisma.product.create({
+          data: {
+            source,
+            externalKey: it.externalKey,
+            ...common,
+            matchedKeywordId: match?.keyword.id ?? null,
+            matchedAt: match ? new Date() : null,
+          },
+        });
+        created += 1;
+      }
+    }
+    res.json({ received: items.length, created, updated, matched });
   }),
 );
 

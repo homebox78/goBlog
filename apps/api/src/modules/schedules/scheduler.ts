@@ -49,19 +49,29 @@ async function findProductForKeyword(keywordId: number, text: string): Promise<P
   // 사건·사고·재난·뉴스·금융 등엔 광고를 붙이지 않는다 (부적절·정책 위험).
   if (isNonCommercialKeyword(text)) return null;
 
-  // ① 등록 상품: 명시 매칭 우선 → 없으면 활성 상품 중 토큰 겹침 최고
+  // ① 등록 상품: 명시 매칭 우선 → 없으면 활성 상품 중 토큰 겹침 최고.
+  // ⚠️ 쿠팡은 제휴 단축링크(link.coupang.com·coupa.ng)가 있는 상품만 쓴다 —
+  //    원본 coupang.com URL은 수수료 추적이 안 돼 광고를 붙이는 의미가 없다(크롤 직후 링크 미발급 상품 제외).
+  const hasAffiliateLink = (p: { source: string; productUrl: string }) =>
+    p.source !== "COUPANG" || /link\.coupang\.com|coupa\.ng/i.test(p.productUrl);
   const explicit = await prisma.product.findFirst({
     where: { status: "ACTIVE", matchedKeywordId: keywordId },
     orderBy: { createdAt: "asc" },
   });
-  let chosen = explicit;
+  let chosen = explicit && hasAffiliateLink(explicit) ? explicit : null;
   if (!chosen) {
-    const actives = await prisma.product.findMany({ where: { status: "ACTIVE" }, take: 200 });
+    // 크롤 적재로 수천 건 — 전량을 보되 토큰매칭은 인메모리라 충분히 빠르다.
+    const actives = await prisma.product.findMany({ where: { status: "ACTIVE" }, take: 5000 });
     let bestScore = 0;
+    let bestRating = -1;
     for (const p of actives) {
+      if (!hasAffiliateLink(p)) continue;
       const score = overlapScore({ name: p.name, brand: p.brand }, text);
-      if (score >= 1 && score > bestScore) {
+      // 동점이면 리뷰 수 많은 상품(검증된 상품) 우선
+      const rating = p.ratingCount ?? 0;
+      if (score >= 1 && (score > bestScore || (score === bestScore && rating > bestRating))) {
         bestScore = score;
+        bestRating = rating;
         chosen = p;
       }
     }

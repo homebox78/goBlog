@@ -26,13 +26,23 @@ interface RegisteredProduct {
   name: string;
   brand: string | null;
   price: number | null;
+  originPrice: number | null;
   imageUrl: string | null;
   productUrl: string;
   description: string | null;
+  categoryName: string | null;
+  ratingCount: number | null;
   isRocket: boolean;
   status: string;
   matchedAt: string | null;
   matchedKeyword: { id: number; text: string } | null;
+}
+
+interface ProductListPage {
+  products: RegisteredProduct[];
+  total: number;
+  nextOffset: number | null;
+  categories: Array<{ name: string; count: number }>;
 }
 
 /** 최근(3일 내) 매칭된 상품인가 — 반짝이는 '매칭완료' 뱃지 표시용 */
@@ -375,9 +385,29 @@ function RegisteredProducts({
   onWrite: (product: ProductPayload, keyword: string, keywordId?: number) => void;
 }) {
   const queryClient = useQueryClient();
-  const { data, isPending } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => api.get<{ products: RegisteredProduct[] }>("/api/products"),
+  const [search, setSearch] = useState("");
+  const [q, setQ] = useState(""); // 디바운스 적용된 검색어
+  const [category, setCategory] = useState("");
+  const [matchedOnly, setMatchedOnly] = useState(false);
+  const listSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // 검색 입력 디바운스 (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => setQ(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const query = useInfiniteQuery({
+    queryKey: ["products", q, category, matchedOnly],
+    queryFn: ({ pageParam }) =>
+      api.get<ProductListPage>(
+        `/api/products?take=30&offset=${pageParam}` +
+          (q ? `&q=${encodeURIComponent(q)}` : "") +
+          (category ? `&category=${encodeURIComponent(category)}` : "") +
+          (matchedOnly ? "&matched=1" : ""),
+      ),
+    initialPageParam: 0 as number,
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
   });
 
   const removeMutation = useMutation({
@@ -388,7 +418,23 @@ function RegisteredProducts({
     },
   });
 
-  const products = data?.products ?? [];
+  const products = query.data?.pages.flatMap((page) => page.products) ?? [];
+  const total = query.data?.pages[0]?.total ?? 0;
+  const categories = query.data?.pages[0]?.categories ?? [];
+  const isPending = query.isPending;
+
+  // 무한스크롤 — 하단 센티넬이 보이면 다음 페이지
+  useEffect(() => {
+    const el = listSentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && query.hasNextPage && !query.isFetchingNextPage) {
+        query.fetchNextPage();
+      }
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [query.hasNextPage, query.isFetchingNextPage, products.length]);
 
   // 새로 매칭된 상품(직전 확인 이후)이 생기면 우측 상단 알림
   useEffect(() => {
@@ -412,12 +458,63 @@ function RegisteredProducts({
   return (
     <Card>
       <CardContent className="pt-6">
-        <h2 className="mb-3 text-base font-semibold">등록된 상품 ({products.length})</h2>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <h2 className="text-base font-semibold">등록된 상품 ({won(total)})</h2>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="상품명·브랜드 검색"
+              className="h-8 w-48 text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => setMatchedOnly((v) => !v)}
+              className={
+                "rounded-md border px-2 py-1 text-xs transition-colors " +
+                (matchedOnly ? "border-emerald-600 bg-emerald-600 font-medium text-white" : "text-muted-foreground hover:bg-muted")
+              }
+            >
+              매칭된 상품만
+            </button>
+          </div>
+        </div>
+        {categories.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setCategory("")}
+              className={
+                "rounded-full border px-2.5 py-0.5 text-[11px] transition-colors " +
+                (!category ? "border-primary bg-primary font-medium text-primary-foreground" : "text-muted-foreground hover:bg-muted")
+              }
+            >
+              전체
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c.name}
+                type="button"
+                onClick={() => setCategory(category === c.name ? "" : c.name)}
+                className={
+                  "rounded-full border px-2.5 py-0.5 text-[11px] transition-colors " +
+                  (category === c.name
+                    ? "border-primary bg-primary font-medium text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted")
+                }
+              >
+                {c.name} <span className="opacity-60">{c.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {isPending ? (
           <p className="py-6 text-center text-sm text-muted-foreground">불러오는 중...</p>
         ) : products.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            아직 등록된 상품이 없습니다. 위에서 상품을 분석하고 <b>상품 등록</b>을 누르면 오늘의 키워드와 매칭됩니다.
+            {q || category || matchedOnly
+              ? "조건에 맞는 상품이 없습니다."
+              : "아직 등록된 상품이 없습니다. 위에서 상품을 분석하고 상품 등록을 누르면 오늘의 키워드와 매칭됩니다."}
           </p>
         ) : (
           <ul className="divide-y">
@@ -442,6 +539,17 @@ function RegisteredProducts({
                       <Badge variant="secondary" className="text-[10px]">
                         {product.source === "COUPANG" ? "쿠팡" : "네이버"}
                       </Badge>
+                      {product.categoryName && (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                          {product.categoryName}
+                        </Badge>
+                      )}
+                      {product.price != null && (
+                        <span className="text-xs font-medium text-foreground">{won(product.price)}원</span>
+                      )}
+                      {product.ratingCount != null && product.ratingCount > 0 && (
+                        <span className="text-[11px] text-muted-foreground">리뷰 {won(product.ratingCount)}</span>
+                      )}
                       {product.status === "USED" && (
                         <Badge variant="outline" className="text-[10px]">발행에 사용됨</Badge>
                       )}
@@ -474,6 +582,13 @@ function RegisteredProducts({
                 </Button>
               </li>
             ))}
+            {/* 무한스크롤 센티넬 */}
+            <div ref={listSentinelRef} className="h-4" />
+            {query.isFetchingNextPage && (
+              <li className="flex justify-center py-2 text-xs text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+              </li>
+            )}
           </ul>
         )}
       </CardContent>
