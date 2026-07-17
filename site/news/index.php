@@ -1,22 +1,18 @@
 <?php
-// HOM2BOX 뉴스 — goBlog가 발행한 글을 자체 신문사 스타일로 노출하는 메인.
-// 기존 이미지샵 홈은 /imgshop.php 로 보존되어 있다.
+// HOM2BOX 뉴스 — 자체 신문사 홈 (디자인 개편: Tailwind + 속보 티커 + 사이드바 + 언론사 헤드라인).
 declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
 require_once __DIR__ . '/includes/press-rss.php';
+require_once __DIR__ . '/includes/layout.php';
 
 $articles = [];
-$loadError = null;
 try {
     $articles = news_articles();
 } catch (Throwable $e) {
-    $loadError = $e->getMessage();
 }
 
-// 한 기사는 페이지 전체에서 한 번만 노출한다 (중복 노출 방지).
-// 우선순위: 헤드라인 → 서브리드(최신) → 주요기사(품질 상위) → 섹션 그리드(나머지)
+// 한 기사는 페이지 전체에서 한 번만 노출 (헤드라인 → 서브리드 → 주요기사 → 섹션 그리드)
 $used = [];
-
 $withImage = array_values(array_filter($articles, fn($a) => !empty($a['image'])));
 $headline = $withImage[0] ?? ($articles[0] ?? null);
 if ($headline) $used[$headline['id']] = true;
@@ -29,9 +25,9 @@ foreach ($articles as $a) {
     if (count($subLeads) >= 6) break;
 }
 
-$ranked = [];
 $byQuality = $articles;
 usort($byQuality, fn($a, $b) => ($b['quality'] <=> $a['quality']) ?: strcmp($b['publishedAt'], $a['publishedAt']));
+$ranked = [];
 foreach ($byQuality as $a) {
     if (isset($used[$a['id']])) continue;
     $ranked[] = $a;
@@ -45,252 +41,165 @@ foreach ($articles as $a) {
     $bySection[$a['section']][] = $a;
 }
 
-// 언론사 헤드라인 (아침·저녁 갱신, 분류별 5건 — 제목·원문 링크만 인용)
+// 속보 티커 — 최신 기사 제목 6개
+$ticker = array_slice($articles, 0, 6);
+
+// 사이드바 파트너스 추천 — 트래킹 링크 있는 상품 1건(최근 매칭)
+$partner = null;
+try {
+    $st = goblog_db()->query(
+        "SELECT name, imageUrl, productUrl, source FROM products
+         WHERE status<>'DISABLED' AND (productUrl LIKE '%link.coupang.com%' OR productUrl LIKE '%coupa.ng%' OR productUrl LIKE '%naver.me%')
+         ORDER BY matchedAt DESC, id DESC LIMIT 1",
+    );
+    $partner = $st->fetch() ?: null;
+} catch (Throwable) {
+}
+
 $press = [];
 try {
     $press = press_headlines(5);
 } catch (Throwable) {
 }
 
-$todayKst = date('Y년 n월 j일', time() + 9 * 3600);
-$weekKo = ['일', '월', '화', '수', '목', '금', '토'];
-$todayKst .= ' (' . $weekKo[(int) date('w', time() + 9 * 3600)] . ')';
+$P = '#134a9c';
+render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스와 가이드. HOM2BOX 편집국 자체 기사.');
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활</title>
-<meta name="description" content="매일 갱신되는 이슈·경제·IT·생활 뉴스와 가이드. HOM2BOX 편집국이 발행하는 자체 기사.">
-<style>
-/* 전체 페이지 폰트 — 에스코어드림 (눈누, 웹사이트 사용 가능 라이선스). 본문 400 · 제목 700/800 */
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff'); font-weight:400; font-display:swap; }
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-7ExtraBold.woff') format('woff'); font-weight:700; font-display:swap; }
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff'); font-weight:800; font-display:swap; }
-:root { --ink:#111; --sub:#666; --line:#e5e5e5; --accent:#0b5fd9; --red:#c0392b; --title-font:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; }
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; color:var(--ink); background:#fff; }
-a { color:inherit; text-decoration:none; }
-a:hover .t, a:hover.t { text-decoration:underline; }
-img { max-width:100%; display:block; }
-.wrap { max-width:1399px; margin:0 auto; padding:0 16px; }
-.topbar { border-bottom:1px solid var(--line); font-size:12px; color:var(--sub); }
-.topbar .wrap { display:flex; justify-content:space-between; padding-top:8px; padding-bottom:8px; }
-.topbar a { margin-left:14px; color:var(--sub); }
-.topbar a:hover { color:var(--ink); }
-.masthead { text-align:center; padding:26px 0 18px; }
-.masthead h1 { font-family:var(--title-font); font-weight:800; font-size:42px; letter-spacing:2px; }
-.masthead h1 .b { color:var(--accent); }
-.masthead p { margin-top:6px; font-size:12.5px; color:var(--sub); letter-spacing:.4px; }
-nav.sections { border-top:2px solid var(--ink); border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; z-index:20; }
-nav.sections .wrap { display:flex; gap:4px; overflow-x:auto; }
-nav.sections a { padding:12px 16px; font-size:15px; font-weight:700; white-space:nowrap; }
-nav.sections a:hover { color:var(--accent); }
-.grid-lead { display:grid; grid-template-columns:1.6fr 1fr; gap:28px; padding:24px 0; border-bottom:1px solid var(--line); }
-.lead .thumb { aspect-ratio:16/10; overflow:hidden; background:#f4f4f4; }
-.lead .thumb img { width:100%; height:100%; object-fit:cover; }
-.lead h2 { font-family:var(--title-font); font-size:30px; line-height:1.4; margin-top:14px; font-weight:800; }
-.lead p.x { margin-top:10px; color:#444; font-size:15px; line-height:1.7; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-.lead .meta, .card .meta, .list .meta { margin-top:8px; font-size:12px; color:var(--sub); }
-.badge { display:inline-block; font-size:11px; font-weight:700; color:var(--accent); border:1px solid currentColor; border-radius:3px; padding:1px 6px; margin-right:6px; vertical-align:1px; }
-.subleads { display:flex; flex-direction:column; }
-.subleads a { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
-.subleads a:last-child { border-bottom:0; }
-.subleads .t { font-family:var(--title-font); font-size:15.5px; font-weight:600; line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; flex:1; }
-.subleads .thumb { width:96px; height:64px; flex:none; overflow:hidden; background:#f4f4f4; border-radius:4px; }
-.subleads .thumb img { width:100%; height:100%; object-fit:cover; }
-.section-block { padding:26px 0 8px; }
-.section-block .head { display:flex; align-items:baseline; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:8px; margin-bottom:18px; }
-.section-block .head h3 { font-family:var(--title-font); font-size:22px; font-weight:800; }
-.cards { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
-.card .thumb { aspect-ratio:16/10; overflow:hidden; background:#f4f4f4; border-radius:4px; }
-.card .thumb img { width:100%; height:100%; object-fit:cover; transition:transform .25s; }
-.card:hover .thumb img { transform:scale(1.04); }
-.card .t { font-family:var(--title-font); margin-top:10px; font-size:16.5px; font-weight:700; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.card p.x { margin-top:6px; font-size:13.5px; color:var(--sub); line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.two-col { display:grid; grid-template-columns:2.2fr 1fr; gap:32px; align-items:start; padding-bottom:30px; }
-aside.rank { border:1px solid var(--line); border-top:2px solid var(--ink); padding:16px; position:sticky; top:56px; }
-aside.rank h3 { font-family:var(--title-font); font-size:18px; font-weight:800; margin-bottom:4px; }
-aside.rank ol { list-style:none; counter-reset:rk; }
-aside.rank li { counter-increment:rk; border-bottom:1px solid var(--line); }
-aside.rank li:last-child { border-bottom:0; }
-aside.rank a { font-family:var(--title-font); display:flex; gap:10px; padding:10px 0; font-size:14px; line-height:1.55; }
-aside.rank a::before { content:counter(rk); font-family:var(--title-font); font-weight:800; font-size:17px; color:var(--accent); min-width:18px; }
-aside.rank .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.yna { border-top:2px solid var(--ink); padding:24px 0 10px; }
-.yna .head { display:flex; align-items:baseline; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
-.yna .tabs { margin-left:auto; display:flex; gap:6px; }
-.yna .ptab { border:1px solid var(--line); background:#fff; padding:5px 14px; font-size:13px; font-weight:700; cursor:pointer; border-radius:16px; color:var(--sub); }
-.yna .ptab.on { background:var(--ink); border-color:var(--ink); color:#fff; }
-.yna .head h3 { font-family:var(--title-font); font-size:22px; font-weight:800; }
-.yna .head .src { font-size:12px; color:var(--sub); }
-.yna .boxes { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
-/* min-width:0 — 제목이 nowrap이라 그리드 아이템 최소폭이 제목 길이가 돼 컨테이너를 뚫던 문제 방지 */
-.yna .box { border:1px solid var(--line); border-top:2px solid #0f6dbd; padding:12px 14px; min-width:0; }
-.yna .box h4 { font-size:14.5px; font-weight:700; color:#0f6dbd; margin-bottom:8px; }
-.yna .box ul { list-style:none; }
-.yna .box li { border-bottom:1px solid #f0f0f0; }
-.yna .box li:last-child { border-bottom:0; }
-.yna .box a { display:block; padding:6px 0; font-size:13.5px; line-height:1.5; color:#333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.yna .box a:hover { color:var(--accent); text-decoration:underline; }
-@media (max-width:1000px){ .yna .boxes { grid-template-columns:repeat(2,1fr); } }
-@media (max-width:520px){ .yna .boxes { grid-template-columns:1fr; } }
-footer { border-top:2px solid var(--ink); margin-top:20px; padding:22px 0 40px; font-size:12.5px; color:var(--sub); }
-footer .links { margin-bottom:10px; }
-footer .links a { margin-right:16px; color:var(--ink); font-weight:600; }
-.empty { padding:60px 0; text-align:center; color:var(--sub); }
-@media (max-width:860px){
-  .grid-lead { grid-template-columns:1fr; }
-  .cards { grid-template-columns:repeat(2,1fr); }
-  .two-col { grid-template-columns:1fr; }
-  .masthead h1 { font-size:32px; }
-  aside.rank { position:static; }
-}
-@media (max-width:520px){ .cards { grid-template-columns:1fr; } }
-</style>
-</head>
-<body>
+<div class="min-h-screen bg-white">
+  <?php render_ticker($ticker); ?>
+  <?php render_topbar(); ?>
+  <?php render_masthead(); ?>
+  <?php render_nav('홈', $bySection, !empty($press)); ?>
 
-<div class="topbar">
-  <div class="wrap">
-    <span><?= nh($todayKst) ?></span>
-    <span>
-      <a href="/imgshop.php">AI 이미지샵</a>
-      <a href="https://hom2box.tistory.com" target="_blank" rel="noopener">티스토리</a>
-      <a href="https://blog.naver.com/coreselect" target="_blank" rel="noopener">네이버 블로그</a>
-    </span>
-  </div>
-</div>
+  <div class="mx-auto max-w-[1399px] px-6">
+    <!-- adsense-slot: 상단 970x90 -->
 
-<header class="masthead wrap">
-  <h1><a href="/">HOM2BOX <span class="b">뉴스</span></a></h1>
-  <p>매일 갱신되는 이슈 · 경제 · IT · 생활 가이드</p>
-</header>
+    <?php if (!$articles): ?>
+      <div class="py-24 text-center text-zinc-400">아직 발행된 기사가 없습니다.</div>
+    <?php else: ?>
 
-<nav class="sections">
-  <div class="wrap">
-    <a href="/">홈</a>
-    <?php foreach (NEWS_SECTIONS as $s): if (empty($bySection[$s])) continue; ?>
-      <a href="#sec-<?= nh($s) ?>"><?= nh($s) ?></a>
-    <?php endforeach; ?>
-    <?php if ($press): ?><a href="#press">언론사 뉴스</a><?php endif; ?>
-    <a href="/welfare.php" style="color:#0a8f5b;">💰 지원금 찾기</a>
-  </div>
-</nav>
-
-<main class="wrap">
-<?php if (!$articles): ?>
-  <div class="empty"><?= $loadError ? '기사를 불러오지 못했습니다.' : '아직 발행된 기사가 없습니다.' ?></div>
-<?php else: ?>
-
-  <!-- 헤드라인 -->
-  <div class="grid-lead">
-    <a class="lead" href="/article.php?id=<?= (int) $headline['id'] ?>">
-      <?php if (!empty($headline['image'])): ?>
-        <div class="thumb"><img src="<?= nh($headline['image']) ?>" alt="<?= nh($headline['title']) ?>"></div>
-      <?php endif; ?>
-      <h2 class="t"><?= nh($headline['title']) ?></h2>
-      <?php if (!empty($headline['excerpt'])): ?><p class="x"><?= nh($headline['excerpt']) ?></p><?php endif; ?>
-      <div class="meta"><span class="badge"><?= nh($headline['section']) ?></span><?= nh(news_date($headline['publishedAt'])) ?></div>
-    </a>
-    <div class="subleads">
-      <?php foreach ($subLeads as $a): ?>
-        <a href="/article.php?id=<?= (int) $a['id'] ?>">
-          <span class="t"><?= nh($a['title']) ?></span>
-          <?php if (!empty($a['image'])): ?><span class="thumb"><img src="<?= nh($a['image']) ?>" alt="" loading="lazy"></span><?php endif; ?>
-        </a>
-      <?php endforeach; ?>
+    <!-- 헤드라인 -->
+    <div class="grid grid-cols-1 md:grid-cols-[1.6fr_1fr] gap-9 py-6 border-b-2 border-zinc-900">
+      <a href="/article.php?id=<?= (int) $headline['id'] ?>" class="block group">
+        <?php if (!empty($headline['image'])): ?>
+          <div class="w-full aspect-video rounded-lg overflow-hidden bg-zinc-100"><img src="<?= nh($headline['image']) ?>" alt="" class="w-full h-full object-cover"></div>
+        <?php endif; ?>
+        <h2 class="mt-4 mb-2 text-[27px] font-extrabold leading-snug tracking-tight group-hover:text-[<?= $P ?>]"><?= nh($headline['title']) ?></h2>
+        <?php if (!empty($headline['excerpt'])): ?><p class="mb-2 text-sm leading-relaxed text-zinc-500 line-clamp-2"><?= nh($headline['excerpt']) ?></p><?php endif; ?>
+        <div class="flex items-center gap-2 text-xs text-zinc-400"><span class="inline-flex items-center rounded-md bg-[<?= $P ?>] px-2 py-0.5 text-[10.5px] font-bold text-white">자체기사</span> <?= nh($headline['section']) ?> · <?= nh(news_date($headline['publishedAt'])) ?></div>
+      </a>
+      <div class="flex flex-col pb-2">
+        <?php foreach ($subLeads as $h): ?>
+          <a href="/article.php?id=<?= (int) $h['id'] ?>" class="flex gap-3.5 items-center py-3 border-b border-zinc-100 group">
+            <div class="flex-1 text-[15px] font-bold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($h['title']) ?></div>
+            <?php if (!empty($h['image'])): ?><div class="w-[88px] h-[60px] rounded-md flex-none bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($h['image']) ?>')"></div><?php endif; ?>
+          </a>
+        <?php endforeach; ?>
+      </div>
     </div>
-  </div>
 
-  <div class="two-col">
-    <div>
-      <?php foreach (NEWS_SECTIONS as $s): $list = $bySection[$s] ?? []; if (!$list) continue; ?>
-        <section class="section-block" id="sec-<?= nh($s) ?>">
-          <div class="head"><h3><?= nh($s) ?></h3></div>
-          <div class="cards">
-            <?php foreach (array_slice($list, 0, 6) as $a): ?>
-              <a class="card" href="/article.php?id=<?= (int) $a['id'] ?>">
-                <?php if (!empty($a['image'])): ?>
-                  <div class="thumb"><img src="<?= nh($a['image']) ?>" alt="" loading="lazy"></div>
-                <?php endif; ?>
-                <div class="t"><?= nh($a['title']) ?></div>
-                <?php if (!empty($a['excerpt'])): ?><p class="x"><?= nh($a['excerpt']) ?></p><?php endif; ?>
-                <div class="meta"><?= nh(news_date($a['publishedAt'])) ?></div>
+    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-9 pt-7 pb-2">
+      <!-- 분야별 섹션 -->
+      <div>
+        <?php foreach (NEWS_SECTIONS as $s): $list = $bySection[$s] ?? []; if (!$list) continue; ?>
+          <div id="sec-<?= nh(preg_replace('/[^0-9a-z가-힣]/u', '', $s)) ?>" class="mb-9">
+            <div class="flex justify-between items-baseline border-b-2 border-zinc-900 pb-2.5 mb-5">
+              <span class="text-[19px] font-extrabold text-[<?= $P ?>]"><?= nh($s) ?></span>
+              <a href="/category.php?cat=<?= urlencode($s) ?>" class="inline-flex items-center gap-0.5 text-xs text-zinc-400 hover:text-[<?= $P ?>]">더보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+              <?php foreach (array_slice($list, 0, 6) as $c): ?>
+                <a href="/article.php?id=<?= (int) $c['id'] ?>" class="block group rounded-lg border border-zinc-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  <?php if (!empty($c['image'])): ?><div class="w-full aspect-[16/10] bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($c['image']) ?>')"></div><?php endif; ?>
+                  <div class="p-3.5">
+                    <div class="text-[15.5px] font-bold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($c['title']) ?></div>
+                    <?php if (!empty($c['excerpt'])): ?><div class="mt-1.5 text-xs leading-relaxed text-zinc-500 line-clamp-2"><?= nh($c['excerpt']) ?></div><?php endif; ?>
+                    <div class="mt-2 text-[11.5px] text-zinc-400"><?= nh(news_date($c['publishedAt'])) ?></div>
+                  </div>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endforeach; ?>
+        <!-- adsense-slot: 인피드 -->
+      </div>
+
+      <!-- 사이드바 -->
+      <div class="flex flex-col gap-5 self-start lg:sticky lg:top-16">
+        <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
+          <div class="px-4 pt-3.5 pb-2.5 text-[15.5px] font-extrabold border-b border-zinc-100">주요 기사</div>
+          <div class="px-4 py-1.5">
+            <?php foreach ($ranked as $i => $r): ?>
+              <a href="/article.php?id=<?= (int) $r['id'] ?>" class="flex gap-3 items-baseline py-2 border-b border-zinc-50 last:border-0 group">
+                <span class="w-4 flex-none text-[15px] font-extrabold text-[<?= $P ?>]"><?= $i + 1 ?></span>
+                <span class="flex-1 text-[13.5px] font-semibold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($r['title']) ?></span>
               </a>
             <?php endforeach; ?>
           </div>
-        </section>
-      <?php endforeach; ?>
-    </div>
+        </div>
 
-    <aside class="rank">
-      <h3>주요 기사</h3>
-      <ol>
-        <?php foreach ($ranked as $a): ?>
-          <li><a href="/article.php?id=<?= (int) $a['id'] ?>"><span class="t"><?= nh($a['title']) ?></span></a></li>
-        <?php endforeach; ?>
-      </ol>
-      <!-- adsense-slot: front-sidebar -->
-    </aside>
-  </div>
+        <a href="/welfare.php" class="block rounded-lg border border-[#0a8f5b] bg-[#0a8f5b] p-4 text-white transition-colors hover:bg-[#087a4d]">
+          <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">payments</span>정부 지원금 찾기</div>
+          <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85">생애주기·지역별 신청 가능한 정부·지자체 지원금을 한 번에.</div>
+          <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[#0a8f5b]">지원금 보기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
+        </a>
 
-<?php endif; ?>
+        <?php if ($partner): ?>
+        <a href="<?= nh($partner['productUrl']) ?>" target="_blank" rel="sponsored nofollow noopener" class="block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+          <div class="flex justify-between items-center mb-2.5"><span class="text-[13px] font-extrabold text-[<?= $P ?>]">파트너스 추천</span><span class="inline-flex items-center rounded border border-zinc-200 px-1.5 text-[10.5px] text-zinc-400">AD</span></div>
+          <?php if (!empty($partner['imageUrl'])): ?><div class="w-full h-32 rounded-md bg-white flex items-center justify-center overflow-hidden"><img src="<?= nh($partner['imageUrl']) ?>" alt="" referrerpolicy="no-referrer" class="h-full object-contain"></div><?php endif; ?>
+          <div class="mt-2.5 text-sm font-bold leading-normal line-clamp-2"><?= nh($partner['name']) ?></div>
+          <div class="mt-1.5 flex items-center gap-1 text-[11px] text-zinc-400"><span class="material-symbols-outlined text-[13px]">info</span>구매 시 운영자가 수수료를 제공받을 수 있습니다</div>
+        </a>
+        <?php endif; ?>
 
-  <?php if ($press): ?>
-  <section class="yna" id="press">
-    <div class="head">
-      <h3>언론사 헤드라인</h3>
-      <span class="src">아침·저녁 갱신 · 제목을 누르면 각 언론사 원문으로 이동합니다</span>
-      <span class="tabs">
-        <?php $first = true; foreach ($press as $key => $tab): ?>
-          <button type="button" class="ptab<?= $first ? ' on' : '' ?>" data-tab="<?= nh($key) ?>"><?= nh($tab['label']) ?></button>
-        <?php $first = false; endforeach; ?>
-      </span>
-    </div>
-    <?php $first = true; foreach ($press as $key => $tab): ?>
-      <div class="boxes press-panel" id="press-<?= nh($key) ?>" <?= $first ? '' : 'style="display:none"' ?>>
-        <?php foreach ($tab['boxes'] as $boxLabel => $items): ?>
-          <div class="box">
-            <h4><?= nh((string) $boxLabel) ?></h4>
-            <ul>
-              <?php foreach ($items as $it): ?>
-                <li><a href="<?= nh($it['link']) ?>" target="_blank" rel="noopener nofollow" title="<?= nh($it['title']) ?>"><?= nh($it['title']) ?></a></li>
-              <?php endforeach; ?>
-            </ul>
-          </div>
-        <?php endforeach; ?>
+        <a href="/subscribe.php" class="block rounded-lg border border-[<?= $P ?>] bg-[<?= $P ?>] p-4 text-white transition-colors hover:bg-[#0f3d82]">
+          <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">mail</span>무료 뉴스레터 구독</div>
+          <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/80">매일 아침·저녁, 분야별 핵심 기사를 메일함에서 받아보세요.</div>
+          <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[<?= $P ?>]">구독하기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
+        </a>
       </div>
-    <?php $first = false; endforeach; ?>
-  </section>
-  <script>
-  document.querySelectorAll('.ptab').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('.ptab').forEach(function (b) { b.classList.remove('on'); });
-      document.querySelectorAll('.press-panel').forEach(function (p) { p.style.display = 'none'; });
-      btn.classList.add('on');
-      var panel = document.getElementById('press-' + btn.dataset.tab);
-      if (panel) panel.style.display = '';
-    });
-  });
-  </script>
-  <?php endif; ?>
-</main>
-
-<footer>
-  <div class="wrap">
-    <div class="links">
-      <a href="/">HOM2BOX 뉴스</a>
-      <a href="/about.php">소개</a>
-      <a href="/privacy.php">개인정보처리방침</a>
-      <a href="/contact.php">문의</a>
-      <a href="/imgshop.php">AI 이미지샵</a>
     </div>
-    <p>일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다.</p>
-    <p>© <?= date('Y') ?> HOM2BOX. All rights reserved.</p>
-  </div>
-</footer>
+    <?php endif; ?>
 
-</body>
-</html>
+    <!-- 언론사 헤드라인 -->
+    <?php if ($press): ?>
+    <div id="sec-yna" class="border-t-2 border-zinc-900 pt-5 pb-2 mb-5">
+      <div class="mb-5 flex flex-wrap items-center gap-3">
+        <span class="text-[19px] font-extrabold">언론사 헤드라인</span>
+        <span class="text-xs text-zinc-400">아침·저녁 갱신 · 제목을 누르면 각 언론사 원문으로 이동합니다</span>
+        <div class="ml-auto flex flex-wrap gap-2">
+          <?php $first = true; foreach ($press as $key => $tab): ?>
+            <button type="button" data-ptab="<?= nh($key) ?>" class="ptab rounded-full border px-3 py-1 text-[13px] font-bold <?= $first ? 'on border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-200 text-zinc-500' ?>"><?= nh($tab['label']) ?></button>
+          <?php $first = false; endforeach; ?>
+        </div>
+      </div>
+      <?php $first = true; foreach ($press as $key => $tab): ?>
+        <div class="press-panel grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="press-<?= nh($key) ?>" <?= $first ? '' : 'style="display:none"' ?>>
+          <?php foreach ($tab['boxes'] as $boxLabel => $links): ?>
+            <div class="min-w-0 rounded-lg border border-zinc-200 bg-white shadow-sm overflow-hidden">
+              <div class="px-4 py-2.5 text-sm font-extrabold text-[<?= $P ?>] bg-zinc-50 border-b-2 border-[<?= $P ?>]"><?= nh((string) $boxLabel) ?></div>
+              <div class="px-4 py-1.5">
+                <?php foreach ($links as $l): ?>
+                  <a href="<?= nh($l['link']) ?>" target="_blank" rel="noopener nofollow" title="<?= nh($l['title']) ?>" class="block truncate py-1.5 text-[13px] leading-normal border-b border-zinc-50 last:border-0 hover:text-[<?= $P ?>]"><?= nh($l['title']) ?></a>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php $first = false; endforeach; ?>
+    </div>
+    <script>
+    document.querySelectorAll('.ptab').forEach(function(b){b.addEventListener('click',function(){
+      document.querySelectorAll('.ptab').forEach(function(x){x.classList.remove('on','border-zinc-900','bg-zinc-900','text-white');x.classList.add('border-zinc-200','text-zinc-500');});
+      document.querySelectorAll('.press-panel').forEach(function(p){p.style.display='none';});
+      b.classList.add('on','border-zinc-900','bg-zinc-900','text-white');b.classList.remove('border-zinc-200','text-zinc-500');
+      var el=document.getElementById('press-'+b.dataset.ptab); if(el) el.style.display='';
+    });});
+    </script>
+    <?php endif; ?>
+  </div>
+
+  <?php render_footer(); ?>
+</div>
+<?php render_foot(); ?>

@@ -3,6 +3,7 @@
 // 광고가 없는 글에는 글 키워드에 매칭된 제휴 상품 배너를 자동 삽입한다.
 declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
+require_once __DIR__ . '/includes/layout.php';
 
 $id = (int) ($_GET['id'] ?? 0);
 if ($id <= 0) { http_response_code(404); exit('잘못된 요청입니다.'); }
@@ -129,19 +130,21 @@ try {
 }
 
 $desc = $article['metaDescription'] ?: ($article['excerpt'] ?: mb_substr(strip_tags($html), 0, 120));
+$readMin = max(3, (int) round(mb_strlen(strip_tags($html)) / 500));
+
+// 사이드바 주요기사·티커용
+$allForNav = [];
+try {
+    $allForNav = news_articles();
+} catch (Throwable) {
+}
+$topRanked = $allForNav;
+usort($topRanked, fn($a, $b) => ($b['quality'] <=> $a['quality']) ?: strcmp($b['publishedAt'], $a['publishedAt']));
+$topRanked = array_slice(array_filter($topRanked, fn($a) => $a['id'] !== $id), 0, 8);
+
+render_head($article['title'] . ' — HOM2BOX 뉴스', $desc, $image ?: '');
 ?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= nh($article['title']) ?> — HOM2BOX 뉴스</title>
-<meta name="description" content="<?= nh($desc) ?>">
 <link rel="canonical" href="https://hom2box.com/article.php?id=<?= $id ?>">
-<meta property="og:type" content="article">
-<meta property="og:title" content="<?= nh($article['title']) ?>">
-<meta property="og:description" content="<?= nh($desc) ?>">
-<?php if ($image): ?><meta property="og:image" content="<?= nh($image) ?>"><?php endif; ?>
 <script type="application/ld+json"><?= json_encode([
     '@context' => 'https://schema.org',
     '@type' => 'NewsArticle',
@@ -151,95 +154,100 @@ $desc = $article['metaDescription'] ?: ($article['excerpt'] ?: mb_substr(strip_t
     'author' => ['@type' => 'Organization', 'name' => 'HOM2BOX 뉴스'],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <style>
-/* 전체 페이지 폰트 — 에스코어드림 (눈누, 웹사이트 사용 가능 라이선스). 본문 400 · 제목 700/800 */
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff'); font-weight:400; font-display:swap; }
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-7ExtraBold.woff') format('woff'); font-weight:700; font-display:swap; }
-@font-face { font-family:'S-CoreDream'; src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff'); font-weight:800; font-display:swap; }
-:root { --ink:#111; --sub:#666; --line:#e5e5e5; --accent:#0b5fd9; --title-font:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; }
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif; color:var(--ink); background:#fff; }
-/* 본문(contentHtml)은 생성 시점 인라인 font-family(Pretendard)가 박혀 있어 상속 강제로 통일한다 */
-.content, .content * { font-family:'S-CoreDream',-apple-system,'Malgun Gothic',sans-serif !important; }
-a { color:inherit; text-decoration:none; }
-img { max-width:100%; }
-.wrap { max-width:820px; margin:0 auto; padding:0 16px; }
-.masthead { text-align:center; padding:18px 0 12px; border-bottom:2px solid var(--ink); }
-.masthead .logo { font-family:var(--title-font); font-weight:800; font-size:26px; letter-spacing:1px; }
-.masthead .logo .b { color:var(--accent); }
-.art-head { padding:30px 0 18px; border-bottom:1px solid var(--line); }
-.art-head .sec { font-size:13px; font-weight:700; color:var(--accent); }
-.art-head h1 { font-family:var(--title-font); font-size:32px; line-height:1.45; font-weight:800; margin:10px 0 14px; }
-.art-head .meta { font-size:13px; color:var(--sub); display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-.pbadge { display:inline-block; font-size:11px; font-weight:700; color:#fff; border-radius:3px; padding:2px 7px; }
-.figure { margin:22px 0 6px; }
-.figure img { width:100%; border-radius:6px; }
-.content { padding:10px 0 30px; }
-.related { border-top:2px solid var(--ink); padding:20px 0 40px; }
-.related h3 { font-family:var(--title-font); font-size:20px; font-weight:800; margin-bottom:14px; }
-.related .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
-.related .card .thumb { aspect-ratio:16/10; overflow:hidden; background:#f4f4f4; border-radius:4px; }
-.related .card img { width:100%; height:100%; object-fit:cover; }
-.related .t { font-family:var(--title-font); margin-top:8px; font-size:14.5px; font-weight:600; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-footer { border-top:2px solid var(--ink); padding:20px 0 40px; font-size:12.5px; color:var(--sub); }
-@media (max-width:640px){ .art-head h1 { font-size:24px; } .related .cards { grid-template-columns:1fr 1fr; } }
+/* 생성 본문(contentHtml)의 인라인 폰트를 통일하고 이미지·표를 반응형으로 */
+.article-body, .article-body * { font-family:'Escoredream','Noto Sans KR',sans-serif !important; }
+.article-body img { max-width:100%; height:auto; border-radius:8px; }
+.article-body table { width:100%; border-collapse:collapse; display:block; overflow-x:auto; }
+.article-body h2 { font-size:22px; font-weight:800; margin:32px 0 12px; padding-top:22px; border-top:1px solid #f1f1f1; }
+.article-body h3 { font-size:18px; font-weight:700; margin:24px 0 10px; }
+.article-body p { font-size:16.5px; line-height:1.95; margin:14px 0; color:#222; }
+.article-body a { color:<?= NEWS_PRIMARY ?>; text-decoration:underline; }
 </style>
-</head>
-<body>
 
-<header class="masthead">
-  <a class="logo" href="/">HOM2BOX <span class="b">뉴스</span></a>
-</header>
+<div class="min-h-screen bg-white">
+  <?php render_ticker(array_slice($allForNav, 0, 6)); ?>
+  <?php render_topbar(); ?>
+  <?php render_masthead(); ?>
+  <?php render_nav($section, [], true); ?>
 
-<main class="wrap">
-  <div class="art-head">
-    <span class="sec"><?= nh($section) ?></span>
-    <h1><?= nh($article['title']) ?></h1>
-    <div class="meta">
-      <span><?= nh(news_date($publishedAt)) ?> 발행</span>
-      <span>
-        <?php foreach (NEWS_PLATFORM_PRIORITY as $pf): if (empty(array_column($jobs, null, 'platform')[$pf])) continue;
-          [$label, $color] = NEWS_PLATFORMS[$pf]; $u = array_column($jobs, null, 'platform')[$pf]['publishedUrl']; ?>
-          <a class="pbadge" style="background:<?= $color ?>" href="<?= nh($u) ?>" target="_blank" rel="noopener"><?= nh($label) ?></a>
-        <?php endforeach; ?>
-      </span>
+  <div class="mx-auto max-w-[1399px] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-10 px-6 py-8">
+    <!-- 기사 본문 -->
+    <div class="min-w-0">
+      <div class="mb-3 text-[13px] font-bold text-[<?= NEWS_PRIMARY ?>]"><?= nh($section) ?></div>
+      <h1 class="mb-4 text-[30px] md:text-[33px] font-extrabold leading-snug tracking-tight"><?= nh($article['title']) ?></h1>
+      <div class="flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-zinc-200">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[<?= NEWS_PRIMARY ?>] text-sm font-extrabold text-white">H</div>
+          <div>
+            <div class="text-[13.5px] font-bold">HOM2BOX 편집국 <span class="ml-1 inline-flex items-center rounded-md bg-[<?= NEWS_PRIMARY ?>] px-2 py-0.5 text-[10.5px] font-bold text-white">자체기사</span></div>
+            <div class="mt-0.5 text-xs text-zinc-400">입력 <?= nh(news_date($publishedAt)) ?> · 읽기 <?= $readMin ?>분</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <?php foreach (NEWS_PLATFORM_PRIORITY as $pf): if (empty(array_column($jobs, null, 'platform')[$pf])) continue;
+            [$label, $color] = NEWS_PLATFORMS[$pf]; $u = array_column($jobs, null, 'platform')[$pf]['publishedUrl']; ?>
+            <a href="<?= nh($u) ?>" target="_blank" rel="noopener" class="inline-flex items-center rounded-md px-2 py-0.5 text-[10.5px] font-bold text-white" style="background:<?= $color ?>"><?= nh($label) ?></a>
+          <?php endforeach; ?>
+          <button type="button" onclick="if(navigator.share){navigator.share({title:document.title,url:location.href})}else{navigator.clipboard.writeText(location.href);this.querySelector('span').textContent='check'}" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm hover:bg-zinc-50"><span class="material-symbols-outlined text-[18px]">share</span></button>
+        </div>
+      </div>
+
+      <?php if (!empty($article['excerpt'])): ?>
+      <div class="my-6 rounded-lg border-l-4 border-[<?= NEWS_PRIMARY ?>] bg-zinc-50 px-5 py-4">
+        <div class="mb-1.5 text-xs font-extrabold text-[<?= NEWS_PRIMARY ?>]">핵심 요약</div>
+        <div class="text-sm leading-loose text-zinc-700"><?= nh($article['excerpt']) ?></div>
+      </div>
+      <?php endif; ?>
+
+      <!-- adsense-slot: article-top -->
+
+      <?php if ($showFigure): ?>
+      <figure class="my-6"><img src="<?= nh($image) ?>" alt="<?= nh($article['title']) ?>" class="block w-full rounded-lg object-cover"><figcaption class="mt-2 text-xs text-zinc-400">AI 생성 이미지</figcaption></figure>
+      <?php endif; ?>
+
+      <article class="article-body pb-8"><?= $html /* goBlog 생성 HTML — 이스케이프 안 함 */ ?></article>
+
+      <!-- adsense-slot: article-bottom -->
+
+      <?php if ($related): ?>
+      <section class="border-t-2 border-zinc-900 pt-6 pb-4">
+        <h3 class="text-[19px] font-extrabold mb-4"><?= nh($section) ?> 최신 기사</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <?php foreach ($related as $a): ?>
+            <a href="/article.php?id=<?= (int) $a['id'] ?>" class="block group rounded-lg border border-zinc-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+              <?php if (!empty($a['image'])): ?><div class="w-full aspect-[16/10] bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($a['image']) ?>')"></div><?php endif; ?>
+              <div class="p-3"><div class="text-[14.5px] font-bold leading-normal group-hover:text-[<?= NEWS_PRIMARY ?>] line-clamp-2"><?= nh($a['title']) ?></div></div>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      </section>
+      <?php endif; ?>
+    </div>
+
+    <!-- 사이드바 -->
+    <div class="flex flex-col gap-5 self-start lg:sticky lg:top-16">
+      <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div class="px-4 pt-3.5 pb-2.5 text-[15.5px] font-extrabold border-b border-zinc-100">주요 기사</div>
+        <div class="px-4 py-1.5">
+          <?php foreach ($topRanked as $i => $r): ?>
+            <a href="/article.php?id=<?= (int) $r['id'] ?>" class="flex gap-3 items-baseline py-2 border-b border-zinc-50 last:border-0 group">
+              <span class="w-4 flex-none text-[15px] font-extrabold text-[<?= NEWS_PRIMARY ?>]"><?= $i + 1 ?></span>
+              <span class="flex-1 text-[13.5px] font-semibold leading-normal group-hover:text-[<?= NEWS_PRIMARY ?>]"><?= nh($r['title']) ?></span>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <a href="/welfare.php" class="block rounded-lg border border-[#0a8f5b] bg-[#0a8f5b] p-4 text-white hover:bg-[#087a4d]">
+        <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">payments</span>정부 지원금 찾기</div>
+        <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85">생애주기·지역별 신청 가능한 지원금을 한 번에.</div>
+      </a>
+      <a href="/subscribe.php" class="block rounded-lg border border-[<?= NEWS_PRIMARY ?>] bg-[<?= NEWS_PRIMARY ?>] p-4 text-white hover:bg-[#0f3d82]">
+        <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">mail</span>무료 뉴스레터 구독</div>
+        <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/80">매일 아침·저녁 핵심 기사를 메일로.</div>
+      </a>
     </div>
   </div>
 
-  <!-- adsense-slot: article-top -->
-
-  <?php if ($showFigure): ?><div class="figure"><img src="<?= nh($image) ?>" alt="<?= nh($article['title']) ?>"></div><?php endif; ?>
-
-  <article class="content"><?= $html /* goBlog가 생성한 자체 HTML — 이스케이프하지 않음 */ ?></article>
-
-  <!-- adsense-slot: article-bottom -->
-
-  <?php if ($related): ?>
-  <section class="related">
-    <h3><?= nh($section) ?> 최신 기사</h3>
-    <div class="cards">
-      <?php foreach ($related as $a): ?>
-        <a class="card" href="/article.php?id=<?= (int) $a['id'] ?>">
-          <?php if (!empty($a['image'])): ?><div class="thumb"><img src="<?= nh($a['image']) ?>" alt="" loading="lazy"></div><?php endif; ?>
-          <div class="t"><?= nh($a['title']) ?></div>
-        </a>
-      <?php endforeach; ?>
-    </div>
-  </section>
-  <?php endif; ?>
-</main>
-
-<footer>
-  <div class="wrap">
-    <p style="margin-bottom:10px;">
-      <a href="/" style="color:#111;font-weight:600;margin-right:14px;">HOM2BOX 뉴스</a>
-      <a href="/about.php" style="color:#111;font-weight:600;margin-right:14px;">소개</a>
-      <a href="/privacy.php" style="color:#111;font-weight:600;margin-right:14px;">개인정보처리방침</a>
-      <a href="/contact.php" style="color:#111;font-weight:600;">문의</a>
-    </p>
-    <p>일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다.</p>
-    <p>© <?= date('Y') ?> HOM2BOX 뉴스</p>
-  </div>
-</footer>
-
-</body>
-</html>
+  <?php render_footer(); ?>
+</div>
+<?php render_foot();
