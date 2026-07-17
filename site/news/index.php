@@ -175,6 +175,7 @@ footer .links a { margin-right:16px; color:var(--ink); font-weight:600; }
       <a href="#sec-<?= nh($s) ?>"><?= nh($s) ?></a>
     <?php endforeach; ?>
     <?php if ($press): ?><a href="#press">언론사 뉴스</a><?php endif; ?>
+    <a href="/welfare.php" style="color:#0a8f5b;">💰 지원금 찾기</a>
   </div>
 </nav>
 

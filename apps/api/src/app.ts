@@ -10,6 +10,7 @@ import { dashboardRouter } from "./modules/analytics/dashboard.router.js";
 import { keywordsRouter } from "./modules/keywords/keywords.router.js";
 import { articlesRouter } from "./modules/articles/articles.router.js";
 import { productsRouter } from "./modules/products/products.router.js";
+import { welfareRouter } from "./modules/welfare/welfare.router.js";
 import { publishRouter } from "./modules/publishing/publish.router.js";
 import { mediaDir } from "./modules/images/image-service.js";
 import { extensionRouter } from "./modules/extension/extension.router.js";
@@ -60,6 +61,7 @@ export function createApp() {
   app.use("/api/keywords", keywordsRouter);
   app.use("/api/articles", articlesRouter);
   app.use("/api/products", productsRouter);
+  app.use("/api/welfare", welfareRouter);
   app.use("/api/publish-jobs", publishRouter);
   app.use("/api/characters", charactersRouter);
   app.use("/api/extension", extensionRouter);

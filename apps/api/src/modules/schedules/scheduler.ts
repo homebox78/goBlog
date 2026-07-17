@@ -12,6 +12,7 @@ let imageSweepJob: Cron | null = null;
 let tistorySyncJob: Cron | null = null;
 let dripJob: Cron | null = null;
 let reportJob: Cron | null = null;
+let welfareJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -603,6 +604,21 @@ export async function scheduleFromSettings(): Promise<void> {
       }
     });
     console.log(`[scheduler] 텔레그램 일일 운영 보고 (${reportTimeRaw} KST)`);
+
+    // 복지서비스(지원금) 적재 — 매일 05:00 KST (키워드 수집 06시 전에 풀을 갱신). 키 미설정이면 조용히 스킵.
+    welfareJob?.stop();
+    welfareJob = new Cron("0 5 * * *", { timezone: "Asia/Seoul", protect: true }, async () => {
+      try {
+        const has = (await getSettingValues(["datago.serviceKey"]))["datago.serviceKey"];
+        if (!has) return;
+        const { ingestWelfareServices } = await import("../welfare/welfare-service.js");
+        const r = await ingestWelfareServices();
+        console.log(`[scheduler] 복지서비스 적재: 중앙 ${r.central.upserted}/${r.central.total} · 지자체 ${r.local.upserted}/${r.local.total}`);
+      } catch (error) {
+        console.error("[scheduler] 복지서비스 적재 실패:", (error as Error).message);
+      }
+    });
+    console.log("[scheduler] 복지서비스 적재 1회/일 (05:00 KST)");
   } catch (error) {
     console.warn("[scheduler] 예약 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }

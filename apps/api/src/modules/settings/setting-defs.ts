@@ -83,6 +83,9 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "threads.accessToken", group: "platforms", label: "Threads 액세스 토큰", secret: true },
   { key: "threads.userId", group: "platforms", label: "Threads 사용자 ID (비우면 자동)", secret: false },
 
+  // 공공데이터포털(data.go.kr) — 복지로 복지서비스(지원금) API 인증키. 중앙·지자체 공용.
+  { key: "datago.serviceKey", group: "keywords", label: "공공데이터포털 인증키 (복지서비스)", secret: true },
+
   // 텔레그램 알림 — 일일 전체 운영 보고 + 발행 실패 즉시 알림 (@BotFather에서 봇 생성)
   { key: "telegram.botToken", group: "notify", label: "텔레그램 봇 토큰", secret: true },
   { key: "telegram.chatId", group: "notify", label: "텔레그램 Chat ID", secret: false },
