@@ -8,7 +8,7 @@ if (!function_exists('nh')) {
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260717f';
+const TW_CSS_VER = '20260718a';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -279,6 +279,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
     }
     $tabs[] = ['지원금', '/welfare.php'];
     $tabs[] = ['계산기', '/tools.php'];
+    $tabs[] = ['문서도구', '/docs.php'];
     $tabs[] = ['언론사', '/press.php'];
     $tabs[] = ['오피니언', '/opinion.php'];
     ?>
