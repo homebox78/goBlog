@@ -66,7 +66,7 @@ function wrap(text: string, maxUnits: number, maxLines: number): string[] {
 
 const FORMATS: Record<string, { w: number; h: number }> = {
   wide: { w: 970, h: 250 },
-  box: { w: 336, h: 280 },
+  box: { w: 336, h: 320 },
   card: { w: 400, h: 500 },
 };
 
@@ -118,7 +118,7 @@ export async function generateProductBanner(
     textAnchor = "start";
   } else {
     // 세로형(box/card) — 상단 이미지 중앙, 하단 텍스트 중앙, CTA 풀폭
-    const s = format === "card" ? 260 : 118;
+    const s = format === "card" ? 260 : 108;
     imgBox = { x: (w - s) / 2, y: 16, s };
     tx = w / 2;
     brandY = imgBox.y + s + 22;
