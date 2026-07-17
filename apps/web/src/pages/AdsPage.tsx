@@ -51,13 +51,51 @@ export default function AdsPage() {
   );
 }
 
+interface BannerProduct {
+  id: number;
+  name: string;
+  source: string;
+  price: number | null;
+  imageUrl: string | null;
+}
+
 function SlotCard({ slot }: { slot: AdSlot }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<AdSlot>(slot);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [genOpen, setGenOpen] = useState(false);
+  const [pq, setPq] = useState("");
+  const [genFormat, setGenFormat] = useState<"box" | "wide" | "card">(
+    slot.position.startsWith("home-top") || slot.position === "category-top" ? "wide" : "box",
+  );
+  const [generating, setGenerating] = useState<number | null>(null);
 
   useEffect(() => setForm(slot), [slot]);
+
+  const bannerProducts = useQuery({
+    queryKey: ["ad-products", pq, genOpen],
+    queryFn: () => api.get<{ products: BannerProduct[] }>(`/api/ads/products${pq ? `?q=${encodeURIComponent(pq)}` : ""}`),
+    enabled: genOpen,
+  });
+
+  const genBanner = async (productId: number, linkUrl: string) => {
+    setGenerating(productId);
+    try {
+      const r = await api.post<{ url: string; linkUrl: string }>("/api/ads/generate-banner", {
+        productId,
+        format: genFormat,
+      });
+      setForm((f) => ({ ...f, type: "IMAGE", imageUrl: r.url, linkUrl: r.linkUrl }));
+      setGenOpen(false);
+      toast.success("배너를 생성했습니다 — 저장을 눌러 적용하세요.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "배너 생성 실패");
+    } finally {
+      setGenerating(null);
+    }
+    void linkUrl;
+  };
 
   const save = useMutation({
     mutationFn: () =>
@@ -150,13 +188,70 @@ function SlotCard({ slot }: { slot: AdSlot }) {
                   className="hidden"
                   onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
                 />
-                <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
-                  {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-                  이미지 업로드
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                    {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+                    이미지 업로드
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setGenOpen((v) => !v)}>
+                    ✨ 상품으로 자동 생성
+                  </Button>
+                </div>
                 <p className="mt-1 text-[11px] text-muted-foreground">PNG·JPG·WebP · 3MB 이하</p>
               </div>
             </div>
+
+            {genOpen && (
+              <div className="rounded-lg border bg-muted/40 p-3 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-semibold">쿠팡·네이버 상품으로 배너 생성</span>
+                  <div className="ml-auto flex gap-1">
+                    {(["box", "wide", "card"] as const).map((fmt) => (
+                      <button
+                        key={fmt}
+                        type="button"
+                        onClick={() => setGenFormat(fmt)}
+                        className={
+                          "rounded border px-2 py-0.5 text-xs " +
+                          (genFormat === fmt ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground")
+                        }
+                      >
+                        {fmt === "box" ? "박스형" : fmt === "wide" ? "가로형" : "카드형"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Input value={pq} onChange={(e) => setPq(e.target.value)} placeholder="상품 검색 (예: 선풍기)" className="h-8 text-sm" />
+                <div className="max-h-56 space-y-1 overflow-y-auto">
+                  {bannerProducts.isPending ? (
+                    <p className="py-3 text-center text-xs text-muted-foreground">불러오는 중...</p>
+                  ) : (bannerProducts.data?.products ?? []).length === 0 ? (
+                    <p className="py-3 text-center text-xs text-muted-foreground">트래킹 링크 있는 상품이 없습니다.</p>
+                  ) : (
+                    (bannerProducts.data?.products ?? []).map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => genBanner(p.id, "")}
+                        disabled={generating !== null}
+                        className="flex w-full items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-left text-xs hover:bg-accent disabled:opacity-50"
+                      >
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt="" referrerPolicy="no-referrer" className="size-9 rounded border object-contain" />
+                        ) : (
+                          <div className="size-9 rounded border bg-muted" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px]">
+                          {p.source === "COUPANG" ? "쿠팡" : "네이버"}
+                        </span>
+                        {generating === p.id && <Loader2 className="size-4 animate-spin" />}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
             <div className="space-y-1">
               <Label className="text-xs">이미지 URL (직접 입력도 가능)</Label>
               <Input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} />
