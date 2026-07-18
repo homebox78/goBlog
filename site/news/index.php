@@ -80,6 +80,26 @@ try {
 } catch (Throwable) {
 }
 
+// 사이드바 '주요 기사' = 언론사 헤드라인의 증권 섹션(여러 매체 교차)으로 채운다.
+// 증권 수집 실패 시 자체 기사 랭킹으로 폴백.
+$mainHeads = [];
+if (!empty($press['stock']['boxes'])) {
+    $boxes = array_values($press['stock']['boxes']);
+    $maxLen = 0;
+    foreach ($boxes as $b) $maxLen = max($maxLen, count($b));
+    for ($r = 0; $r < $maxLen && count($mainHeads) < 8; $r++) {
+        foreach ($boxes as $b) {
+            if (isset($b[$r]) && !empty($b[$r]['title'])) {
+                $mainHeads[] = ['title' => $b[$r]['title'], 'href' => $b[$r]['link'], 'ext' => true];
+                if (count($mainHeads) >= 8) break;
+            }
+        }
+    }
+}
+if (!$mainHeads) {
+    foreach ($ranked as $r) $mainHeads[] = ['title' => $r['title'], 'href' => '/article.php?id=' . (int) $r['id'], 'ext' => false];
+}
+
 $P = '#134a9c';
 render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스와 가이드. HOM2BOX 편집국 자체 기사.');
 ?>
@@ -321,13 +341,12 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
           <div class="flex items-center gap-2 px-4 pt-3.5 pb-2.5 border-b border-zinc-100">
             <span class="h-[15px] w-[3px] rounded-full bg-[#b3925c]"></span>
             <span class="text-[15.5px] font-extrabold">주요 기사</span>
-            <span class="ml-auto inline-flex items-center gap-0.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#b3925c]"><span class="material-symbols-outlined text-[13px]">trending_up</span>Trending</span>
+            <span class="ml-auto inline-flex items-center gap-0.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#b3925c]"><span class="material-symbols-outlined text-[13px]">show_chart</span>증권</span>
           </div>
           <div class="px-4 py-1.5">
-            <?php foreach ($ranked as $i => $r): ?>
-              <a href="/article.php?id=<?= (int) $r['id'] ?>" class="flex gap-3 items-baseline py-2 border-b border-zinc-50 last:border-0 group">
-                <span class="w-4 flex-none text-[15px] font-extrabold text-[#b3925c]"><?= $i + 1 ?></span>
-                <span class="flex-1 text-[13.5px] font-semibold leading-normal group-hover:text-[<?= $P ?>]"><?= nh($r['title']) ?></span>
+            <?php foreach ($mainHeads as $r): ?>
+              <a href="<?= nh($r['href']) ?>"<?= $r['ext'] ? ' target="_blank" rel="noopener nofollow"' : '' ?> class="flex py-2 border-b border-zinc-50 last:border-0 group">
+                <span class="flex-1 text-[13.5px] font-normal leading-normal text-zinc-800 group-hover:text-[<?= $P ?>] line-clamp-2"><?= nh($r['title']) ?></span>
               </a>
             <?php endforeach; ?>
           </div>

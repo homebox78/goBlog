@@ -123,14 +123,25 @@ function press_fetch_all(array $urls): array
  */
 function press_headlines(int $perBox = 5): array
 {
+    // 공유 캐시라 박스당 최대 STORE건을 저장하고 반환 시 $perBox로 슬라이스 — 첫 호출자의 perBox에 종속되지 않게.
+    // (예: 티커=10건, 홈 목록=5건이 같은 캐시를 쓰는데 먼저 쓴 쪽 개수로 고정되던 문제 해결)
+    $STORE = 10;
+    $slice = function (array $data) use ($perBox): array {
+        foreach ($data as &$tab) {
+            if (empty($tab['boxes']) || !is_array($tab['boxes'])) continue;
+            foreach ($tab['boxes'] as &$items) $items = array_slice($items, 0, $perBox);
+        }
+        unset($tab, $items);
+        return $data;
+    };
     // ⚠️ PHP-FPM은 PrivateTmp라 셸에서 /tmp를 지워도 이 파일은 안 지워진다 — 강제 갱신은 파일명 버전업으로
-    $cacheFile = sys_get_temp_dir() . '/goblog_press_headlines_v3.json';
+    $cacheFile = sys_get_temp_dir() . '/goblog_press_headlines_v4.json';
     $bucket = press_bucket();
     $cache = null;
     if (is_file($cacheFile)) {
         $cache = json_decode((string) file_get_contents($cacheFile), true);
         if (is_array($cache) && ($cache['bucket'] ?? '') === $bucket && !empty($cache['data'])) {
-            return $cache['data'];
+            return $slice($cache['data']);
         }
     }
 
@@ -157,7 +168,7 @@ function press_headlines(int $perBox = 5): array
                         // pubDate 도 담는다 (속보 24시간 필터용) — 없으면 빈 문자열
                         $pub = trim((string) ($it->pubDate ?? ''));
                         $items[] = ['title' => $title, 'link' => $link, 'pubDate' => $pub];
-                        if (count($items) >= $perBox) break;
+                        if (count($items) >= $STORE) break;
                     }
                 }
             }
@@ -173,10 +184,10 @@ function press_headlines(int $perBox = 5): array
         if ($boxes) $data[$tabKey] = ['label' => $label, 'boxes' => $boxes];
     }
 
-    if (count($data) === 0) return $cache['data'] ?? [];
+    if (count($data) === 0) return $slice($cache['data'] ?? []);
     $save = ['bucket' => $failed <= $total / 2 ? $bucket : 'retry', 'data' => $data];
     file_put_contents($cacheFile, json_encode($save, JSON_UNESCAPED_UNICODE), LOCK_EX);
-    return $data;
+    return $slice($data);
 }
 
 /**

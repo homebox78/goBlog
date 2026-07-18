@@ -287,10 +287,27 @@ function render_breaking_bar(): void
 
 function render_ticker(array $items): void
 {
-    if (!$items) return;
-    $span = function () use ($items) {
-        foreach ($items as $a) {
-            echo '<a href="/article.php?id=' . (int) $a['id'] . '" class="mx-6 text-[11px] text-zinc-700 hover:text-[' . NEWS_PRIMARY . ']">· ' . nh($a['title']) . '</a>';
+    // 티커 = 언론사 헤드라인 JTBC '이슈 TOP10' 10건(외부 링크). 수집 실패 시 전달받은 자체 기사로 폴백.
+    if (!function_exists('press_headlines')) {
+        $f = __DIR__ . '/press-rss.php';
+        if (is_file($f)) require_once $f;
+    }
+    $issue = [];
+    if (function_exists('press_headlines')) {
+        try {
+            $ph = press_headlines(10);
+            foreach (($ph['jtbc']['boxes']['이슈 TOP10'] ?? []) as $it) {
+                if (!empty($it['title']) && !empty($it['link'])) $issue[] = ['title' => $it['title'], 'link' => $it['link']];
+                if (count($issue) >= 10) break;
+            }
+        } catch (Throwable) {}
+    }
+    $rows = $issue ?: array_map(fn($a) => ['title' => $a['title'], 'link' => '/article.php?id=' . (int) $a['id']], $items);
+    if (!$rows) return;
+    $span = function () use ($rows) {
+        foreach ($rows as $a) {
+            $ext = str_starts_with($a['link'], 'http');
+            echo '<a href="' . nh($a['link']) . '"' . ($ext ? ' target="_blank" rel="noopener nofollow"' : '') . ' class="mx-6 text-[11px] text-zinc-700 hover:text-[' . NEWS_PRIMARY . ']">· ' . nh($a['title']) . '</a>';
         }
     };
     ?>
@@ -299,7 +316,7 @@ function render_ticker(array $items): void
     <input type="checkbox" id="h2btk" class="h2b-pause">
     <label for="h2btk" title="클릭하면 멈춤/재생" class="flex flex-none cursor-pointer select-none items-center gap-1 bg-[#b91c1c] px-3 text-white">
       <span class="h2b-ico-pause material-symbols-outlined text-[16px]">pause</span><span class="h2b-ico-play material-symbols-outlined text-[16px]">play_arrow</span>
-      <span class="whitespace-nowrap text-[12.5px] font-extrabold">속보</span>
+      <span class="whitespace-nowrap text-[12.5px] font-extrabold">이슈</span>
     </label>
     <div class="h2b-bar min-w-0 flex-1 overflow-hidden py-2">
       <div class="h2b-track">
