@@ -23,7 +23,8 @@ export const SETTING_DEFS: SettingDef[] = [
   // 하루 자동 생성 상한 — 대량 생성(스팸/애드센스 위험)을 막는다. 스케줄러가 이 수를 넘으면 그날은 더 안 만든다.
   { key: "scheduler.dailyLimit", group: "claude", label: "하루 자동 생성 상한(글)", secret: false, defaultValue: "5" },
   // 제휴 배너 전역 스위치 — off면 어떤 글에도 상품 배너를 삽입하지 않는다(정보성 블로그로 운영할 때).
-  { key: "affiliate.bannersEnabled", group: "claude", label: "제휴 배너 삽입 사용", secret: false, defaultValue: "true" },
+  // 초기 운영 정책: 독자 확보 전까지 광고 없이 뉴스·가이드만 → 기본 off. 독자 모인 뒤 관리자 설정에서 켠다.
+  { key: "affiliate.bannersEnabled", group: "claude", label: "제휴 배너 삽입 사용", secret: false, defaultValue: "false" },
   // 드립 자동 발행 — on이면 검토 끝난 글을 하루 상한만큼 카테고리 고르게 자동 발행(대량 배포 방지). off면 수동 발행.
   { key: "scheduler.autoPublishDaily", group: "claude", label: "하루 자동 발행(드립)", secret: false, defaultValue: "true" },
 
