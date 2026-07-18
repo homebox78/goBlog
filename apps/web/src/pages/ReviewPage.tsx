@@ -76,7 +76,7 @@ function statusBadge(s: string) {
   return <Badge variant="secondary">{STATUS_LABEL[s] ?? s}</Badge>;
 }
 
-export default function ReviewPage() {
+export default function ReviewPage({ embedded = false }: { embedded?: boolean } = {}) {
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("selected") ? Number(params.get("selected")) : null;
@@ -108,15 +108,17 @@ export default function ReviewPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Inbox className="size-6" /> 검수함
-            {pendingCount > 0 && <Badge className="bg-amber-500 text-white hover:bg-amber-500">{pendingCount}</Badge>}
-          </h1>
-          <p className="text-sm text-muted-foreground">검토 대기 글을 훑어보고 바로 검수·발행·삭제하세요.</p>
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-bold">
+              <Inbox className="size-6" /> 검수함
+              {pendingCount > 0 && <Badge className="bg-amber-500 text-white hover:bg-amber-500">{pendingCount}</Badge>}
+            </h1>
+            <p className="text-sm text-muted-foreground">검토 대기 글을 훑어보고 바로 검수·발행·삭제하세요.</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(320px,380px)_1fr]">
         {/* 목록 pane */}

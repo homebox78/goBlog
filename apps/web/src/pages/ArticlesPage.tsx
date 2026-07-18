@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ImagePlus, Loader2, Search, Trash2, Wand2, X } from "lucide-react";
+import ReviewPage from "@/pages/ReviewPage";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -196,17 +197,24 @@ export default function ArticlesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = (searchParams.get("filter") as ListFilter) || "all";
   const search = searchParams.get("q") ?? "";
+  const view: "list" | "review" = searchParams.get("view") === "review" ? "review" : "list";
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
   // 행별 진행 중 작업 (이미지 생성/보정은 수십 초 걸림)
   const [busy, setBusy] = useState<Record<number, "images" | "improve">>({});
 
   // 필터·검색어를 한 곳에서 갱신한다 — 따로 setSearchParams를 부르면 서로를 지운다.
-  const updateParams = (patch: { filter?: ListFilter; q?: string }) => {
+  const updateParams = (patch: { filter?: ListFilter; q?: string; view?: "list" | "review" }) => {
     const next: Record<string, string> = {};
     const nextFilter = patch.filter ?? filter;
     const nextQ = patch.q ?? search;
+    const nextView = patch.view ?? view;
     if (nextFilter !== "all") next.filter = nextFilter;
     if (nextQ.trim()) next.q = nextQ;
+    if (nextView === "review") {
+      next.view = "review";
+      const sel = searchParams.get("selected");
+      if (sel) next.selected = sel;
+    }
     setSearchParams(next, { replace: true });
   };
 
@@ -298,6 +306,7 @@ export default function ArticlesPage() {
   };
 
   const all = query.data?.articles ?? [];
+  const pendingCount = all.filter((a) => a.status === "REVIEW").length;
   const filtered = all
     .filter((a) => matchFilter(a, filter, minScore) && matchSearch(a, search))
     .sort((a, b) => {
@@ -318,6 +327,36 @@ export default function ArticlesPage() {
           생성된 글의 검수·편집·발행 상태를 관리합니다. 오늘의 키워드에서 "글 생성"으로 시작하세요.
         </p>
       </div>
+
+      {/* 글 목록 / 검수함 탭 (한 페이지에서 관리) */}
+      <div className="flex gap-4 border-b">
+        {(["list", "review"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => updateParams({ view: v })}
+            className={`-mb-px flex items-center gap-1.5 border-b-2 px-1 pb-2 text-sm font-semibold transition-colors ${
+              view === v ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {v === "list" ? (
+              "글 목록"
+            ) : (
+              <>
+                검수함
+                {pendingCount > 0 && (
+                  <span className="rounded-full bg-amber-500 px-1.5 text-[11px] font-bold leading-5 text-white">{pendingCount}</span>
+                )}
+              </>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {view === "review" ? (
+        <ReviewPage embedded />
+      ) : (
+        <>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-1.5">
@@ -836,6 +875,8 @@ export default function ArticlesPage() {
             </Button>
           </div>
         )}
+        </>
+      )}
         </>
       )}
     </div>
