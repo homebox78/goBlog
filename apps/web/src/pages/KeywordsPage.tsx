@@ -7,6 +7,7 @@ import TrendsView from "./KeywordTrendsPage";
 import { GenerateDialog } from "@/components/articles/GenerateDialog";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -263,6 +264,31 @@ export default function KeywordsPage() {
       toast.error(error instanceof Error ? error.message : "상태 변경에 실패했습니다."),
   });
 
+  // 수동 키워드 추가 — 자동 발굴과 별개로 내가 정한 주제로 바로 글을 쓴다. 추가 후 곧바로 생성 다이얼로그를 연다.
+  const [manualText, setManualText] = useState("");
+  const manualMutation = useMutation({
+    mutationFn: (text: string) =>
+      api.post<{ id: number; text: string; status: string }>("/api/keywords/", { text }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["keywords"] });
+      setManualText("");
+      // 저장된 키워드 목록에 들어가므로 그 뷰로 전환 + 곧바로 생성 다이얼로그 오픈
+      setView("saved");
+      setGenerateTarget({ id: result.id, keyword: result.text, articleType: "guide" });
+      toast.success(`"${result.text}" 주제 추가 — 글 생성 설정을 확인하세요.`);
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "키워드 추가에 실패했습니다."),
+  });
+  const submitManual = () => {
+    const text = manualText.trim();
+    if (text.length < 2) {
+      toast.error("주제를 2자 이상 입력하세요.");
+      return;
+    }
+    manualMutation.mutate(text);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -318,6 +344,36 @@ export default function KeywordsPage() {
           </Button>
         )}
       </div>
+
+      {view !== "trends" && view !== "citations" && (
+        <Card>
+          <CardContent className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center">
+            <div className="min-w-0 sm:flex-1">
+              <div className="flex items-center gap-1.5 text-sm font-semibold">
+                <PenLine className="size-4 text-primary" /> 주제 직접 입력해서 생성
+              </div>
+              <p className="mt-0.5 text-xs break-keep text-muted-foreground">
+                자동 발굴과 별개로, 내가 정한 주제를 넣어 바로 글을 씁니다. 추가하면 곧바로 생성 설정이 열립니다.
+              </p>
+            </div>
+            <div className="flex w-full gap-2 sm:w-auto">
+              <Input
+                value={manualText}
+                onChange={(e) => setManualText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitManual()}
+                placeholder="예: 단일종목 레버리지 기본예탁금 3000만원"
+                maxLength={80}
+                className="sm:w-80"
+                disabled={manualMutation.isPending}
+              />
+              <Button onClick={submitManual} disabled={manualMutation.isPending} className="flex-none">
+                {manualMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <PenLine className="size-4" />}
+                추가 후 생성
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {view === "trends" && <TrendsView />}
       {view === "citations" && <CitationsView />}
