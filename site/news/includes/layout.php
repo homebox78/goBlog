@@ -258,8 +258,39 @@ function render_foot(): void
 }
 
 /** 속보 티커 — 최신 기사 제목 스크롤 */
+/**
+ * JTBC 속보 바 — 헤더 위, 24시간 내 속보가 있을 때만. X로 닫으면(그 속보 한정) 다시 안 뜬다.
+ * 새 속보가 뜨면(키가 바뀌면) 다시 노출.
+ */
+function render_breaking_bar(): void
+{
+    if (!function_exists('news_breaking')) {
+        $f = __DIR__ . '/press-rss.php';
+        if (is_file($f)) require_once $f; else return;
+    }
+    $b = null;
+    try { $b = news_breaking(); } catch (Throwable) {}
+    if (!$b) return;
+    $mins = max(1, (int) floor((time() - (int) $b['ts']) / 60));
+    $ago = $mins < 60 ? ($mins . '분 전') : (floor($mins / 60) . '시간 전');
+    ?>
+<div id="h2b-bk" data-k="<?= nh($b['key']) ?>" class="border-b border-[#f0e6c8] bg-[#fdf6e3]">
+  <div class="mx-auto flex max-w-[1399px] items-center gap-3 px-4 py-2 sm:px-6">
+    <a href="<?= nh($b['link']) ?>" target="_blank" rel="noopener nofollow" class="flex min-w-0 flex-1 items-center justify-center gap-2">
+      <span class="flex-none text-[13px] font-extrabold text-[#03c75a]">속보</span>
+      <span class="truncate text-[13px] font-bold text-zinc-800 sm:text-[13.5px]"><?= nh($b['title']) ?></span>
+      <span class="flex-none text-[12px] text-zinc-400"><?= $ago ?></span>
+    </a>
+    <button type="button" onclick="try{localStorage.setItem('h2b_bk_'+this.parentNode.parentNode.dataset.k,'1')}catch(e){};this.closest('#h2b-bk').remove();" aria-label="속보 닫기" class="flex-none text-zinc-400 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px]">close</span></button>
+  </div>
+</div>
+<script>(function(){try{var el=document.getElementById('h2b-bk');if(el&&localStorage.getItem('h2b_bk_'+el.dataset.k))el.remove();}catch(e){}})();</script>
+    <?php
+}
+
 function render_ticker(array $items): void
 {
+    render_breaking_bar();
     if (!$items) return;
     $span = function () use ($items) {
         foreach ($items as $a) {
@@ -373,27 +404,27 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
 function render_product_card(array $p): void
 {
     $isCoupang = ($p['source'] ?? '') === 'COUPANG';
-    $badge = $isCoupang ? ($p['isRocket'] ? '로켓' : '쿠팡') : '네이버';
-    $badgeCls = $isCoupang ? 'text-[#2c7fff]' : 'text-[#03c75a]';
+    $badge = $isCoupang ? ($p['isRocket'] ? '로켓배송' : '쿠팡') : '네이버';
+    $badgeBg = $isCoupang ? 'bg-[#2c7fff]' : 'bg-[#03c75a]';
     $price = (int) ($p['price'] ?? 0);
     $orig = (int) ($p['originPrice'] ?? 0);
     $disc = ($orig > $price && $price > 0) ? (int) round(($orig - $price) / $orig * 100) : 0;
     $reviews = (int) ($p['ratingCount'] ?? 0);
     ?>
 <a href="<?= nh($p['productUrl']) ?>" target="_blank" rel="sponsored nofollow noopener" class="group block">
-  <div class="relative aspect-square w-full overflow-hidden rounded-xl bg-zinc-100">
+  <div class="relative aspect-[4/5] w-full overflow-hidden rounded-lg bg-zinc-100">
     <img src="<?= nh($p['imageUrl']) ?>" alt="<?= nh($p['name']) ?>" loading="lazy" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
-    <span class="absolute left-2 top-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[10.5px] font-extrabold <?= $badgeCls ?> shadow-sm"><?= $badge ?></span>
+    <span class="absolute left-0 top-0 rounded-br-lg <?= $badgeBg ?> px-2 py-1 text-[10.5px] font-bold text-white"><?= $badge ?></span>
   </div>
-  <div class="mt-2.5">
-    <div class="line-clamp-2 min-h-[2.6em] text-[13.5px] font-semibold leading-snug text-zinc-800 group-hover:text-[#134a9c]"><?= nh($p['name']) ?></div>
-    <div class="mt-1.5 flex items-baseline gap-1.5">
-      <?php if ($disc > 0): ?><span class="text-[15px] font-extrabold text-[#e0392b]"><?= $disc ?>%</span><?php endif; ?>
-      <span class="text-[16px] font-extrabold text-zinc-900"><?= number_format($price) ?>원</span>
+  <div class="mt-2">
+    <div class="line-clamp-2 min-h-[2.5em] text-[13px] leading-snug text-zinc-800 group-hover:text-[#134a9c]"><?= nh($p['name']) ?></div>
+    <?php if ($orig > $price): ?><div class="mt-1 text-[11px] text-zinc-400 line-through"><?= number_format($orig) ?>원</div><?php endif; ?>
+    <div class="mt-0.5 flex items-baseline gap-1">
+      <?php if ($disc > 0): ?><span class="text-[17px] font-extrabold text-[#e0392b]"><?= $disc ?>%</span><?php endif; ?>
+      <span class="text-[17px] font-extrabold text-zinc-900"><?= number_format($price) ?>원</span>
     </div>
-    <?php if ($orig > $price): ?><div class="text-[11.5px] text-zinc-400 line-through"><?= number_format($orig) ?>원</div><?php endif; ?>
     <?php if ($reviews > 0): ?>
-      <div class="mt-1 flex items-center gap-1 text-[11.5px] text-zinc-400"><span class="material-symbols-outlined text-[13px] text-amber-400" style="font-variation-settings:'FILL' 1;">star</span>리뷰 <?= number_format($reviews) ?></div>
+      <div class="mt-0.5 flex items-center gap-1 text-[11px] text-zinc-400"><span class="material-symbols-outlined text-[13px] text-amber-400" style="font-variation-settings:'FILL' 1;">star</span>리뷰 <?= number_format($reviews) ?></div>
     <?php endif; ?>
   </div>
 </a>

@@ -124,7 +124,7 @@ function press_fetch_all(array $urls): array
 function press_headlines(int $perBox = 5): array
 {
     // ⚠️ PHP-FPM은 PrivateTmp라 셸에서 /tmp를 지워도 이 파일은 안 지워진다 — 강제 갱신은 파일명 버전업으로
-    $cacheFile = sys_get_temp_dir() . '/goblog_press_headlines_v2.json';
+    $cacheFile = sys_get_temp_dir() . '/goblog_press_headlines_v3.json';
     $bucket = press_bucket();
     $cache = null;
     if (is_file($cacheFile)) {
@@ -154,7 +154,9 @@ function press_headlines(int $perBox = 5): array
                         $title = trim((string) $it->title);
                         $link = trim((string) $it->link);
                         if ($title === '' || $link === '') continue;
-                        $items[] = ['title' => $title, 'link' => $link];
+                        // pubDate 도 담는다 (속보 24시간 필터용) — 없으면 빈 문자열
+                        $pub = trim((string) ($it->pubDate ?? ''));
+                        $items[] = ['title' => $title, 'link' => $link, 'pubDate' => $pub];
                         if (count($items) >= $perBox) break;
                     }
                 }
@@ -175,4 +177,28 @@ function press_headlines(int $perBox = 5): array
     $save = ['bucket' => $failed <= $total / 2 ? $bucket : 'retry', 'data' => $data];
     file_put_contents($cacheFile, json_encode($save, JSON_UNESCAPED_UNICODE), LOCK_EX);
     return $data;
+}
+
+/**
+ * JTBC 속보 — 24시간 이내 발행된 최신 속보 1건. 없으면 null.
+ * 헤더 위 속보 바에 사용. (press_headlines 캐시의 jtbc/속보 박스에서 추출)
+ */
+function news_breaking(): ?array
+{
+    try {
+        $data = press_headlines(5);
+    } catch (Throwable) {
+        return null;
+    }
+    $box = $data['jtbc']['boxes']['속보'] ?? [];
+    foreach ($box as $it) {
+        $pub = $it['pubDate'] ?? '';
+        if ($pub === '') continue;
+        $ts = strtotime($pub);
+        if ($ts && $ts >= time() - 86400) {
+            // 닫기 상태 유지용 키(제목 해시) — 새 속보가 뜨면 다시 노출
+            return ['title' => $it['title'], 'link' => $it['link'], 'ts' => $ts, 'key' => substr(md5($it['title']), 0, 10)];
+        }
+    }
+    return null;
 }

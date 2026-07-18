@@ -38,7 +38,7 @@ $tab = function (string $key, string $label) use ($src): string {
 ?>
 <div class="min-h-screen bg-white">
   <?php // 히어로 (절제된 다크 밴드) ?>
-  <section class="border-b border-zinc-200 bg-[#0f2942] text-white">
+  <section class="border-b border-zinc-200 bg-[#03c75a] text-white">
     <div class="mx-auto max-w-[1399px] px-4 py-7 sm:px-6 sm:py-9">
       <div class="text-[12px] font-bold uppercase tracking-wider text-white/50">SHOP</div>
       <h1 class="mt-2 flex items-center gap-2 text-[26px] font-extrabold tracking-tight sm:text-[32px]"><span class="material-symbols-outlined text-[28px]">shopping_cart</span>지금 가장 많이 담는 특가</h1>
