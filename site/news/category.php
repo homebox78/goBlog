@@ -132,6 +132,7 @@ render_ticker(array_slice($all, 0, 6));
 render_topbar();
 render_masthead();
 render_nav($cat, [], true);
+render_section_subscribe($cat);
 
 $sortOn = 'inline-flex cursor-pointer items-center whitespace-nowrap rounded-full border border-[#134a9c] bg-[#134a9c] px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm';
 $sortOff = 'inline-flex cursor-pointer items-center whitespace-nowrap rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-[13px] font-semibold text-zinc-600 shadow-sm hover:border-[#134a9c] hover:text-[#134a9c]';

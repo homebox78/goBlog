@@ -367,6 +367,37 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
 }
 
 /**
+ * 섹션 구독 배너 — 카테고리/기사 상단. 시안(경제 돋보기) 스타일:
+ * 절제된 다크 밴드에 "{섹션} 돋보기" + 구독 버튼 + 관련 토픽 해시태그.
+ */
+function render_section_subscribe(string $section): void
+{
+    static $topics = [
+        '경제·금융' => ['물가·금리', '부동산', '증시·환율'],
+        'IT·게임'   => ['AI·반도체', '스마트폰', '게임'],
+        '생활·건강' => ['건강', '재테크', '생활정보'],
+        '여행·문화' => ['여행', '맛집', '문화'],
+        '종합'      => ['이슈', '사회', '트렌드'],
+    ];
+    $tags = $topics[$section] ?? [];
+    ?>
+<section class="border-b border-zinc-200 bg-[#0f2942] text-white">
+  <div class="mx-auto max-w-[1399px] px-4 py-5 sm:px-6">
+    <div class="flex flex-wrap items-center gap-2.5">
+      <h2 class="text-[19px] font-extrabold tracking-tight sm:text-[22px]"><?= nh($section) ?> 돋보기</h2>
+      <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-white/40 px-2.5 py-1 text-[12.5px] font-bold text-white/90 transition-colors hover:border-white hover:bg-white/10"><span class="material-symbols-outlined text-[15px]">add</span>구독</a>
+    </div>
+    <?php if ($tags): ?>
+      <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] font-medium text-white/50">
+        <?php foreach ($tags as $t): ?><span>#<?= nh($t) ?></span><?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+</section>
+    <?php
+}
+
+/**
  * 유틸 페이지(지원금·계산기·문서도구·노인일자리) 공용 히어로 헤더.
  * 절제된 다크 밴드 — 좌: 눈썹+제목+구독 버튼+부제+메타태그 / 우: 최근 기사 이미지(임시).
  * 시안(이가혁 라이브)의 구조를 뉴스 톤으로. 모바일에선 이미지 아래로 접힌다.

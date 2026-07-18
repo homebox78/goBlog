@@ -136,22 +136,21 @@ render_masthead();
 render_nav('노인일자리', [], true);
 ?>
 <div class="min-h-screen bg-white">
-  <!-- 히어로 (회색 밴드) -->
-  <div class="border-b border-zinc-100 bg-zinc-50">
-    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-10">
-      <span class="inline-flex items-center gap-1.5 rounded-full bg-[#134a9c]/10 px-3 py-1 text-xs font-bold text-[#134a9c]"><span class="material-symbols-outlined text-[15px]">elderly</span>한국노인인력개발원 100세누리</span>
-      <h1 class="mt-4 mb-2 text-[28px] sm:text-[34px] font-extrabold tracking-tight">노인 일자리 찾기</h1>
-      <p class="mb-6 text-[14px] leading-relaxed text-zinc-500">전국 노인 구인정보 <b class="text-[#134a9c]"><?= number_format($totalActive) ?></b>건(접수중)을 한 번에. 지역·직무로 좁혀 가까운 일자리를 찾아보세요.</p>
+  <?php render_util_hero('SENIOR JOBS', '노인 일자리 찾기', '전국 노인 구인정보 ' . number_format($totalActive) . '건(접수중)을 한 번에. 지역·직무로 좁혀 가까운 일자리를 찾아보세요.', ['미화', '경비', '요양보호', '급식도우미', '지도원']); ?>
+  <!-- 검색 섹션 (흰 배경) -->
+  <div class="border-b border-zinc-100">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-6">
       <form method="get" action="/jobs.php" class="flex max-w-2xl items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2.5 shadow-sm focus-within:ring-2 focus-within:ring-[#134a9c]/30">
         <span class="material-symbols-outlined text-[22px] text-zinc-400">search</span>
         <input name="q" value="<?= nh($q) ?>" placeholder="일자리 검색 (예: 미화, 경비, 요양보호)" class="flex-1 border-0 bg-transparent text-[15px] outline-none placeholder:text-zinc-400">
         <?php if ($sido !== ''): ?><input type="hidden" name="sido" value="<?= nh($sido) ?>"><?php endif; ?>
         <button type="submit" class="rounded-lg bg-[#134a9c] px-4 py-1.5 text-[13.5px] font-bold text-white hover:bg-[#0f3d82]">검색</button>
       </form>
-      <div class="mt-3 flex flex-wrap items-center gap-2">
-        <span class="text-[12.5px] font-bold text-zinc-400">인기</span>
-        <?php foreach ($HOT as $k): ?>
-          <a href="/jobs.php?q=<?= urlencode($k) ?>" class="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[12.5px] font-semibold text-zinc-600 hover:border-[#134a9c] hover:text-[#134a9c]"><?= nh($k) ?></a>
+      <?php // 인기 검색어 — 뱃지 없이 미니멀 텍스트, 최대 6개 ?>
+      <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px]">
+        <span class="font-bold text-zinc-400">인기 검색어</span>
+        <?php foreach (array_slice($HOT, 0, 6) as $k): ?>
+          <a href="/jobs.php?q=<?= urlencode($k) ?>" class="font-medium text-zinc-500 hover:text-[#134a9c] hover:underline"><?= nh($k) ?></a>
         <?php endforeach; ?>
       </div>
     </div>
