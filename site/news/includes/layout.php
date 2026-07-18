@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718n';
+const TW_CSS_VER = '20260718p';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -275,8 +275,8 @@ function render_breaking_bar(): void
 <div id="h2b-bk" data-k="<?= nh($b['key']) ?>" class="bg-[#16356e]">
   <div class="mx-auto flex max-w-[1399px] items-center gap-3 px-4 py-3 sm:px-6">
     <a href="<?= nh($b['link']) ?>" target="_blank" rel="noopener nofollow" class="flex min-w-0 flex-1 items-center gap-8">
-      <span class="flex-none text-[14px] font-bold text-white">속보</span>
-      <span class="truncate text-[14px] font-medium text-white/95"><?= nh($b['title']) ?></span>
+      <span class="flex-none text-[12px] font-bold text-white sm:text-[14px]">속보</span>
+      <span class="truncate text-[12px] font-medium text-white/95 sm:text-[14px]"><?= nh($b['title']) ?></span>
     </a>
     <button type="button" onclick="try{localStorage.setItem('h2b_bk_'+this.parentNode.parentNode.dataset.k,'1')}catch(e){};this.closest('#h2b-bk').remove();" aria-label="속보 닫기" class="flex-none text-white/80 hover:text-white"><span class="material-symbols-outlined text-[20px]">close</span></button>
   </div>
@@ -386,12 +386,12 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
 
 <div class="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur">
   <div class="mx-auto flex max-w-[1399px] items-center gap-2 px-4 sm:px-6 lg:gap-4">
-    <label for="h2bnav" aria-label="메뉴 열기" class="flex h-10 w-10 flex-none cursor-pointer items-center justify-center text-zinc-700 lg:hidden"><span class="material-symbols-outlined text-[26px]">menu</span></label>
-    <a href="/" class="flex flex-none items-center gap-1.5 py-2.5">
+    <label for="h2bnav" aria-label="메뉴 열기" class="order-2 flex h-10 w-10 flex-none cursor-pointer items-center justify-center text-zinc-700 lg:hidden"><span class="material-symbols-outlined text-[26px]">menu</span></label>
+    <a href="/" class="order-1 mr-auto flex flex-none items-center gap-1.5 py-2.5 lg:mr-0">
       <svg width="26" height="26" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg>
       <span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">뉴스</span>
     </a>
-    <nav class="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:flex">
+    <nav class="order-3 hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:ml-16 lg:flex">
       <?php foreach ($newsTabs as [$name, $href]): ?>
         <a href="<?= nh($href) ?>" class="<?= $tabCls($name === $active) ?>"><?= nh($name) ?></a>
       <?php endforeach; ?>
@@ -401,7 +401,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
         <a href="<?= nh($href) ?>" class="<?= $tabCls($name === $active) ?>"><?= nh($name) ?></a>
       <?php endforeach; ?>
     </nav>
-    <a href="/search.php" class="ml-auto flex flex-none items-center gap-1 py-3 text-sm font-bold text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>] lg:ml-0">
+    <a href="/search.php" class="order-4 flex flex-none items-center gap-1 py-3 text-sm font-bold text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">
       <span class="material-symbols-outlined text-[20px]">search</span><span class="hidden sm:inline">검색</span>
     </a>
   </div>
@@ -494,21 +494,21 @@ function render_util_hero(string $eyebrow, string $title, string $subtitle, arra
     ?>
 <section class="border-b border-zinc-200 bg-[#0f2942] text-white">
   <div class="mx-auto flex max-w-[1399px] flex-col-reverse items-stretch md:flex-row md:items-center">
-    <div class="flex-1 px-4 py-6 sm:px-6 sm:py-7 md:py-9">
+    <div class="flex-1 px-4 py-4 sm:px-6 sm:py-5 md:py-6">
       <div class="text-[12px] font-bold uppercase tracking-wider text-white/50"><?= nh($eyebrow) ?></div>
-      <div class="mt-2 flex flex-wrap items-center gap-2.5">
+      <div class="mt-1.5 flex flex-wrap items-center gap-2.5">
         <h1 class="text-[26px] font-extrabold tracking-tight sm:text-[32px]"><?= nh($title) ?></h1>
         <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-white/40 px-2.5 py-1 text-[13px] font-bold text-white/90 transition-colors hover:border-white hover:bg-white/10"><span class="material-symbols-outlined text-[16px]">add</span>구독</a>
       </div>
-      <?php if ($subtitle !== ''): ?><p class="mt-2.5 text-[14px] leading-relaxed text-white/70"><?= nh($subtitle) ?></p><?php endif; ?>
+      <?php if ($subtitle !== ''): ?><p class="mt-2 text-[14px] leading-relaxed text-white/70"><?= nh($subtitle) ?></p><?php endif; ?>
       <?php if ($metaTags): ?>
-        <div class="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-medium text-white/50">
+        <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-medium text-white/50">
           <?php foreach ($metaTags as $t): ?><span>#<?= nh($t) ?></span><?php endforeach; ?>
         </div>
       <?php endif; ?>
     </div>
     <?php if ($img !== ''): ?>
-      <div class="relative h-28 w-full overflow-hidden md:h-auto md:w-5/12 md:self-stretch">
+      <div class="relative h-28 w-full overflow-hidden md:h-[280px] md:w-5/12">
         <img src="<?= nh($img) ?>" alt="" class="h-full w-full object-cover opacity-90" loading="lazy">
         <div class="absolute inset-0 bg-gradient-to-r from-[#0f2942] via-transparent to-transparent"></div>
       </div>
@@ -560,7 +560,7 @@ function render_footer(): void
     ?>
 <div class="border-t border-zinc-200 bg-zinc-50">
   <div class="mx-auto max-w-[1399px] px-6 py-10">
-    <div class="grid grid-cols-2 gap-8 border-b border-zinc-200 pb-8 sm:grid-cols-[1.6fr_repeat(4,1fr)]">
+    <div class="grid grid-cols-2 gap-8 border-b border-zinc-200 pb-8 sm:grid-cols-[1.4fr_repeat(5,1fr)]">
       <div class="col-span-2 sm:col-span-1">
         <div class="text-[19px] font-extrabold">HOM2BOX <span class="text-[<?= NEWS_PRIMARY ?>]">뉴스</span></div>
         <div class="mt-2 max-w-xs text-[12.5px] leading-relaxed text-zinc-500">매일 아침·저녁, 편집국이 선별한 이슈·경제·IT·생활 뉴스와 가이드를 발행합니다.</div>
@@ -568,9 +568,9 @@ function render_footer(): void
       <div>
         <div class="mb-2.5 text-[13px] font-extrabold">뉴스</div>
         <a href="/" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">홈</a>
+        <a href="/press.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">언론사 헤드라인</a>
         <a href="/opinion.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">오피니언</a>
         <a href="/search.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">뉴스 검색</a>
-        <a href="/welfare.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">정부 지원금</a>
         <a href="/subscribe.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">뉴스레터 구독</a>
       </div>
       <div>
@@ -578,6 +578,14 @@ function render_footer(): void
         <?php foreach (NEWS_SECTIONS as $s): ?>
           <a href="/category.php?cat=<?= urlencode($s) ?>" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]"><?= nh($s) ?></a>
         <?php endforeach; ?>
+      </div>
+      <div>
+        <div class="mb-2.5 text-[13px] font-extrabold">생활·유틸</div>
+        <a href="/welfare.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">정부 지원금</a>
+        <a href="/jobs.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">노인일자리</a>
+        <a href="/tools.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">계산기</a>
+        <a href="/docs.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">문서도구</a>
+        <a href="/shop.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">특가 쇼핑</a>
       </div>
       <div>
         <div class="mb-2.5 text-[13px] font-extrabold">채널</div>
@@ -591,7 +599,6 @@ function render_footer(): void
         <a href="/about.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">소개</a>
         <a href="/privacy.php" class="block py-1 text-[13px] font-semibold text-zinc-600 hover:text-[<?= NEWS_PRIMARY ?>]">개인정보처리방침</a>
         <a href="/contact.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">문의하기</a>
-        <a href="/imgshop.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">AI 이미지샵</a>
       </div>
     </div>
     <div class="mt-6 text-xs leading-relaxed text-zinc-400">일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다. 제휴 매체 헤드라인은 RSS로 제공되는 콘텐츠입니다.<br>© <?= date('Y') ?> HOM2BOX. All rights reserved.</div>
