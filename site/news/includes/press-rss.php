@@ -196,8 +196,10 @@ function news_breaking(): ?array
         if ($pub === '') continue;
         $ts = strtotime($pub);
         if ($ts && $ts >= time() - 86400) {
+            // 좌측에 '속보' 라벨이 이미 있으므로 제목 앞의 [속보]/(속보)/【속보】 접두어는 제거(중복 방지)
+            $title = preg_replace('/^\s*[\[\(【]\s*속보\s*[\]\)】]\s*/u', '', $it['title']);
             // 닫기 상태 유지용 키(제목 해시) — 새 속보가 뜨면 다시 노출
-            return ['title' => $it['title'], 'link' => $it['link'], 'ts' => $ts, 'key' => substr(md5($it['title']), 0, 10)];
+            return ['title' => $title, 'link' => $it['link'], 'ts' => $ts, 'key' => substr(md5($it['title']), 0, 10)];
         }
     }
     return null;

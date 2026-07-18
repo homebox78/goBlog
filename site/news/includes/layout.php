@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718m';
+const TW_CSS_VER = '20260718n';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -271,17 +271,14 @@ function render_breaking_bar(): void
     $b = null;
     try { $b = news_breaking(); } catch (Throwable) {}
     if (!$b) return;
-    $mins = max(1, (int) floor((time() - (int) $b['ts']) / 60));
-    $ago = $mins < 60 ? ($mins . '분 전') : (floor($mins / 60) . '시간 전');
     ?>
-<div id="h2b-bk" data-k="<?= nh($b['key']) ?>" class="border-b border-[#f0e6c8] bg-[#fdf6e3]">
-  <div class="mx-auto flex max-w-[1399px] items-center gap-3 px-4 py-2 sm:px-6">
-    <a href="<?= nh($b['link']) ?>" target="_blank" rel="noopener nofollow" class="flex min-w-0 flex-1 items-center justify-center gap-2">
-      <span class="flex-none text-[13px] font-extrabold text-[#03c75a]">속보</span>
-      <span class="truncate text-[13px] font-bold text-zinc-800 sm:text-[13.5px]"><?= nh($b['title']) ?></span>
-      <span class="flex-none text-[12px] text-zinc-400"><?= $ago ?></span>
+<div id="h2b-bk" data-k="<?= nh($b['key']) ?>" class="bg-[#16356e]">
+  <div class="mx-auto flex max-w-[1399px] items-center gap-3 px-4 py-3 sm:px-6">
+    <a href="<?= nh($b['link']) ?>" target="_blank" rel="noopener nofollow" class="flex min-w-0 flex-1 items-center gap-8">
+      <span class="flex-none text-[14px] font-bold text-white">속보</span>
+      <span class="truncate text-[14px] font-medium text-white/95"><?= nh($b['title']) ?></span>
     </a>
-    <button type="button" onclick="try{localStorage.setItem('h2b_bk_'+this.parentNode.parentNode.dataset.k,'1')}catch(e){};this.closest('#h2b-bk').remove();" aria-label="속보 닫기" class="flex-none text-zinc-400 hover:text-zinc-700"><span class="material-symbols-outlined text-[20px]">close</span></button>
+    <button type="button" onclick="try{localStorage.setItem('h2b_bk_'+this.parentNode.parentNode.dataset.k,'1')}catch(e){};this.closest('#h2b-bk').remove();" aria-label="속보 닫기" class="flex-none text-white/80 hover:text-white"><span class="material-symbols-outlined text-[20px]">close</span></button>
   </div>
 </div>
 <script>(function(){try{var el=document.getElementById('h2b-bk');if(el&&localStorage.getItem('h2b_bk_'+el.dataset.k))el.remove();}catch(e){}})();</script>
@@ -290,7 +287,6 @@ function render_breaking_bar(): void
 
 function render_ticker(array $items): void
 {
-    render_breaking_bar();
     if (!$items) return;
     $span = function () use ($items) {
         foreach ($items as $a) {
@@ -394,6 +390,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
   </div>
 </div>
     <?php
+    render_breaking_bar(); // 속보 바 = 헤더(로고+메뉴) 바로 아래 (JTBC 스타일)
     render_market_strip();
 }
 
