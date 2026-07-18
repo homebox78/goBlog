@@ -86,9 +86,9 @@ function SlotCard({ slot }: { slot: AdSlot }) {
         productId,
         format: genFormat,
       });
-      setForm((f) => ({ ...f, type: "IMAGE", imageUrl: r.url, linkUrl: r.linkUrl }));
+      setForm((f) => ({ ...f, type: "IMAGE", imageUrl: r.url, linkUrl: r.linkUrl, enabled: true }));
       setGenOpen(false);
-      toast.success("배너를 생성했습니다 — 저장을 눌러 적용하세요.");
+      toast.success("배너 생성 완료 — '노출'이 켜졌습니다. 저장을 눌러 사이트에 적용하세요.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "배너 생성 실패");
     } finally {
@@ -129,8 +129,8 @@ function SlotCard({ slot }: { slot: AdSlot }) {
         r.readAsDataURL(file);
       });
       const { url } = await api.post<{ url: string }>("/api/ads/upload", { dataUrl });
-      setForm((f) => ({ ...f, imageUrl: url }));
-      toast.success("이미지 업로드 완료 — 저장을 눌러 적용하세요.");
+      setForm((f) => ({ ...f, imageUrl: url, enabled: true }));
+      toast.success("업로드 완료 — '노출'이 켜졌습니다. 저장을 눌러 사이트에 적용하세요.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "업로드 실패");
     } finally {
