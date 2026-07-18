@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718l';
+const TW_CSS_VER = '20260718m';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -317,14 +317,37 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
             ? 'flex-none whitespace-nowrap px-2.5 py-4 text-sm font-bold text-[' . NEWS_PRIMARY . '] border-b-[3px] border-[' . NEWS_PRIMARY . ']'
             : 'flex-none whitespace-nowrap px-2.5 py-4 text-sm font-bold text-zinc-700 hover:text-[' . NEWS_PRIMARY . ']';
     };
+    // 드로어 링크 = 좌측(기사) + 구분선 + 우측(유틸) + 검색
+    $drawerLink = function (string $name, string $href) use ($active): string {
+        $on = $name === $active;
+        $cls = $on ? 'bg-[#134a9c]/10 text-[#134a9c]' : 'text-zinc-700 hover:bg-zinc-50';
+        return '<a href="' . nh($href) . '" class="rounded-lg px-3 py-2.5 text-[14px] font-bold ' . $cls . '">' . nh($name) . '</a>';
+    };
     ?>
+<!-- 모바일 햄버거 드로어 (CSS-only, JS 불필요) — lg 미만에서만 동작 -->
+<input type="checkbox" id="h2bnav" class="peer hidden">
+<label for="h2bnav" aria-label="메뉴 닫기" class="fixed inset-0 z-[80] hidden bg-black/50 backdrop-blur-sm peer-checked:block lg:!hidden"></label>
+<aside class="fixed left-0 top-0 z-[90] flex h-full w-[284px] max-w-[82%] -translate-x-full flex-col overflow-y-auto bg-white shadow-2xl transition-transform duration-300 ease-out peer-checked:translate-x-0 lg:hidden">
+  <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3.5">
+    <a href="/" class="flex items-center gap-1.5"><svg width="22" height="22" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg><span class="text-[17px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[12px] font-bold text-zinc-500">뉴스</span></a>
+    <label for="h2bnav" aria-label="닫기" class="flex h-9 w-9 cursor-pointer items-center justify-center text-zinc-500"><span class="material-symbols-outlined text-[24px]">close</span></label>
+  </div>
+  <nav class="flex flex-col p-2">
+    <?php foreach ($newsTabs as [$name, $href]) echo $drawerLink($name, $href); ?>
+    <div class="my-1.5 border-t border-zinc-100"></div>
+    <?php foreach ($utilTabs as [$name, $href]) echo $drawerLink($name, $href); ?>
+    <?php echo $drawerLink('검색', '/search.php'); ?>
+  </nav>
+</aside>
+
 <div class="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur">
-  <div class="mx-auto flex max-w-[1399px] items-center gap-4 px-4 sm:px-6">
+  <div class="mx-auto flex max-w-[1399px] items-center gap-2 px-4 sm:px-6 lg:gap-4">
+    <label for="h2bnav" aria-label="메뉴 열기" class="flex h-10 w-10 flex-none cursor-pointer items-center justify-center text-zinc-700 lg:hidden"><span class="material-symbols-outlined text-[26px]">menu</span></label>
     <a href="/" class="flex flex-none items-center gap-1.5 py-2.5">
       <svg width="26" height="26" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg>
       <span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">뉴스</span>
     </a>
-    <nav class="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+    <nav class="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:flex">
       <?php foreach ($newsTabs as [$name, $href]): ?>
         <a href="<?= nh($href) ?>" class="<?= $tabCls($name === $active) ?>"><?= nh($name) ?></a>
       <?php endforeach; ?>
@@ -334,7 +357,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
         <a href="<?= nh($href) ?>" class="<?= $tabCls($name === $active) ?>"><?= nh($name) ?></a>
       <?php endforeach; ?>
     </nav>
-    <a href="/search.php" class="flex flex-none items-center gap-1 py-3 text-sm font-bold text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">
+    <a href="/search.php" class="ml-auto flex flex-none items-center gap-1 py-3 text-sm font-bold text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>] lg:ml-0">
       <span class="material-symbols-outlined text-[20px]">search</span><span class="hidden sm:inline">검색</span>
     </a>
   </div>
