@@ -300,52 +300,34 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
           <a href="/welfare.php" class="ml-1 text-xs text-zinc-400 hover:text-[#134a9c] inline-flex items-center">전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
         </div>
       </div>
-      <?php
-      // 부처(dept)별 카드 색상 — 소관부처 이름으로 매칭, 미매칭/지자체는 dept 해시로 팔레트 배정(카드마다 색 다르게)
-      // dept 는 대개 하위 부서명(예: 주민복지과·교육복지과)이라 소관부처를 부서명 키워드로 추론한다.
-      // 순서=우선순위: 특정 키워드가 광범위한 '복지'보다 먼저 잡히게(교육복지과 → 교육 초록).
-      $deptColor = function (string $dept, string $source): string {
-          static $map = [
-              '문화' => '#9b3d6e', '체육' => '#9b3d6e', '관광' => '#9b3d6e', '예술' => '#9b3d6e',
-              '국토' => '#8a6a30', '교통' => '#8a6a30', '주택' => '#8a6a30', '도시' => '#8a6a30', '건설' => '#8a6a30',
-              '고용' => '#b5562a', '노동' => '#b5562a', '일자리' => '#b5562a', '근로' => '#b5562a',
-              '여성' => '#a83d5c', '가족' => '#a83d5c', '아동' => '#a83d5c', '보육' => '#a83d5c', '청소년' => '#a83d5c',
-              '농림' => '#5a7d2f', '축산' => '#5a7d2f', '농업' => '#5a7d2f', '농촌' => '#5a7d2f', '산림' => '#5a7d2f',
-              '환경' => '#2f7d4a', '기후' => '#2f7d4a',
-              '교육' => '#2f8f5b', '학교' => '#2f8f5b', '장학' => '#2f8f5b', '평생학습' => '#2f8f5b',
-              '안전' => '#3a5a9b', '재난' => '#3a5a9b', '행정' => '#3a5a9b', '민방위' => '#3a5a9b',
-              '중소' => '#c58a1e', '벤처' => '#c58a1e', '소상공인' => '#c58a1e',
-              '기업' => '#2f6e8a', '산업' => '#2f6e8a', '경제' => '#2f6e8a', '통상' => '#2f6e8a',
-              '과학' => '#5a4db5', '기술' => '#5a4db5', '정보' => '#5a4db5', '디지털' => '#5a4db5',
-              '보훈' => '#7a5a2f', '제대군인' => '#7a5a2f',
-              '외국인' => '#6a4a4a', '출입국' => '#6a4a4a', '법무' => '#6a4a4a',
-              '해양' => '#1f6a8a', '수산' => '#1f6a8a', '어촌' => '#1f6a8a',
-              '보건' => '#1a6ba8', '복지' => '#1a6ba8', '의약' => '#1a6ba8', '식품' => '#1a6ba8',
-              '건강' => '#1a6ba8', '노인' => '#1a6ba8', '장애' => '#1a6ba8', '기초생활' => '#1a6ba8', '돌봄' => '#1a6ba8',
-          ];
-          foreach ($map as $k => $c) if (mb_strpos($dept, $k) !== false) return $c;
-          $palette = ['#2f4260', '#5a4a7a', '#2f6e5a', '#7a3d4a', '#3d5a7a', '#6a5a2f'];
-          return $palette[abs(crc32($dept !== '' ? $dept : $source)) % count($palette)];
-      };
-      ?>
       <div id="h2b-wf" class="overflow-hidden">
         <div id="h2b-wf-track" class="h2b-wf-track">
           <?php foreach ($welfare as $w):
             $wlink = !empty($w['detailLink']) ? $w['detailLink'] : '/welfare.php';
             $wext = !empty($w['detailLink']);
-            $bg = $deptColor((string) ($w['dept'] ?? ''), (string) ($w['source'] ?? ''));
-            $eyebrow = $w['source'] === 'CENTRAL' ? '중앙부처' : '지자체';
+            $central = ($w['source'] ?? '') === 'CENTRAL';
+            $org = $central ? (string) ($w['dept'] ?? '') : (string) ($w['region'] ?? '');
+            if ($org === '') $org = $central ? '중앙부처' : '지자체';
+            $targets = preg_split('/\s*[·,\/]\s*/u', (string) ($w['lifeCycle'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $targets = array_slice(array_filter(array_map('trim', $targets), fn($t) => $t !== ''), 0, 5);
           ?>
-            <a href="<?= nh($wlink) ?>"<?= $wext ? ' target="_blank" rel="noopener"' : '' ?> class="h2b-wf-item flex flex-col rounded-lg p-4 shadow-sm transition-transform hover:-translate-y-0.5 group" style="background:<?= $bg ?>">
-              <div class="flex items-center gap-1.5 text-[11px] font-bold text-white/60">
-                <?= nh($eyebrow) ?><?php if (!empty($w['lifeCycle'])): ?><span class="text-white/40">·</span><span class="min-w-0 truncate text-white/50"><?= nh($w['lifeCycle']) ?></span><?php endif; ?>
+            <a href="<?= nh($wlink) ?>"<?= $wext ? ' target="_blank" rel="noopener"' : '' ?> class="h2b-wf-item group flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div class="mb-2.5 flex items-center gap-2">
+                <span class="inline-flex items-center gap-1 rounded-md bg-[#134a9c]/10 px-2 py-0.5 text-[11px] font-bold text-[#134a9c]"><span class="material-symbols-outlined text-[13px]">account_balance</span><?= nh($org) ?></span>
               </div>
-              <div class="mt-2 text-[15px] font-extrabold leading-snug text-white line-clamp-2"><?= nh($w['name']) ?></div>
-              <?php if (!empty($w['summary'])): ?><div class="mt-2 flex-1 text-[12px] leading-relaxed text-white/70 line-clamp-3"><?= nh($w['summary']) ?></div><?php else: ?><div class="flex-1"></div><?php endif; ?>
-              <div class="mt-3 flex items-center gap-2">
-                <span class="min-w-0 flex-1 truncate text-[12px] font-bold text-white/90"><?= nh($w['dept'] ?: ($w['region'] ?? '정부·지자체')) ?></span>
-                <span class="inline-flex flex-none items-center gap-0.5 rounded border border-white/40 px-2 py-0.5 text-[11.5px] font-bold text-white/90 transition-colors group-hover:bg-white/15">자세히<span class="material-symbols-outlined text-[14px]">chevron_right</span></span>
+              <div class="mb-2 text-[15.5px] sm:text-[16.5px] font-bold leading-snug text-zinc-900 group-hover:text-[#134a9c] line-clamp-2"><?= nh($w['name']) ?></div>
+              <?php if (!empty($w['summary'])): ?><div class="mb-4 flex-1 text-[13px] leading-relaxed text-zinc-500 line-clamp-3"><?= nh($w['summary']) ?></div><?php else: ?><div class="mb-4 flex-1"></div><?php endif; ?>
+              <?php if ($targets): ?>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11.5px] font-bold text-zinc-400">대상</span>
+                <?php foreach ($targets as $t): ?>
+                  <span class="rounded-md bg-zinc-100 px-2 py-0.5 text-[11.5px] font-semibold text-zinc-600"><?= nh($t) ?></span>
+                <?php endforeach; ?>
               </div>
+              <?php endif; ?>
+              <?php if ($wext): ?>
+              <div class="mt-4 inline-flex items-center gap-1 text-[13px] font-bold text-[#134a9c]">복지로에서 자세히<span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
+              <?php endif; ?>
             </a>
           <?php endforeach; ?>
         </div>
