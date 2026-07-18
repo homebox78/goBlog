@@ -72,9 +72,9 @@ render_nav('오피니언', [], true);
         <?php if ($lead): ?>
         <!-- 리드 히어로: 오늘의 칼럼 -->
         <a href="/article.php?id=<?= (int) $lead['id'] ?>" data-optype="own" class="block group border-b border-zinc-200 pb-7 mb-2">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="inline-flex whitespace-nowrap items-center rounded-md bg-zinc-900 px-2 py-0.5 text-[11px] font-bold text-white">오늘의 칼럼</span>
-            <span class="inline-flex whitespace-nowrap items-center rounded-md bg-[<?= $P ?>]/10 px-2 py-0.5 text-[11px] font-bold text-[<?= $P ?>]">편집국 칼럼</span>
+          <div class="flex items-center gap-2.5 mb-3">
+            <span class="text-[11.5px] font-extrabold uppercase tracking-wide text-[<?= $P ?>]">오늘의 칼럼</span>
+            <span class="text-[11.5px] font-medium text-zinc-400">편집국 칼럼</span>
           </div>
           <h2 class="m-0 text-[22px] sm:text-[30px] font-extrabold leading-snug tracking-tight group-hover:text-[<?= $P ?>]"><?= nh($lead['title']) ?></h2>
           <?php if (!empty($lead['excerpt'])): ?><p class="mt-3 mb-4 max-w-3xl text-[15px] leading-relaxed text-zinc-500"><?= nh($lead['excerpt']) ?></p><?php endif; ?>
@@ -93,7 +93,8 @@ render_nav('오피니언', [], true);
           <div class="h-[101px] w-[135px] sm:h-[135px] sm:w-[180px] flex-none overflow-hidden rounded-lg bg-cover bg-center bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"<?php if (!empty($a['image'])): ?> style="background-image:url('<?= nh($a['image']) ?>')"<?php endif; ?>></div>
           <div class="min-w-0 flex-1">
             <div class="mb-1 flex items-center gap-2">
-              <span class="inline-flex whitespace-nowrap items-center rounded-md bg-[<?= $P ?>]/10 px-2 py-0.5 text-[11px] font-bold text-[<?= $P ?>]">편집국 칼럼</span>
+              <span class="text-[11.5px] font-bold text-[<?= $P ?>]">편집국 칼럼</span>
+              <span class="text-zinc-300">·</span>
               <span class="text-[11.5px] text-zinc-400"><?= nh(news_date($a['publishedAt'])) ?></span>
             </div>
             <div class="text-[15.5px] sm:text-[18px] font-bold leading-snug group-hover:text-[<?= $P ?>]"><?= nh($a['title']) ?></div>
@@ -109,7 +110,7 @@ render_nav('오피니언', [], true);
           <div class="h-[101px] w-[135px] sm:h-[135px] sm:w-[180px] flex-none overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"></div>
           <div class="min-w-0 flex-1">
             <div class="mb-1 flex items-center gap-2">
-              <span class="inline-flex whitespace-nowrap items-center rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-bold text-zinc-500">제휴 매체</span>
+              <span class="text-[11.5px] font-bold text-zinc-500"><?= nh($pi['source']) ?></span>
             </div>
             <div class="text-[15.5px] sm:text-[18px] font-bold leading-snug group-hover:text-[<?= $P ?>]"><?= nh($pi['title']) ?></div>
             <div class="mt-1 hidden sm:block text-[13px] leading-relaxed text-zinc-500 line-clamp-2">제휴 매체 오피니언 · 원문에서 전문을 읽을 수 있습니다.</div>
