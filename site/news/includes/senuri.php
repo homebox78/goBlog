@@ -70,6 +70,17 @@ function senuri_sido(string $place): string
     return $map[$tok] ?? $tok;
 }
 
+/** 캐시만 읽는다(네트워크 페치 절대 안 함) — 홈 위젯 등 페이지 로딩을 막으면 안 되는 곳 전용. 캐시 없으면 []. */
+function senuri_jobs_cached(): array
+{
+    $cacheFile = sys_get_temp_dir() . '/goblog_senuri.json';
+    if (is_file($cacheFile)) {
+        $c = json_decode((string) file_get_contents($cacheFile), true);
+        if (is_array($c)) return $c;
+    }
+    return [];
+}
+
 /** 접수중 구인정보 목록 — 30분 캐시. 실패 시 기존 캐시 or [] */
 function senuri_jobs(): array
 {

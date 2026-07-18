@@ -8,6 +8,21 @@ require_once __DIR__ . '/includes/layout.php';
 $P = NEWS_PRIMARY;
 
 $q = trim((string) ($_GET['q'] ?? ''));
+
+/** 검색어를 결과 제목·요약에서 파랑으로 하이라이트(서울경제식). HTML 이스케이프 후 매칭이라 안전, 원문 대소문자 보존. */
+function hl_q(string $text, string $q): string
+{
+    $esc = nh($text);
+    $q = trim($q);
+    if ($q === '') return $esc;
+    // 공백 구분 다중어도 각각 하이라이트 (2자 미만 토큰은 제외해 과매칭 방지)
+    $terms = array_values(array_filter(array_unique(preg_split('/\s+/u', $q) ?: []), fn($t) => mb_strlen($t) >= 2));
+    if (!$terms) $terms = [$q];
+    usort($terms, fn($a, $b) => mb_strlen($b) - mb_strlen($a)); // 긴 어절 먼저(alternation 겹침 방지)
+    // 한 번에 치환 — 주입한 <span> 마크업이 재매칭되지 않게 단일 패스
+    $pattern = '/(' . implode('|', array_map(fn($t) => preg_quote(nh($t), '/'), $terms)) . ')/iu';
+    return preg_replace($pattern, '<span class="font-semibold text-[' . NEWS_PRIMARY . ']">$1</span>', $esc) ?? $esc;
+}
 $all = [];
 try {
     $all = news_articles();
@@ -135,9 +150,9 @@ render_nav('', [], true);
                     <span class="inline-flex items-center rounded-md bg-[#134a9c]/10 px-2 py-0.5 text-[11px] font-bold text-[#134a9c]"><?= nh($a['section'] ?? '종합') ?></span>
                     <span class="text-[11.5px] text-zinc-400"><?= nh(news_date((string) $a['publishedAt'])) ?></span>
                   </div>
-                  <div class="text-[15.5px] sm:text-[17px] font-bold leading-snug group-hover:text-[#134a9c]"><?= nh($a['title']) ?></div>
+                  <div class="text-[15.5px] sm:text-[17px] font-bold leading-snug group-hover:text-[#134a9c]"><?= hl_q((string) $a['title'], $q) ?></div>
                   <?php if (!empty($a['excerpt'])): ?>
-                    <div class="mt-1.5 text-[12.5px] sm:text-[13.5px] leading-relaxed text-zinc-500 line-clamp-2"><?= nh($a['excerpt']) ?></div>
+                    <div class="mt-1.5 text-[12.5px] sm:text-[13.5px] leading-relaxed text-zinc-500 line-clamp-2"><?= hl_q((string) $a['excerpt'], $q) ?></div>
                   <?php endif; ?>
                 </div>
               </a>
