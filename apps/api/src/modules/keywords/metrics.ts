@@ -8,6 +8,22 @@ export interface KeywordMetricData {
   competition: string | null;
   competitionIndex: number | null;
   source: string;
+  /** 최근 12개월 월별 검색량(시계열, 오래된→최신). 구글만 제공, 없으면 null. 계절성 판단용. */
+  monthlyVolumes: number[] | null;
+}
+
+/**
+ * 계절성/최근 추세 점수 (-15~+15). 구글 월별 검색량 시계열로 "지금 제철인 키워드"를 가점한다.
+ * 최근 2개월 평균이 연 평균보다 높으면(수요 상승기) +, 낮으면(철 지남) -. 6개월 미만이면 0(중립).
+ */
+export function seasonalScore(monthlyVolumes: number[] | null | undefined): number {
+  if (!monthlyVolumes || monthlyVolumes.length < 6) return 0;
+  const avg = monthlyVolumes.reduce((sum, v) => sum + v, 0) / monthlyVolumes.length;
+  if (avg <= 0) return 0;
+  const tail = monthlyVolumes.slice(-2);
+  const recent = tail.reduce((sum, v) => sum + v, 0) / tail.length;
+  const ratio = recent / avg;
+  return Math.max(-15, Math.min(15, Math.round((ratio - 1) * 40)));
 }
 
 function normalize(text: string): string {
@@ -91,6 +107,11 @@ export async function fetchGoogleAdsMetrics(
             competitionIndex?: string | number;
             lowTopOfPageBidMicros?: string | number;
             highTopOfPageBidMicros?: string | number;
+            monthlySearchVolumes?: Array<{
+              month?: string;
+              year?: string;
+              monthlySearches?: string | number;
+            }>;
           };
         }>;
       };
@@ -103,6 +124,10 @@ export async function fetchGoogleAdsMetrics(
         const low = Number(metric.lowTopOfPageBidMicros ?? 0);
         const high = Number(metric.highTopOfPageBidMicros ?? 0);
         const avgBid = low || high ? Math.round((low + high) / 2) : null;
+        // 월별 검색량 시계열 (오래된→최신) — 계절성 판단용. 그동안 avg만 읽고 이 배열은 버려졌다.
+        const monthly = (metric.monthlySearchVolumes ?? [])
+          .map((m) => parseCount(m.monthlySearches))
+          .filter((n): n is number => n !== null);
         result.set(text, {
           avgMonthlySearches:
             metric.avgMonthlySearches !== undefined ? Number(metric.avgMonthlySearches) : null,
@@ -112,6 +137,7 @@ export async function fetchGoogleAdsMetrics(
           competitionIndex:
             metric.competitionIndex !== undefined ? Number(metric.competitionIndex) : null,
           source: "GOOGLE_ADS",
+          monthlyVolumes: monthly.length > 0 ? monthly : null,
         });
       }
     }
@@ -190,6 +216,7 @@ export async function fetchNaverSearchAdMetrics(
           competition: row.compIdx ?? null,
           competitionIndex: null,
           source: "NAVER_SEARCHAD",
+          monthlyVolumes: null, // 네이버 API는 월별 시계열 미제공
         });
       }
     } catch {

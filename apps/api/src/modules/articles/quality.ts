@@ -35,6 +35,72 @@ function detectPolicyRisks(text: string): string[] {
   return [...found];
 }
 
+/**
+ * AI 티 나는 상투어·보일러플레이트 감지 (토큰 0, 규칙 기반).
+ * generator 프롬프트가 금지하는 표현을 사후에 실제로 검출해 채점에 반영한다.
+ * (프롬프트로 "쓰지 마라"만 해선 지켰는지 알 수 없으므로 detector로 확인.)
+ */
+const AI_CLICHE_PATTERNS: Array<{ re: RegExp; label: string }> = [
+  { re: /결론적으로/, label: "결론적으로" },
+  { re: /알아보겠습니다|알아보도록\s*하겠습니다/, label: "~알아보겠습니다" },
+  { re: /살펴보(겠습니다|았습니다|겠어요)/, label: "~살펴보겠습니다" },
+  { re: /지금까지.{0,15}(살펴|알아)/, label: "지금까지 살펴봤습니다" },
+  { re: /도움이\s*(되셨|되시길|되기를|되었길)/, label: "도움이 되셨길 바랍니다" },
+  { re: /것이\s*중요합니다/, label: "~것이 중요합니다" },
+  { re: /마치(겠습니다|도록\s*하겠습니다)/, label: "~마치겠습니다" },
+  { re: /이번\s*(포스팅|시간|글)(에서는|에는)/, label: "이번 포스팅에서는" },
+];
+
+function detectCliches(text: string): string[] {
+  const found = new Set<string>();
+  for (const { re, label } of AI_CLICHE_PATTERNS) {
+    if (re.test(text)) found.add(label);
+  }
+  return [...found];
+}
+
+/**
+ * 사람다움 문체 신호 실측 (토큰 0). 프롬프트가 요구한 "한 문장씩 줄바꿈·수치 밀도"를 사후 측정.
+ * - denseParaRatio: 프로즈 문단 중 3문장 이상 몰아쓴 비율(AI 특징 = 한 문단에 3~5문장 쌓기).
+ * - numbersPer1000: 본문 1,000자당 수치 표현 수(AEO·인용에 유리).
+ */
+function measureStyleSignals(markdown: string): {
+  denseParaRatio: number;
+  proseParas: number;
+  numbersPer1000: number;
+} {
+  const blocks = markdown
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  const proseBlocks = blocks.filter((b) => {
+    const first = (b.split("\n")[0] ?? "").trim();
+    if (/^#{1,6}\s/.test(first)) return false; // 헤딩
+    if (/^[-*+]\s/.test(first)) return false; // 목록
+    if (/^\d+[.)]\s/.test(first)) return false; // 번호 목록
+    if (/^>/.test(first)) return false; // 인용
+    if (/^\|/.test(first)) return false; // 표
+    if (b.split(/\s+/).every((t) => /^#/.test(t))) return false; // 해시태그 줄
+    if (b.replace(/\s/g, "").length < 20) return false; // 너무 짧은 블록
+    return true;
+  });
+  let dense = 0;
+  for (const b of proseBlocks) {
+    // 문장 끝 = 마침표/물음표/느낌표 뒤에 공백·줄바꿈·문단끝이 오는 경우만.
+    // (소수점 3.2%, 4.8% 의 마침표는 뒤에 숫자가 와서 문장 경계로 세지 않는다 — 오탐 방지)
+    const sentences = (b.match(/[.!?…](?=\s|$)/g) ?? []).length || 1;
+    if (sentences >= 3) dense += 1;
+  }
+  const plain = markdown.replace(/[#*`>\-|]/g, " ");
+  const numbers = (plain.match(/\d[\d,.]*%?/g) ?? []).length;
+  const plainLen = plain.replace(/\s+/g, " ").trim().length;
+  return {
+    denseParaRatio: proseBlocks.length > 0 ? dense / proseBlocks.length : 0,
+    proseParas: proseBlocks.length,
+    numbersPer1000: plainLen > 0 ? (numbers / plainLen) * 1000 : 0,
+  };
+}
+
 export function runQualityCheck(input: {
   keyword: string;
   title: string;
@@ -129,6 +195,32 @@ export function runQualityCheck(input: {
     policyRisks.length === 0,
     10,
     policyRisks.length > 0 ? policyRisks.join(", ") : undefined,
+  );
+
+  // ── 문체·사람다움 채점 (AI 티 제거) — 프롬프트가 요구한 사람 같은 글쓰기를 실제로 측정 ──
+  // 세 항목을 모두 실패해도 총점이 82점(폐기선) 위에 남도록 가중치를 보정했다(합 25점).
+  const clicheHits = detectCliches(`${input.title}\n${input.contentMarkdown}`);
+  add(
+    "AI 상투어 없음 (사람다운 문체)",
+    clicheHits.length === 0,
+    8,
+    clicheHits.length > 0 ? clicheHits.join(", ") : undefined,
+  );
+
+  const style = measureStyleSignals(content);
+  // AI 특징 = 한 문단에 3~5문장 몰아쓰기. 프로즈 문단의 3문장+ 비율이 35% 이하여야 사람처럼 끊어 쓴 글.
+  add(
+    "문단 밀집도 (한 문단 3문장+ 비율 35% 이하)",
+    style.proseParas < 3 || style.denseParaRatio <= 0.35,
+    12,
+    `${Math.round(style.denseParaRatio * 100)}% 밀집 (프로즈 ${style.proseParas}문단)`,
+  );
+  // 구체적 숫자(금액·%·연도·기간)는 AEO·AI 인용에 유리
+  add(
+    "수치 밀도 (본문 1,000자당 3개 이상)",
+    style.numbersPer1000 >= 3,
+    5,
+    `1,000자당 ${style.numbersPer1000.toFixed(1)}개`,
   );
 
   const maxTotal = items.reduce((sum, item) => sum + item.maxScore, 0);

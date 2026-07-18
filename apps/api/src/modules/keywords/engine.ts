@@ -7,6 +7,7 @@ import {
   fetchGoogleAdsMetrics,
   fetchNaverSearchAdMetrics,
   normalizeKeyword,
+  seasonalScore,
   type KeywordMetricData,
 } from "./metrics.js";
 import { fetchNaverBlogCompetition, lowCompetitionScore } from "./competition.js";
@@ -334,6 +335,9 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
       // 트렌드 모멘텀(-20~+20) — 순위가 오르고 며칠째 지속되는 키워드를 위로 올린다.
       // 그동안 시계열은 기록만 되고 선정에 전혀 안 쓰였다.
       const momentum = trend?.momentum ?? 0;
+      // 계절성(-15~+15) — 구글 월별 검색량 시계열로 '지금 제철인 키워드'를 가점(추가 API 호출 0).
+      // 모멘텀(자기 추천 이력 기반)과 달리 외생 검색 수요의 계절 흐름을 본다.
+      const seasonal = seasonalScore(google?.monthlyVolumes);
       const finalScore = Math.max(
         0,
         Math.round(
@@ -341,13 +345,14 @@ export async function runDailyDiscovery(trigger: "cron" | "manual"): Promise<Dis
             revenueScore * 0.3 +
             valueScore * 0.25 -
             (noCompetitionData ? 8 : 0) +
-            momentum * 0.5,
+            momentum * 0.5 +
+            seasonal * 0.4,
         ),
       );
 
       return {
         candidate, google, naver, volume, revenueScore, valueScore, opportunityScore,
-        competitionScore, finalScore, totalDocs,
+        competitionScore, finalScore, totalDocs, seasonal,
       };
     });
 

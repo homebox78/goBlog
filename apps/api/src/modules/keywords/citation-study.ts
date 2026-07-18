@@ -347,9 +347,12 @@ export interface CitationInsightData {
 
 /** 인용된 글들을 읽고 Claude 로 분석해 인사이트를 뽑는다. */
 export async function studyKeyword(keywordText: string, maxPosts = 5): Promise<CitationInsightData | null> {
+  // 블로거 중복 제거 — 한 유명 블로거가 상위 여러 개를 차지하면 그 개인 스타일이 '법칙'으로 과대반영된다.
+  // distinct blogId + citedCount desc 정렬이라 블로거당 가장 인용 많은 글 1개만 남는다(studyStyle과 동일 방식).
   const citations = await prisma.blogCitation.findMany({
     where: { keywordText },
     orderBy: [{ citedCount: "desc" }, { rank: "asc" }],
+    distinct: ["blogId"],
     take: maxPosts,
   });
   if (citations.length === 0) return null;
@@ -430,15 +433,19 @@ export async function studyPendingKeywords(limit = 5): Promise<{ studied: number
     orderBy: { _max: { citedCount: "desc" } },
     take: 40,
   });
-  const done = await prisma.citationInsight.findMany({ select: { keywordText: true } });
-  const doneSet = new Set(done.map((d) => d.keywordText));
-
+  // 최근 14일 내 학습분만 skip — 그보다 오래된 인사이트는 상위 인용글 지형이 바뀌었을 수 있어 재학습한다.
+  // (예전엔 한 번 학습하면 영구 동결이라 옛 분석을 계속 주입했다.)
+  const FRESH_MS = 14 * 24 * 60 * 60 * 1000;
+  const done = await prisma.citationInsight.findMany({ select: { keywordText: true, updatedAt: true } });
+  const freshSet = new Set(
+    done.filter((d) => Date.now() - d.updatedAt.getTime() < FRESH_MS).map((d) => d.keywordText),
+  );
 
   let studied = 0;
   for (const group of groups) {
     if (studied >= limit) break;
     if (isStyleKey(group.keywordText)) continue; // 예약 키(전역 문체)는 키워드가 아니다
-    if (doneSet.has(group.keywordText)) continue;
+    if (freshSet.has(group.keywordText)) continue; // 14일 내 학습분만 건너뜀 (오래된 건 재학습)
     try {
       const insight = await studyKeyword(group.keywordText);
       if (insight) studied += 1;
