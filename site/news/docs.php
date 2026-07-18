@@ -87,7 +87,7 @@ render_nav('문서도구', [], true);
 
 <div class="min-h-screen bg-white">
 <?php if (!$isDetail): ?>
-  <?php render_util_hero('DOCUMENTS', '문서 도구 허브', '각서·위임장·차용증부터 사직서·견적서까지 자주 쓰는 서식 ' . count(DOC_DEFS) . '종. 정보만 입력하면 완성된 문서가 바로 만들어집니다.', ['각서', '차용증', '사직서', '근로계약서', '견적서']); ?>
+  <?php render_util_hero('DOCUMENTS', '문서 도구 허브', '각서·위임장·차용증부터 사직서·견적서까지 자주 쓰는 서식 ' . count(DOC_DEFS) . '종. 정보만 입력하면 완성된 문서가 바로 만들어집니다.', ['각서', '차용증', '사직서', '근로계약서', '견적서'], '/assets/hero/docs.jpg'); ?>
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-9">
     <?php foreach (DOC_CATS as [$catTitle, $keys]): ?>
       <div class="mb-4 mt-10 first:mt-0 flex items-center gap-2.5 border-b border-zinc-200 pb-2.5">

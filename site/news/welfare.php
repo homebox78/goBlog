@@ -118,7 +118,7 @@ render_masthead();
 render_nav('지원금', [], true);
 ?>
 <div class="min-h-screen bg-white">
-  <?php render_util_hero('WELFARE', '정부 지원금·복지서비스 찾기', '생애주기·지역으로 신청 가능한 정부·지자체 지원금 ' . number_format($total) . '건을 한 번에. 조건을 좁혀 내게 맞는 지원을 찾아보세요.', ['청년', '월세', '출산', '기초연금', '주거']); ?>
+  <?php render_util_hero('WELFARE', '정부 지원금·복지서비스 찾기', '생애주기·지역으로 신청 가능한 정부·지자체 지원금 ' . number_format($total) . '건을 한 번에. 조건을 좁혀 내게 맞는 지원을 찾아보세요.', ['청년', '월세', '출산', '기초연금', '주거'], '/assets/hero/welfare.jpg'); ?>
   <!-- 검색 섹션 (흰 배경) -->
   <div class="border-b border-zinc-100">
     <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-6">

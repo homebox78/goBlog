@@ -481,15 +481,17 @@ function render_section_subscribe(string $section): void
  * 절제된 다크 밴드 — 좌: 눈썹+제목+구독 버튼+부제+메타태그 / 우: 최근 기사 이미지(임시).
  * 시안(이가혁 라이브)의 구조를 뉴스 톤으로. 모바일에선 이미지 아래로 접힌다.
  */
-function render_util_hero(string $eyebrow, string $title, string $subtitle, array $metaTags = []): void
+function render_util_hero(string $eyebrow, string $title, string $subtitle, array $metaTags = [], string $image = ''): void
 {
-    // 우측 이미지 = 이미지 있는 최근 기사 하나 (임시 대체)
-    $img = '';
-    try {
-        foreach (news_articles() as $a) {
-            if (!empty($a['image'])) { $img = (string) $a['image']; break; }
+    // 우측 이미지 = 페이지 전용 히어로 이미지($image). 없으면 최근 기사 이미지로 폴백.
+    $img = $image;
+    if ($img === '') {
+        try {
+            foreach (news_articles() as $a) {
+                if (!empty($a['image'])) { $img = (string) $a['image']; break; }
+            }
+        } catch (Throwable) {
         }
-    } catch (Throwable) {
     }
     ?>
 <section class="border-b border-zinc-200 bg-[#0f2942] text-white">

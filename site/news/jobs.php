@@ -136,7 +136,7 @@ render_masthead();
 render_nav('노인일자리', [], true);
 ?>
 <div class="min-h-screen bg-white">
-  <?php render_util_hero('SENIOR JOBS', '노인 일자리 찾기', '전국 노인 구인정보 ' . number_format($totalActive) . '건(접수중)을 한 번에. 지역·직무로 좁혀 가까운 일자리를 찾아보세요.', ['미화', '경비', '요양보호', '급식도우미', '지도원']); ?>
+  <?php render_util_hero('SENIOR JOBS', '노인 일자리 찾기', '전국 노인 구인정보 ' . number_format($totalActive) . '건(접수중)을 한 번에. 지역·직무로 좁혀 가까운 일자리를 찾아보세요.', ['미화', '경비', '요양보호', '급식도우미', '지도원'], '/assets/hero/jobs.jpg'); ?>
   <!-- 검색 섹션 (흰 배경) -->
   <div class="border-b border-zinc-100">
     <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-6">

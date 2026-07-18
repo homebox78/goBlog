@@ -50,7 +50,7 @@ render_masthead();
 render_nav('계산기', [], true);
 ?>
 <div class="min-h-screen bg-white">
-  <?php render_util_hero('CALCULATOR', '실용 계산기 모음', '급여·세금·부동산·크리에이터 수익까지 자주 쓰는 계산기 ' . count(TOOLS) . '종. 설치 없이 바로 사용하세요.', ['연봉실수령액', '4대보험', '퇴직금', '대출이자', '부동산세금']); ?>
+  <?php render_util_hero('CALCULATOR', '실용 계산기 모음', '급여·세금·부동산·크리에이터 수익까지 자주 쓰는 계산기 ' . count(TOOLS) . '종. 설치 없이 바로 사용하세요.', ['연봉실수령액', '4대보험', '퇴직금', '대출이자', '부동산세금'], '/assets/hero/tools.jpg'); ?>
 
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-9">
     <?php foreach ($groups as $cat => $tools): ?>

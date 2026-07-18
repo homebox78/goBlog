@@ -43,7 +43,7 @@ render_ticker(array_slice($all, 0, 6));
 render_topbar();
 render_masthead();
 render_nav('오피니언', [], true);
-render_util_hero('OPINION', '오피니언', 'HOM2BOX 편집국 칼럼과 제휴 매체 오피니언을 함께 · 매일 아침·저녁 갱신', ['사설·칼럼', '경제', '시사', 'IT']);
+render_util_hero('OPINION', '오피니언', 'HOM2BOX 편집국 칼럼과 제휴 매체 오피니언을 함께 · 매일 아침·저녁 갱신', ['사설·칼럼', '경제', '시사', 'IT'], '/assets/hero/opinion.jpg');
 ?>
 <div class="min-h-screen bg-white">
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6">

@@ -18,7 +18,7 @@ render_ticker($ticker);
 render_topbar();
 render_masthead();
 render_nav('언론사', [], true);
-render_util_hero('PRESS', '언론사 헤드라인', '연합뉴스·JTBC·SBS·증권 등 주요 언론사 헤드라인을 분야별로 · 아침·저녁 갱신', ['속보', '경제', '정치', 'IT·과학']);
+render_util_hero('PRESS', '언론사 헤드라인', '연합뉴스·JTBC·SBS·증권 등 주요 언론사 헤드라인을 분야별로 · 아침·저녁 갱신', ['속보', '경제', '정치', 'IT·과학'], '/assets/hero/press.jpg');
 ?>
 <div class="min-h-screen bg-white">
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6">
