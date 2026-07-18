@@ -33,8 +33,51 @@ try { $ticker = array_slice(news_articles(), 0, 6); } catch (Throwable) {}
 if ($isDetail) {
     $d = DOC_DEFS[$doc];
     render_head($d['title'] . ' 양식 무료 작성·PDF — HOM2BOX 문서도구', $d['desc'] . ' 로그인 없이 무료로 작성하고 인쇄·PDF 저장하세요.');
+    // 개별 서식 = 웹 도구(WebApplication)로 인식 + breadcrumb
+    news_breadcrumb_ld([
+        ['name' => '홈', 'url' => 'https://hom2box.com/'],
+        ['name' => '문서도구', 'url' => 'https://hom2box.com/docs.php'],
+        ['name' => $d['title']],
+    ]);
+    news_jsonld([
+        '@context' => 'https://schema.org',
+        '@type' => 'WebApplication',
+        'name' => $d['title'] . ' 양식 작성',
+        'url' => 'https://hom2box.com/docs.php?doc=' . $doc,
+        'applicationCategory' => 'BusinessApplication',
+        'operatingSystem' => 'All (웹 브라우저)',
+        'inLanguage' => 'ko',
+        'description' => $d['desc'],
+        'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'KRW'],
+        'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+    ]);
 } else {
     render_head('무료 문서 서식 10종 — 각서·차용증·사직서·근로계약서 | HOM2BOX 문서도구', '각서·위임장·차용증·합의서·사직서·경위서·재직증명서·근로계약서·견적서·영수증. 정보만 입력하면 완성된 문서가 바로 만들어집니다. 무료·로그인 없이·PDF 저장.');
+    // 허브 = 서식 10종 디렉터리(CollectionPage + ItemList)
+    news_breadcrumb_ld([
+        ['name' => '홈', 'url' => 'https://hom2box.com/'],
+        ['name' => '문서도구'],
+    ]);
+    $doc_ld_items = [];
+    $doc_i = 1;
+    foreach (DOC_DEFS as $dk => $dv) {
+        $doc_ld_items[] = [
+            '@type' => 'ListItem',
+            'position' => $doc_i++,
+            'name' => $dv['title'],
+            'url' => 'https://hom2box.com/docs.php?doc=' . $dk,
+        ];
+    }
+    news_jsonld([
+        '@context' => 'https://schema.org',
+        '@type' => 'CollectionPage',
+        'name' => '무료 문서 서식 10종',
+        'description' => '각서·위임장·차용증·합의서·사직서·경위서·재직증명서·근로계약서·견적서·영수증을 무료로 작성·PDF 저장.',
+        'url' => 'https://hom2box.com/docs.php',
+        'inLanguage' => 'ko',
+        'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+        'mainEntity' => ['@type' => 'ItemList', 'numberOfItems' => count($doc_ld_items), 'itemListElement' => $doc_ld_items],
+    ]);
 }
 render_ticker($ticker);
 render_topbar();

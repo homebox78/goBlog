@@ -298,16 +298,25 @@ function render_masthead(string $q = ''): void
 /** 슬림 통합 내비 — 로고 + 탭 + 우측 검색 (시안 1단 sticky 바) + 하단 Market 스트립 */
 function render_nav(string $active, array $bySection = [], bool $hasPress = false): void
 {
-    $tabs = [['홈', '/']];
+    // 좌측 = 기사 관련(홈·카테고리·언론사·오피니언), 우측 = 유틸(지원금·일자리·계산기·문서도구).
+    // 데스크톱에선 유틸 그룹을 우측 정렬 + '|'로 분기, 모바일에선 가로 스크롤로 자연스럽게 이어진다.
+    $newsTabs = [['홈', '/']];
     foreach (NEWS_SECTIONS as $s) {
-        $tabs[] = [$s, '/category.php?cat=' . urlencode($s)];
+        $newsTabs[] = [$s, '/category.php?cat=' . urlencode($s)];
     }
-    $tabs[] = ['지원금', '/welfare.php'];
-    $tabs[] = ['노인일자리', '/jobs.php'];
-    $tabs[] = ['계산기', '/tools.php'];
-    $tabs[] = ['문서도구', '/docs.php'];
-    $tabs[] = ['언론사', '/press.php'];
-    $tabs[] = ['오피니언', '/opinion.php'];
+    $newsTabs[] = ['언론사', '/press.php'];
+    $newsTabs[] = ['오피니언', '/opinion.php'];
+    $utilTabs = [
+        ['지원금', '/welfare.php'],
+        ['노인일자리', '/jobs.php'],
+        ['계산기', '/tools.php'],
+        ['문서도구', '/docs.php'],
+    ];
+    $tabCls = function (bool $on): string {
+        return $on
+            ? 'flex-none whitespace-nowrap px-2.5 py-4 text-sm font-bold text-[' . NEWS_PRIMARY . '] border-b-[3px] border-[' . NEWS_PRIMARY . ']'
+            : 'flex-none whitespace-nowrap px-2.5 py-4 text-sm font-bold text-zinc-700 hover:text-[' . NEWS_PRIMARY . ']';
+    };
     ?>
 <div class="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur">
   <div class="mx-auto flex max-w-[1399px] items-center gap-4 px-4 sm:px-6">
@@ -316,12 +325,13 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
       <span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">뉴스</span>
     </a>
     <nav class="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
-      <?php foreach ($tabs as [$name, $href]):
-          $on = $name === $active;
-          $cls = $on
-              ? 'flex-none whitespace-nowrap px-2.5 py-4 text-sm font-bold text-[' . NEWS_PRIMARY . '] border-b-[3px] border-[' . NEWS_PRIMARY . ']'
-              : 'flex-none whitespace-nowrap px-2.5 py-4 text-sm font-bold text-zinc-700 hover:text-[' . NEWS_PRIMARY . ']'; ?>
-        <a href="<?= nh($href) ?>" class="<?= $cls ?>"><?= nh($name) ?></a>
+      <?php foreach ($newsTabs as [$name, $href]): ?>
+        <a href="<?= nh($href) ?>" class="<?= $tabCls($name === $active) ?>"><?= nh($name) ?></a>
+      <?php endforeach; ?>
+      <?php // 구분자 — ml-auto로 유틸 그룹을 데스크톱에서 우측으로 밀고 '|'로 분기 ?>
+      <span class="ml-auto flex-none select-none px-2 text-zinc-300" aria-hidden="true">|</span>
+      <?php foreach ($utilTabs as [$name, $href]): ?>
+        <a href="<?= nh($href) ?>" class="<?= $tabCls($name === $active) ?>"><?= nh($name) ?></a>
       <?php endforeach; ?>
     </nav>
     <a href="/search.php" class="flex flex-none items-center gap-1 py-3 text-sm font-bold text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">

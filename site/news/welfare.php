@@ -76,6 +76,42 @@ $ticker = [];
 try { $ticker = array_slice(news_articles(), 0, 6); } catch (Throwable) {}
 
 render_head('정부 지원금·복지서비스 찾기 — HOM2BOX 뉴스', '생애주기·지역별 신청 가능한 정부·지자체 지원금을 한 번에. 복지로 공식 데이터 기반.');
+
+// ── SEO 구조화 데이터 — 검색엔진이 '정부 복지서비스 디렉터리'로 인식하게 ──
+news_breadcrumb_ld([
+    ['name' => '홈', 'url' => 'https://hom2box.com/'],
+    ['name' => '지원금'],
+]);
+// 이 페이지에 나열된 복지서비스를 GovernmentService 항목의 ItemList로 (각 서비스 = 정부 서비스로 인식)
+$wf_ld_items = [];
+$wf_i = 1;
+foreach ($items as $wf) {
+    $wf_ld_items[] = [
+        '@type' => 'ListItem',
+        'position' => $wf_i++,
+        'item' => [
+            '@type' => 'GovernmentService',
+            'name' => (string) $wf['name'],
+            'description' => mb_substr((string) ($wf['summary'] ?? ''), 0, 200),
+            'serviceType' => '복지·지원금',
+            'areaServed' => (string) ($wf['region'] ?? '대한민국'),
+            'provider' => ['@type' => 'GovernmentOrganization', 'name' => (string) ($wf['dept'] ?? '정부·지자체')],
+            'audience' => ['@type' => 'Audience', 'audienceType' => (string) ($wf['lifeCycle'] ?? '전 생애주기')],
+            'url' => 'https://hom2box.com/welfare.php?q=' . urlencode((string) $wf['name']),
+        ],
+    ];
+}
+news_jsonld([
+    '@context' => 'https://schema.org',
+    '@type' => 'CollectionPage',
+    'name' => '정부 지원금·복지서비스 찾기',
+    'description' => '생애주기·지역별 신청 가능한 정부·지자체 지원금을 한 번에. 복지로 공식 데이터 기반.',
+    'url' => 'https://hom2box.com/welfare.php',
+    'inLanguage' => 'ko',
+    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+    'mainEntity' => ['@type' => 'ItemList', 'numberOfItems' => count($wf_ld_items), 'itemListElement' => $wf_ld_items],
+]);
+
 render_ticker($ticker);
 render_topbar();
 render_masthead();
