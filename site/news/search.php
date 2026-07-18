@@ -102,9 +102,7 @@ render_nav('', [], true);
         <form action="/search.php" method="get" class="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 h-14 shadow-sm focus-within:ring-2 focus-within:ring-[#134a9c]/30">
           <span class="material-symbols-outlined text-[22px] text-zinc-400">search</span>
           <input name="q" value="<?= nh($q) ?>" autofocus placeholder="뉴스 검색" class="min-w-0 flex-1 border-0 outline-none bg-transparent text-base placeholder:text-zinc-400">
-          <?php if ($q !== ''): ?>
-            <a href="/search.php" title="검색어 지우기" class="flex flex-none items-center"><span class="material-symbols-outlined text-[20px] text-zinc-400 hover:text-zinc-600">close</span></a>
-          <?php endif; ?>
+          <?php if ($q !== ''): ?><a href="/search.php" title="검색 취소" class="flex-none cursor-pointer rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-bold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700">취소</a><?php endif; ?>
           <button type="submit" class="flex-none cursor-pointer rounded-lg border-0 bg-[#134a9c] px-4 py-2 text-sm font-bold text-white hover:bg-[#0f3d82]">검색</button>
         </form>
         <?php if ($hotKeywords): ?>

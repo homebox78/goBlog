@@ -144,6 +144,7 @@ render_nav('노인일자리', [], true);
         <span class="material-symbols-outlined text-[22px] text-zinc-400">search</span>
         <input name="q" value="<?= nh($q) ?>" placeholder="일자리 검색 (예: 미화, 경비, 요양보호)" class="flex-1 border-0 bg-transparent text-[15px] outline-none placeholder:text-zinc-400">
         <?php if ($sido !== ''): ?><input type="hidden" name="sido" value="<?= nh($sido) ?>"><?php endif; ?>
+        <?php if ($q !== ''): ?><a href="/jobs.php<?= $sido !== '' ? '?sido=' . urlencode($sido) : '' ?>" title="검색 취소" class="flex-none rounded-lg border border-zinc-300 px-3.5 py-1.5 text-[13.5px] font-bold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700">취소</a><?php endif; ?>
         <button type="submit" class="rounded-lg bg-[#134a9c] px-4 py-1.5 text-[13.5px] font-bold text-white hover:bg-[#0f3d82]">검색</button>
       </form>
       <?php // 인기 검색어 — 뱃지 없이 미니멀 텍스트, 최대 6개 ?>
