@@ -254,7 +254,7 @@ html { scroll-behavior:smooth; }
     <!-- 기사 본문 -->
     <div class="min-w-0">
       <div class="mb-3 flex items-center gap-2"><span class="h-[14px] w-[3px] rounded-full bg-[#e0392b]"></span><span class="text-[12.5px] font-extrabold uppercase tracking-wider text-[#e0392b]"><?= nh($section) ?></span></div>
-      <h1 class="mb-4 text-[30px] md:text-[33px] font-extrabold leading-snug tracking-tight"><?= nh($article['title']) ?></h1>
+      <h1 class="mb-4 text-[23px] sm:text-[30px] md:text-[33px] font-extrabold leading-snug tracking-tight"><?= nh($article['title']) ?></h1>
       <div class="flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-zinc-200">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[<?= NEWS_PRIMARY ?>] text-sm font-extrabold text-white">H</div>
