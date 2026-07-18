@@ -428,6 +428,25 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
     <?php endif; ?>
   </div>
 
+  <?php // ── 제휴 상품 특가 캐러셀 (쿠팡 파트너스 + 네이버 커넥트 섞어서) ── ?>
+  <?php $shopProducts = news_shop_mixed(12); if ($shopProducts): ?>
+  <section class="border-t border-zinc-100">
+    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-9">
+      <div class="mb-4 flex items-end justify-between gap-3">
+        <div>
+          <h2 class="flex items-center gap-2 text-[20px] font-extrabold tracking-tight sm:text-[23px]"><span class="material-symbols-outlined text-[24px] text-[#134a9c]">shopping_cart</span>지금 가장 많이 담는 특가</h2>
+          <p class="mt-1 text-[13px] text-zinc-400">쿠팡·네이버 인기 상품을 골라 담았습니다 · 제휴 링크</p>
+        </div>
+        <a href="/shop.php" class="flex flex-none items-center gap-0.5 text-[13px] font-bold text-zinc-500 hover:text-[<?= $P ?>]">전체보기<span class="material-symbols-outlined text-[18px]">chevron_right</span></a>
+      </div>
+      <div class="grid grid-flow-col auto-cols-[45%] gap-3 overflow-x-auto pb-2 sm:auto-cols-[30%] sm:gap-4 lg:auto-cols-[15.6%]" style="scrollbar-width:none">
+        <?php foreach ($shopProducts as $p) render_product_card($p); ?>
+      </div>
+      <p class="mt-3 text-[11px] text-zinc-400">※ 제휴 마케팅 링크가 포함되어 있으며, 구매 시 일정액의 수수료를 제공받을 수 있습니다.</p>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <?php render_footer(); ?>
 </div>
 <?php render_foot(); ?>

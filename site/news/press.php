@@ -18,15 +18,13 @@ render_ticker($ticker);
 render_topbar();
 render_masthead();
 render_nav('언론사', [], true);
+render_util_hero('PRESS', '언론사 헤드라인', '연합뉴스·JTBC·SBS·증권 등 주요 언론사 헤드라인을 분야별로 · 아침·저녁 갱신', ['속보', '경제', '정치', 'IT·과학']);
 ?>
 <div class="min-h-screen bg-white">
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6">
-    <!-- 헤더: 빨강 세로바 + 제목 / 우측 탭 -->
-    <div class="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-200 pt-8 pb-4">
-      <div>
-        <div class="mb-1.5 flex items-center gap-2.5"><span class="h-[18px] w-[3px] rounded-full bg-[#e0392b]"></span><h1 class="m-0 text-[28px] sm:text-[32px] font-bold tracking-tight">언론사 헤드라인</h1></div>
-        <div class="mt-1.5 text-[13px] text-zinc-400">아침·저녁 갱신 · 제목을 누르면 각 언론사 원문으로 이동합니다</div>
-      </div>
+    <!-- 필터 탭 (제목은 히어로로 이동, 중복 제거) -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pt-6 pb-4">
+      <h2 class="text-[17px] font-extrabold tracking-tight sm:text-[19px]">전체 헤드라인</h2>
       <?php if ($press): ?>
       <div class="flex flex-wrap gap-2">
         <?php $first = true; foreach ($press as $key => $tab): ?>

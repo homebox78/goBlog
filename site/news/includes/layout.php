@@ -367,6 +367,40 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
 }
 
 /**
+ * 제휴 상품 카드 — 쿠팡 파트너스 / 네이버 커넥트 공용. (홈 캐러셀·전체보기 페이지 공용)
+ * ⚠️ 트래킹 링크는 새 창 + rel=sponsored nofollow. 대가성은 페이지에서 별도 고지.
+ */
+function render_product_card(array $p): void
+{
+    $isCoupang = ($p['source'] ?? '') === 'COUPANG';
+    $badge = $isCoupang ? ($p['isRocket'] ? '로켓' : '쿠팡') : '네이버';
+    $badgeCls = $isCoupang ? 'text-[#2c7fff]' : 'text-[#03c75a]';
+    $price = (int) ($p['price'] ?? 0);
+    $orig = (int) ($p['originPrice'] ?? 0);
+    $disc = ($orig > $price && $price > 0) ? (int) round(($orig - $price) / $orig * 100) : 0;
+    $reviews = (int) ($p['ratingCount'] ?? 0);
+    ?>
+<a href="<?= nh($p['productUrl']) ?>" target="_blank" rel="sponsored nofollow noopener" class="group block">
+  <div class="relative aspect-square w-full overflow-hidden rounded-xl bg-zinc-100">
+    <img src="<?= nh($p['imageUrl']) ?>" alt="<?= nh($p['name']) ?>" loading="lazy" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+    <span class="absolute left-2 top-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[10.5px] font-extrabold <?= $badgeCls ?> shadow-sm"><?= $badge ?></span>
+  </div>
+  <div class="mt-2.5">
+    <div class="line-clamp-2 min-h-[2.6em] text-[13.5px] font-semibold leading-snug text-zinc-800 group-hover:text-[#134a9c]"><?= nh($p['name']) ?></div>
+    <div class="mt-1.5 flex items-baseline gap-1.5">
+      <?php if ($disc > 0): ?><span class="text-[15px] font-extrabold text-[#e0392b]"><?= $disc ?>%</span><?php endif; ?>
+      <span class="text-[16px] font-extrabold text-zinc-900"><?= number_format($price) ?>원</span>
+    </div>
+    <?php if ($orig > $price): ?><div class="text-[11.5px] text-zinc-400 line-through"><?= number_format($orig) ?>원</div><?php endif; ?>
+    <?php if ($reviews > 0): ?>
+      <div class="mt-1 flex items-center gap-1 text-[11.5px] text-zinc-400"><span class="material-symbols-outlined text-[13px] text-amber-400" style="font-variation-settings:'FILL' 1;">star</span>리뷰 <?= number_format($reviews) ?></div>
+    <?php endif; ?>
+  </div>
+</a>
+    <?php
+}
+
+/**
  * 섹션 구독 배너 — 카테고리/기사 상단. 시안(경제 돋보기) 스타일:
  * 절제된 다크 밴드에 "{섹션} 돋보기" + 구독 버튼 + 관련 토픽 해시태그.
  */
@@ -382,7 +416,7 @@ function render_section_subscribe(string $section): void
     $tags = $topics[$section] ?? [];
     ?>
 <section class="border-b border-zinc-200 bg-[#0f2942] text-white">
-  <div class="mx-auto max-w-[1399px] px-4 py-5 sm:px-6">
+  <div class="mx-auto max-w-[1399px] px-4 py-7 sm:px-6 sm:py-[45px]">
     <div class="flex flex-wrap items-center gap-2.5">
       <h2 class="text-[19px] font-extrabold tracking-tight sm:text-[22px]"><?= nh($section) ?> 돋보기</h2>
       <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-white/40 px-2.5 py-1 text-[12.5px] font-bold text-white/90 transition-colors hover:border-white hover:bg-white/10"><span class="material-symbols-outlined text-[15px]">add</span>구독</a>

@@ -43,17 +43,15 @@ render_ticker(array_slice($all, 0, 6));
 render_topbar();
 render_masthead();
 render_nav('오피니언', [], true);
+render_util_hero('OPINION', '오피니언', 'HOM2BOX 편집국 칼럼과 제휴 매체 오피니언을 함께 · 매일 아침·저녁 갱신', ['사설·칼럼', '경제', '시사', 'IT']);
 ?>
 <div class="min-h-screen bg-white">
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6">
 
-    <!-- 오피니언 헤더 -->
-    <div class="flex flex-col gap-3 border-b border-zinc-200 pt-8 pb-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <div class="mb-1.5 flex items-center gap-2.5"><span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span><h1 class="m-0 text-[24px] sm:text-[30px] font-bold tracking-tight">오피니언</h1></div>
-        <div class="mt-1.5 text-[13px] text-zinc-400">HOM2BOX 편집국 칼럼<?= $hasPress ? '과 제휴 매체 오피니언을' : '을' ?> 함께 전합니다 · 매일 아침·저녁 갱신</div>
-      </div>
-      <div class="flex flex-wrap gap-2 pb-1">
+    <!-- 오피니언 필터 -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pt-6 pb-4">
+      <h2 class="text-[17px] font-extrabold tracking-tight sm:text-[19px]">전체 칼럼</h2>
+      <div class="flex flex-wrap gap-2">
         <button type="button" data-filter="all" class="cursor-pointer inline-flex whitespace-nowrap items-center rounded-full px-3.5 py-1.5 text-[13px] font-semibold border shadow-sm bg-[<?= $P ?>] text-white border-[<?= $P ?>]">전체</button>
         <button type="button" data-filter="own" class="cursor-pointer inline-flex whitespace-nowrap items-center rounded-full px-3.5 py-1.5 text-[13px] font-semibold border shadow-sm bg-white text-zinc-600 border-zinc-200 hover:border-[<?= $P ?>] hover:text-[<?= $P ?>]">편집국 칼럼</button>
         <?php if ($hasPress): ?>

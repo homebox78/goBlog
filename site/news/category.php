@@ -157,8 +157,8 @@ $viewOff = 'border-zinc-200 bg-white text-zinc-600';
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6">
     <div class="flex flex-col gap-3 border-b border-zinc-200 pt-8 pb-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <div class="mb-1.5 flex items-center gap-2.5"><span class="h-[18px] w-[3px] rounded-full bg-[#e0392b]"></span><h1 class="m-0 text-[24px] font-bold tracking-tight text-zinc-900 sm:text-[30px]"><?= nh($cat) ?></h1></div>
-        <div class="mt-1.5 text-[13px] text-zinc-400"><?= nh($catDesc) ?> · 전체 <?= count($all) ?>건</div>
+        <h2 class="m-0 text-[17px] font-extrabold tracking-tight text-zinc-900 sm:text-[19px]">전체 기사</h2>
+        <div class="mt-1 text-[13px] text-zinc-400"><?= nh($catDesc) ?> · <?= count($all) ?>건</div>
       </div>
       <div class="flex flex-wrap items-center gap-2 pb-1">
         <a href="<?= nh($base) ?>" class="<?= $sort === 'latest' ? $sortOn : $sortOff ?>">최신순</a>

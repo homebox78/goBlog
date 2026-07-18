@@ -208,3 +208,60 @@ function record_article_view(int $articleId): void
         // 조회 기록 실패는 조용히 무시 (기사 노출이 우선)
     }
 }
+
+/**
+ * 제휴 상품 전시용 조회 — 쿠팡 파트너스 + 네이버 커넥트 (트래킹 링크 보유분만).
+ * ⚠️ 수수료는 트래킹 링크(link.coupang·coupa.ng·naver.me)에서만 발생 → 그것만 노출.
+ * $source: '' (섞어서) | 'COUPANG' | 'BRANDCONNECT'. 리뷰수 많은 순(인기).
+ */
+function news_shop_products(int $limit = 12, string $source = '', int $offset = 0): array
+{
+    $track = "((source='COUPANG' AND (productUrl LIKE '%link.coupang%' OR productUrl LIKE '%coupa.ng%'))"
+        . " OR (source='BRANDCONNECT' AND productUrl LIKE '%naver.me%'))";
+    $where = "status='ACTIVE' AND imageUrl IS NOT NULL AND imageUrl<>'' AND $track";
+    if ($source === 'COUPANG') $where .= " AND source='COUPANG'";
+    elseif ($source === 'BRANDCONNECT') $where .= " AND source='BRANDCONNECT'";
+    $sql = "SELECT id,source,name,brand,price,originPrice,imageUrl,productUrl,isRocket,ratingCount,categoryName"
+        . " FROM products WHERE $where ORDER BY ratingCount DESC LIMIT :lim OFFSET :off";
+    try {
+        $st = goblog_db()->prepare($sql);
+        $st->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $st->bindValue(':off', $offset, PDO::PARAM_INT);
+        $st->execute();
+        return $st->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+/**
+ * 두 출처를 번갈아 섞어 반환 (홈 캐러셀용 — 한쪽으로 쏠리지 않게).
+ * 각 출처 상위 리뷰순을 지퍼처럼 교차.
+ */
+function news_shop_mixed(int $limit = 12): array
+{
+    $half = (int) ceil($limit / 2);
+    $cp = news_shop_products($half, 'COUPANG');
+    $nc = news_shop_products($half, 'BRANDCONNECT');
+    $out = [];
+    for ($i = 0; $i < max(count($cp), count($nc)); $i++) {
+        if (isset($nc[$i])) $out[] = $nc[$i];
+        if (isset($cp[$i])) $out[] = $cp[$i];
+    }
+    return array_slice($out, 0, $limit);
+}
+
+/** 제휴 상품 총 개수 (전체보기 페이지네이션용) */
+function news_shop_count(string $source = ''): int
+{
+    $track = "((source='COUPANG' AND (productUrl LIKE '%link.coupang%' OR productUrl LIKE '%coupa.ng%'))"
+        . " OR (source='BRANDCONNECT' AND productUrl LIKE '%naver.me%'))";
+    $where = "status='ACTIVE' AND imageUrl IS NOT NULL AND imageUrl<>'' AND $track";
+    if ($source === 'COUPANG') $where .= " AND source='COUPANG'";
+    elseif ($source === 'BRANDCONNECT') $where .= " AND source='BRANDCONNECT'";
+    try {
+        return (int) goblog_db()->query("SELECT COUNT(*) FROM products WHERE $where")->fetchColumn();
+    } catch (Throwable) {
+        return 0;
+    }
+}
