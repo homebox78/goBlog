@@ -440,17 +440,28 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
           </a>
           <div class="divide-y divide-zinc-100">
             <?php foreach ($seniorJobs as $j):
-              $loc = trim((string) ($j['place'] !== '' ? $j['place'] : $j['org']));
+              $place = trim((string) ($j['place'] ?? ''));
+              $org = trim((string) ($j['org'] ?? ''));
+              $region = $place !== '' ? (preg_split('/\s+/u', $place)[0] ?? '') : '';
+              $method = trim((string) ($j['acptMthd'] ?? ''));
               $fr = preg_replace('/^(\d{4})(\d{2})(\d{2})$/', '$1.$2.$3', (string) ($j['frDd'] ?? ''));
               $to = preg_replace('/^(\d{4})(\d{2})(\d{2})$/', '$1.$2.$3', (string) ($j['toDd'] ?? ''));
             ?>
               <a href="/jobs.php?id=<?= nh($j['jobId']) ?>" class="block px-4 py-3 hover:bg-zinc-50 group">
-                <div class="flex items-center gap-1.5">
-                  <span class="inline-flex min-w-0 items-center gap-0.5 rounded bg-[#e0392b]/10 px-1.5 py-0.5 text-[11px] font-bold text-[#e0392b]"><span class="material-symbols-outlined text-[13px]">location_on</span><span class="truncate"><?= nh(mb_strimwidth($loc, 0, 18, '…', 'UTF-8')) ?></span></span>
-                  <span class="ml-auto flex-none rounded bg-[#03c75a]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#03c75a]">접수중</span>
+                <div class="mb-1.5 flex items-center gap-1.5">
+                  <span class="material-symbols-outlined flex-none text-[15px] text-[#03c75a]">business_center</span>
+                  <?php if ($region !== ''): ?><span class="flex-none rounded bg-[#e0392b]/10 px-1.5 py-0.5 text-[11px] font-bold text-[#e0392b]"><?= nh($region) ?></span><?php endif; ?>
+                  <span class="ml-auto flex flex-none items-center gap-1">
+                    <span class="rounded bg-[#03c75a]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#03c75a]">접수중</span>
+                    <?php if ($method !== ''): ?><span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-bold text-zinc-500"><?= nh(mb_strimwidth($method, 0, 8, '', 'UTF-8')) ?></span><?php endif; ?>
+                  </span>
                 </div>
-                <div class="mt-1.5 line-clamp-1 text-[13.5px] font-bold text-zinc-800 group-hover:text-[<?= $P ?>]"><?= nh($j['title']) ?></div>
-                <?php if ($fr !== ''): ?><div class="mt-1 truncate text-[11.5px] text-zinc-400">접수 <?= nh($fr) ?><?= $to !== '' ? ' ~ ' . nh($to) : '' ?></div><?php endif; ?>
+                <div class="line-clamp-2 text-[13.5px] font-bold leading-snug text-zinc-900 group-hover:text-[<?= $P ?>]"><?= nh($j['title']) ?></div>
+                <div class="mt-1.5 space-y-0.5 text-[11.5px] text-zinc-500">
+                  <?php if ($org !== ''): ?><div class="flex items-center gap-1 truncate"><span class="material-symbols-outlined flex-none text-[13px] text-zinc-400">apartment</span><span class="truncate"><?= nh($org) ?></span></div><?php endif; ?>
+                  <?php if ($place !== ''): ?><div class="flex items-center gap-1 truncate"><span class="material-symbols-outlined flex-none text-[13px] text-zinc-400">location_on</span><span class="truncate"><?= nh($place) ?></span></div><?php endif; ?>
+                  <?php if ($fr !== ''): ?><div class="flex items-center gap-1 truncate"><span class="material-symbols-outlined flex-none text-[13px] text-zinc-400">calendar_month</span><?= nh($fr) . ($to !== '' ? ' ~ ' . nh($to) : '') ?></div><?php endif; ?>
+                </div>
               </a>
             <?php endforeach; ?>
           </div>
