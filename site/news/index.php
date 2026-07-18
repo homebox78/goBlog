@@ -208,13 +208,16 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
 
     <!-- 헤드라인 -->
     <div class="grid grid-cols-1 md:grid-cols-[1.6fr_1fr] gap-9 py-6 border-b-2 border-zinc-900">
-      <a href="/article.php?id=<?= (int) $headline['id'] ?>" class="block group">
+      <a href="/article.php?id=<?= (int) $headline['id'] ?>" class="group flex flex-col gap-4 sm:flex-row sm:gap-5">
         <?php if (!empty($headline['image'])): ?>
-          <div class="w-full aspect-video rounded-lg overflow-hidden bg-zinc-100"><img src="<?= nh($headline['image']) ?>" alt="" class="w-full h-full object-cover"></div>
+          <div class="aspect-video w-full flex-none overflow-hidden rounded-lg bg-zinc-100 sm:aspect-[4/3] sm:w-[52%]"><img src="<?= nh($headline['image']) ?>" alt="" class="h-full w-full object-cover"></div>
         <?php endif; ?>
-        <h2 class="mt-4 mb-2 text-[19px] sm:text-[27px] font-extrabold leading-snug tracking-tight group-hover:text-[<?= $P ?>]"><?= nh($headline['title']) ?></h2>
-        <?php if (!empty($headline['excerpt'])): ?><p class="mb-2 text-sm leading-relaxed text-zinc-500 line-clamp-2"><?= nh($headline['excerpt']) ?></p><?php endif; ?>
-        <div class="flex items-center gap-2 text-xs text-zinc-400"><span class="text-[11.5px] font-bold text-[<?= $P ?>]"><?= nh($headline['section']) ?></span><span class="text-zinc-300">·</span><?= nh(news_date($headline['publishedAt'])) ?></div>
+        <div class="flex min-w-0 flex-1 flex-col justify-center">
+          <div class="mb-1.5 text-[11.5px] font-bold text-[<?= $P ?>]"><?= nh($headline['section']) ?></div>
+          <h2 class="mb-2.5 text-[21px] sm:text-[28px] font-extrabold leading-tight tracking-tight group-hover:text-[<?= $P ?>]"><?= nh($headline['title']) ?></h2>
+          <?php if (!empty($headline['excerpt'])): ?><p class="text-[14px] leading-relaxed text-zinc-500 line-clamp-4"><?= nh($headline['excerpt']) ?></p><?php endif; ?>
+          <div class="mt-3 text-xs text-zinc-400"><?= nh(news_date($headline['publishedAt'])) ?></div>
+        </div>
       </a>
       <div class="flex flex-col pb-2">
         <?php foreach ($subLeads as $h): ?>
