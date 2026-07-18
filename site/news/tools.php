@@ -50,14 +50,7 @@ render_masthead();
 render_nav('계산기', [], true);
 ?>
 <div class="min-h-screen bg-white">
-  <!-- 히어로 밴드 -->
-  <div class="border-b border-zinc-100 bg-zinc-50">
-    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-10">
-      <span class="inline-flex items-center gap-1.5 rounded-full bg-[#134a9c]/10 px-3 py-1 text-xs font-bold text-[#134a9c]"><span class="material-symbols-outlined text-[15px]">calculate</span>무료 · 설치 없이 바로 사용</span>
-      <h1 class="mt-4 mb-2 text-[28px] font-extrabold tracking-tight sm:text-[34px]">실용 계산기 모음</h1>
-      <p class="text-[14px] leading-relaxed text-zinc-500">급여·세금·부동산·크리에이터 수익까지 자주 쓰는 계산기 <b class="text-zinc-700"><?= count(TOOLS) ?>종</b>. 설치 없이 바로 사용하세요.</p>
-    </div>
-  </div>
+  <?php render_util_hero('CALCULATOR', '실용 계산기 모음', '급여·세금·부동산·크리에이터 수익까지 자주 쓰는 계산기 ' . count(TOOLS) . '종. 설치 없이 바로 사용하세요.', ['연봉실수령액', '4대보험', '퇴직금', '대출이자', '부동산세금']); ?>
 
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-9">
     <?php foreach ($groups as $cat => $tools): ?>

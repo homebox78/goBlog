@@ -367,6 +367,48 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
 }
 
 /**
+ * 유틸 페이지(지원금·계산기·문서도구·노인일자리) 공용 히어로 헤더.
+ * 절제된 다크 밴드 — 좌: 눈썹+제목+구독 버튼+부제+메타태그 / 우: 최근 기사 이미지(임시).
+ * 시안(이가혁 라이브)의 구조를 뉴스 톤으로. 모바일에선 이미지 아래로 접힌다.
+ */
+function render_util_hero(string $eyebrow, string $title, string $subtitle, array $metaTags = []): void
+{
+    // 우측 이미지 = 이미지 있는 최근 기사 하나 (임시 대체)
+    $img = '';
+    try {
+        foreach (news_articles() as $a) {
+            if (!empty($a['image'])) { $img = (string) $a['image']; break; }
+        }
+    } catch (Throwable) {
+    }
+    ?>
+<section class="border-b border-zinc-200 bg-[#0f2942] text-white">
+  <div class="mx-auto flex max-w-[1399px] flex-col-reverse items-stretch md:flex-row md:items-center">
+    <div class="flex-1 px-4 py-8 sm:px-6 sm:py-10 md:py-14">
+      <div class="text-[12px] font-bold uppercase tracking-wider text-white/50"><?= nh($eyebrow) ?></div>
+      <div class="mt-2 flex flex-wrap items-center gap-2.5">
+        <h1 class="text-[26px] font-extrabold tracking-tight sm:text-[32px]"><?= nh($title) ?></h1>
+        <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-white/40 px-2.5 py-1 text-[13px] font-bold text-white/90 transition-colors hover:border-white hover:bg-white/10"><span class="material-symbols-outlined text-[16px]">add</span>구독</a>
+      </div>
+      <?php if ($subtitle !== ''): ?><p class="mt-2.5 text-[14px] leading-relaxed text-white/70"><?= nh($subtitle) ?></p><?php endif; ?>
+      <?php if ($metaTags): ?>
+        <div class="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-medium text-white/50">
+          <?php foreach ($metaTags as $t): ?><span>#<?= nh($t) ?></span><?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </div>
+    <?php if ($img !== ''): ?>
+      <div class="relative h-40 w-full overflow-hidden md:h-auto md:w-5/12 md:self-stretch">
+        <img src="<?= nh($img) ?>" alt="" class="h-full w-full object-cover opacity-90" loading="lazy">
+        <div class="absolute inset-0 bg-gradient-to-r from-[#0f2942] via-transparent to-transparent"></div>
+      </div>
+    <?php endif; ?>
+  </div>
+</section>
+    <?php
+}
+
+/**
  * 광고 슬롯 렌더 — ad_slots 테이블에서 position을 읽어 활성 시 배너/애드센스를 출력한다.
  * 관리자에서 켜지 않았거나 내용이 없으면 아무것도 출력하지 않는다(빈 슬롯).
  */
