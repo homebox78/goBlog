@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718s';
+const TW_CSS_VER = '20260718t';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -495,14 +495,14 @@ function render_util_hero(string $eyebrow, string $title, string $subtitle, arra
 <section class="border-b border-zinc-200 bg-[#0f2942] text-white">
   <div class="mx-auto flex max-w-[1399px] flex-col-reverse items-stretch md:flex-row md:items-center">
     <div class="flex-1 px-4 py-4 sm:px-6 sm:py-5 md:py-6">
-      <div class="text-[12px] font-bold uppercase tracking-wider text-white/50"><?= nh($eyebrow) ?></div>
+      <div class="text-[12px] font-bold uppercase tracking-wider text-[#45c4de]"><?= nh($eyebrow) ?></div>
       <div class="mt-1.5 flex flex-wrap items-center gap-2.5">
         <h1 class="text-[26px] font-extrabold tracking-tight sm:text-[32px]"><?= nh($title) ?></h1>
-        <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-white/40 px-2.5 py-1 text-[13px] font-bold text-white/90 transition-colors hover:border-white hover:bg-white/10"><span class="material-symbols-outlined text-[16px]">add</span>구독</a>
+        <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-[#45c4de]/60 px-2.5 py-1 text-[13px] font-bold text-[#45c4de] transition-colors hover:border-[#45c4de] hover:bg-[#45c4de]/10"><span class="material-symbols-outlined text-[16px]">add</span>구독</a>
       </div>
       <?php if ($subtitle !== ''): ?><p class="mt-2 text-[14px] leading-relaxed text-white/70"><?= nh($subtitle) ?></p><?php endif; ?>
       <?php if ($metaTags): ?>
-        <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-medium text-white/50">
+        <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-medium text-[#45c4de]/80">
           <?php foreach ($metaTags as $t): ?><span>#<?= nh($t) ?></span><?php endforeach; ?>
         </div>
       <?php endif; ?>
