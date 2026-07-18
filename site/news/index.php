@@ -141,6 +141,25 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
 
   <div class="mx-auto max-w-[1399px] px-6">
     <h1 class="sr-only">HOM2BOX 뉴스 — 매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스</h1>
+
+    <?php // ── 상단 # 큐레이션 스트립 (서울경제식) — 3개 코너를 굵은 라인 아래 나란히 ── ?>
+    <div class="border-t-2 border-zinc-900 pt-3 pb-3">
+      <div class="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-3 sm:divide-x sm:divide-zinc-100">
+        <?php
+        $eyebrows = [
+            ['label' => '오늘의 이슈', 'desc' => '편집국이 고른 지금 봐야 할 뉴스', 'href' => '/opinion.php'],
+            ['label' => '마켓 시그널', 'desc' => '코스피·환율·금리, 증시를 한눈에', 'href' => '/category.php?cat=' . urlencode('경제·금융')],
+            ['label' => '생활 정보', 'desc' => '지원금·노인일자리·계산기·문서도구', 'href' => '/welfare.php'],
+        ];
+        foreach ($eyebrows as $i => $e): ?>
+          <a href="<?= nh($e['href']) ?>" class="group flex items-baseline gap-2 min-w-0 <?= $i > 0 ? 'sm:pl-6' : '' ?>">
+            <span class="flex-none text-[15px] font-extrabold tracking-tight text-zinc-900 group-hover:text-[<?= $P ?>]"># <?= nh($e['label']) ?></span>
+            <span class="truncate text-[12.5px] text-zinc-400"><?= nh($e['desc']) ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+
     <?php render_ad("home-top"); ?>
 
     <!-- 언론사 헤드라인 — 카테고리 탭 + 2컬럼 리스트 (연합뉴스 분야별). 메인 마켓 바로 아래 배치 -->
