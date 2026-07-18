@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718u';
+const TW_CSS_VER = '20260718v';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -464,7 +464,7 @@ function render_section_subscribe(string $section): void
   <div class="mx-auto max-w-[1399px] px-4 py-7 sm:px-6 sm:py-[45px]">
     <div class="flex flex-wrap items-center gap-2.5">
       <h2 class="text-[19px] font-extrabold tracking-tight sm:text-[22px]"><?= nh($section) ?> 돋보기</h2>
-      <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-white/40 px-2.5 py-1 text-[12.5px] font-bold text-white/90 transition-colors hover:border-white hover:bg-white/10"><span class="material-symbols-outlined text-[15px]">add</span>구독</a>
+      <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-[#45c4de] bg-[#45c4de] px-2.5 py-1 text-[12.5px] font-bold text-white transition-colors hover:border-[#3bb4ce] hover:bg-[#3bb4ce]"><span class="material-symbols-outlined text-[15px]">add</span>구독</a>
     </div>
     <?php if ($tags): ?>
       <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] font-medium text-white/50">
@@ -510,7 +510,7 @@ function render_util_hero(string $eyebrow, string $title, string $subtitle, arra
       <?php endif; ?>
     </div>
     <?php if ($img !== ''): ?>
-      <div class="relative h-28 w-full overflow-hidden md:h-[280px] md:w-5/12">
+      <div class="relative h-28 w-full overflow-hidden md:h-[240px] md:w-5/12">
         <img src="<?= nh($img) ?>" alt="" class="h-full w-full object-cover opacity-90" loading="lazy">
         <div class="absolute inset-0 bg-gradient-to-r from-[#0f2942] via-transparent to-transparent"></div>
       </div>
