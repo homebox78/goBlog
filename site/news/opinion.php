@@ -105,10 +105,6 @@ render_util_hero('OPINION', '오피니언', 'HOM2BOX 편집국 칼럼과 제휴 
 
         <?php foreach ($pressItems as $pi): ?>
         <a href="<?= nh($pi['link']) ?>" target="_blank" rel="noopener" data-optype="press" class="flex items-center gap-3.5 sm:gap-5 border-b border-zinc-100 py-5 group">
-          <div class="relative h-[101px] w-[135px] sm:h-[135px] sm:w-[180px] flex-none overflow-hidden rounded-lg bg-gradient-to-br from-[#1b3c7a] to-[#0f2942]">
-            <span class="material-symbols-outlined absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[46px] text-white/20" style="font-variation-settings:'FILL' 1;">format_quote</span>
-            <span class="absolute inset-x-3 bottom-2 truncate text-[11.5px] font-bold text-white/90"><?= nh($pi['source']) ?></span>
-          </div>
           <div class="min-w-0 flex-1">
             <div class="mb-1 flex items-center gap-2">
               <span class="text-[11.5px] font-bold text-zinc-500"><?= nh($pi['source']) ?></span>
