@@ -90,7 +90,7 @@ render_nav('오피니언', [], true);
 
         <?php foreach ($rest as $a): ?>
         <a href="/article.php?id=<?= (int) $a['id'] ?>" data-optype="own" class="flex items-center gap-3.5 sm:gap-5 border-b border-zinc-100 py-5 group">
-          <div class="h-[92px] w-[138px] sm:h-[110px] sm:w-[165px] flex-none overflow-hidden rounded-lg bg-cover bg-center bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"<?php if (!empty($a['image'])): ?> style="background-image:url('<?= nh($a['image']) ?>')"<?php endif; ?>></div>
+          <div class="h-[101px] w-[135px] sm:h-[135px] sm:w-[180px] flex-none overflow-hidden rounded-lg bg-cover bg-center bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"<?php if (!empty($a['image'])): ?> style="background-image:url('<?= nh($a['image']) ?>')"<?php endif; ?>></div>
           <div class="min-w-0 flex-1">
             <div class="mb-1 flex items-center gap-2">
               <span class="inline-flex whitespace-nowrap items-center rounded-md bg-[<?= $P ?>]/10 px-2 py-0.5 text-[11px] font-bold text-[<?= $P ?>]">편집국 칼럼</span>
@@ -106,7 +106,7 @@ render_nav('오피니언', [], true);
 
         <?php foreach ($pressItems as $pi): ?>
         <a href="<?= nh($pi['link']) ?>" target="_blank" rel="noopener" data-optype="press" class="flex items-center gap-3.5 sm:gap-5 border-b border-zinc-100 py-5 group">
-          <div class="h-[92px] w-[138px] sm:h-[110px] sm:w-[165px] flex-none overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"></div>
+          <div class="h-[101px] w-[135px] sm:h-[135px] sm:w-[180px] flex-none overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)]"></div>
           <div class="min-w-0 flex-1">
             <div class="mb-1 flex items-center gap-2">
               <span class="inline-flex whitespace-nowrap items-center rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-bold text-zinc-500">제휴 매체</span>

@@ -93,10 +93,11 @@ render_nav('', [], true);
           <button type="submit" class="flex-none cursor-pointer rounded-lg border-0 bg-[#134a9c] px-4 py-2 text-sm font-bold text-white hover:bg-[#0f3d82]">검색</button>
         </form>
         <?php if ($hotKeywords): ?>
-        <div class="mt-4 flex flex-wrap items-center gap-2">
-          <span class="text-xs text-zinc-400">인기 검색어</span>
-          <?php foreach ($hotKeywords as $kw): ?>
-            <a href="/search.php?q=<?= urlencode($kw) ?>" class="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 shadow-sm hover:border-[#134a9c] hover:text-[#134a9c]"><?= nh($kw) ?></a>
+        <?php // 인기 검색어 — 뱃지 없이 미니멀 텍스트, 최대 6개 ?>
+        <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px]">
+          <span class="font-bold text-zinc-400">인기 검색어</span>
+          <?php foreach (array_slice($hotKeywords, 0, 6) as $kw): ?>
+            <a href="/search.php?q=<?= urlencode($kw) ?>" class="font-medium text-zinc-500 hover:text-[#134a9c] hover:underline"><?= nh($kw) ?></a>
           <?php endforeach; ?>
         </div>
         <?php endif; ?>

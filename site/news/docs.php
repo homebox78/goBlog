@@ -87,14 +87,7 @@ render_nav('문서도구', [], true);
 
 <div class="min-h-screen bg-white">
 <?php if (!$isDetail): ?>
-  <!-- 허브 -->
-  <div class="border-b border-zinc-100 bg-zinc-50">
-    <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-10">
-      <span class="inline-flex items-center gap-1.5 rounded-full bg-[<?= $P ?>]/10 px-3 py-1 text-xs font-bold text-[<?= $P ?>]"><span class="material-symbols-outlined text-[15px]">draft</span>무료 · 로그인 없이 · PDF 저장</span>
-      <h1 class="mt-4 mb-2 text-[28px] sm:text-[34px] font-extrabold tracking-tight">문서 도구 허브</h1>
-      <p class="text-[14px] leading-relaxed text-zinc-500">각서·위임장·차용증부터 사직서·견적서까지 자주 쓰는 서식 <b class="text-zinc-700"><?= count(DOC_DEFS) ?>종</b>. 정보만 입력하면 완성된 문서가 바로 만들어집니다.</p>
-    </div>
-  </div>
+  <?php render_util_hero('DOCUMENTS', '문서 도구 허브', '각서·위임장·차용증부터 사직서·견적서까지 자주 쓰는 서식 ' . count(DOC_DEFS) . '종. 정보만 입력하면 완성된 문서가 바로 만들어집니다.', ['각서', '차용증', '사직서', '근로계약서', '견적서']); ?>
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-9">
     <?php foreach (DOC_CATS as [$catTitle, $keys]): ?>
       <div class="mb-4 mt-10 first:mt-0 flex items-center gap-2.5 border-b border-zinc-200 pb-2.5">

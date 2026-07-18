@@ -34,9 +34,9 @@ function category_row(array $c): void
     ?>
     <a href="/article.php?id=<?= (int) $c['id'] ?>" class="h2b-art group flex items-center gap-4 border-b border-zinc-100 py-4 transition-colors hover:bg-zinc-50 sm:gap-5">
       <?php if (!empty($c['image'])): ?>
-        <div class="h2b-art-thumb h-[92px] w-[138px] flex-none rounded-md bg-zinc-100 bg-cover bg-center sm:h-[110px] sm:w-[165px]" style="background-image:url('<?= nh($c['image']) ?>')"></div>
+        <div class="h2b-art-thumb h-[101px] w-[135px] flex-none rounded-md bg-zinc-100 bg-cover bg-center sm:h-[135px] sm:w-[180px]" style="background-image:url('<?= nh($c['image']) ?>')"></div>
       <?php else: ?>
-        <div class="h2b-art-thumb flex h-[92px] w-[138px] flex-none items-center justify-center rounded-md bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)] font-mono text-[10px] text-zinc-400 sm:h-[110px] sm:w-[165px]">기사 썸네일</div>
+        <div class="h2b-art-thumb flex h-[101px] w-[135px] flex-none items-center justify-center rounded-md bg-[repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5_8px,#e4e4e7_8px,#e4e4e7_16px)] font-mono text-[10px] text-zinc-400 sm:h-[135px] sm:w-[180px]">기사 썸네일</div>
       <?php endif; ?>
       <div class="h2b-art-body min-w-0 flex-1">
         <div class="mb-1.5 flex items-center gap-2">

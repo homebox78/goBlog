@@ -384,7 +384,7 @@ function render_util_hero(string $eyebrow, string $title, string $subtitle, arra
     ?>
 <section class="border-b border-zinc-200 bg-[#0f2942] text-white">
   <div class="mx-auto flex max-w-[1399px] flex-col-reverse items-stretch md:flex-row md:items-center">
-    <div class="flex-1 px-4 py-8 sm:px-6 sm:py-10 md:py-14">
+    <div class="flex-1 px-4 py-6 sm:px-6 sm:py-7 md:py-9">
       <div class="text-[12px] font-bold uppercase tracking-wider text-white/50"><?= nh($eyebrow) ?></div>
       <div class="mt-2 flex flex-wrap items-center gap-2.5">
         <h1 class="text-[26px] font-extrabold tracking-tight sm:text-[32px]"><?= nh($title) ?></h1>
@@ -398,7 +398,7 @@ function render_util_hero(string $eyebrow, string $title, string $subtitle, arra
       <?php endif; ?>
     </div>
     <?php if ($img !== ''): ?>
-      <div class="relative h-40 w-full overflow-hidden md:h-auto md:w-5/12 md:self-stretch">
+      <div class="relative h-28 w-full overflow-hidden md:h-auto md:w-5/12 md:self-stretch">
         <img src="<?= nh($img) ?>" alt="" class="h-full w-full object-cover opacity-90" loading="lazy">
         <div class="absolute inset-0 bg-gradient-to-r from-[#0f2942] via-transparent to-transparent"></div>
       </div>
