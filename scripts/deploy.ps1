@@ -1,4 +1,4 @@
-# One-shot deploy for goBlog -> hom2box.com
+﻿# One-shot deploy for goBlog -> hom2box.com
 #   web  -> /var/www/html/goBlog          (https://hom2box.com/goBlog)
 #   api  -> ~/goblog-api  (systemd: goblog-api, 127.0.0.1:8788, Apache proxy /goBlog/api)
 # First run also enables Apache proxy modules + conf and installs the systemd unit (sudo).
@@ -65,6 +65,9 @@ $serverEnv = @(
     "SESSION_SECRET=$(Get-EnvValue $rootEnv 'SESSION_SECRET')",
     "MASTER_ENCRYPTION_KEY=$(Get-EnvValue $rootEnv 'MASTER_ENCRYPTION_KEY')",
     "EXTENSION_TOKEN=$(Get-EnvValue $rootEnv 'EXTENSION_TOKEN')",
+    "SF_ALLOWED_EMAILS=$(Get-EnvValue $rootEnv 'SF_ALLOWED_EMAILS')",
+    "SF_GOOGLE_CLIENT_ID=$(Get-EnvValue $rootEnv 'SF_GOOGLE_CLIENT_ID')",
+    "SF_GOOGLE_CLIENT_SECRET=$(Get-EnvValue $rootEnv 'SF_GOOGLE_CLIENT_SECRET')",
     "MEDIA_DIR=/var/www/html/goBlog/media",
     "MEDIA_PUBLIC_URL=https://hom2box.com/goBlog/media"
 ) -join "`n"
