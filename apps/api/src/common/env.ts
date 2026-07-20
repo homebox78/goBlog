@@ -26,6 +26,10 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(16, "SESSION_SECRET은 16자 이상이어야 합니다."),
   MASTER_ENCRYPTION_KEY: z.string().min(16, "MASTER_ENCRYPTION_KEY는 16자 이상이어야 합니다."),
   EXTENSION_TOKEN: z.string().optional(),
+  // Shorts Factory 시크릿 보관함 — 구글 로그인(ID 토큰)으로만 접근
+  SF_ALLOWED_EMAILS: z.string().optional(),   // 쉼표 구분 허용 계정
+  SF_GOOGLE_CLIENT_ID: z.string().optional(), // 데스크톱 앱 OAuth 클라이언트
+  SF_GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
