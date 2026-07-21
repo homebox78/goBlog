@@ -258,21 +258,13 @@ export async function publishToInstagram(article: {
   return { url: `https://www.instagram.com/p/${published.id}` };
 }
 
-/**
- * Threads 텍스트 발행 — 후킹 요약 + 홈박스 기사 링크로 트래픽을 끌어온다.
- * 컨테이너 생성 → 발행 → permalink 조회 (graph.threads.net, 토큰은 Threads API 액세스 사용 사례로 발급).
- */
-export async function publishToThreads(article: {
-  id: number;
-  title: string;
-  excerpt: string | null;
-}): Promise<PublishResult> {
+/** Threads 토큰·userId 확보 (userId 미입력 시 토큰으로 자동 조회·저장) */
+async function resolveThreadsAuth(): Promise<{ token: string; userId: string }> {
   const values = await getSettingValues(["threads.userId", "threads.accessToken"]);
   const token = values["threads.accessToken"];
   let userId = values["threads.userId"];
   if (!token) throw new Error("Threads 액세스 토큰이 설정되지 않았습니다. 설정 → 게시 플랫폼에서 입력해주세요.");
 
-  // userId 미입력 시 토큰으로 자동 조회해 저장
   if (!userId) {
     const me = (await (
       await fetch(`https://graph.threads.net/v1.0/me?fields=id,username&access_token=${encodeURIComponent(token)}`)
@@ -282,20 +274,23 @@ export async function publishToThreads(article: {
     const { updateSettings } = await import("../settings/settings.service.js");
     await updateSettings({ "threads.userId": userId }).catch(() => undefined);
   }
+  return { token, userId };
+}
 
-  const tags = await getArticleTags(article.id).catch(() => [] as string[]);
-  const hashtags = tags.slice(0, 3).map((tag) => `#${tag.replace(/\s+/g, "")}`).join(" ");
-  const articleUrl = `https://hom2box.com/article.php?id=${article.id}`;
-  // Threads는 500자 제한 — 제목 + 요약 두 문장 + 링크 + 태그
-  const text = [article.title, "", (article.excerpt ?? "").slice(0, 220), "", `👉 자세히: ${articleUrl}`, hashtags]
-    .join("\n")
-    .trim()
-    .slice(0, 490);
+/**
+ * Threads 텍스트/이미지 컨테이너 생성 → 발행 → permalink 조회 (graph.threads.net).
+ * imageUrl이 있으면 media_type=IMAGE(공개 URL 필요), 없으면 TEXT.
+ */
+async function postToThreads(text: string, imageUrl?: string | null): Promise<PublishResult> {
+  const { token, userId } = await resolveThreadsAuth();
+  const body = imageUrl
+    ? { media_type: "IMAGE", image_url: imageUrl, text, access_token: token }
+    : { media_type: "TEXT", text, access_token: token };
 
   const createRes = await fetch(`https://graph.threads.net/v1.0/${userId}/threads`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ media_type: "TEXT", text, access_token: token }),
+    body: JSON.stringify(body),
   });
   const container = (await createRes.json()) as { id?: string; error?: { message?: string } };
   if (!container.id) throw new Error(`Threads 컨테이너 생성 실패: ${container.error?.message ?? "ID 없음"}`);
@@ -312,4 +307,36 @@ export async function publishToThreads(article: {
     await fetch(`https://graph.threads.net/v1.0/${published.id}?fields=permalink&access_token=${encodeURIComponent(token)}`)
   ).json()) as { permalink?: string };
   return { url: perma.permalink ?? `https://www.threads.net/post/${published.id}` };
+}
+
+/**
+ * 기사 → Threads 발행 — 후킹 요약 + 홈박스 기사 링크로 트래픽을 끌어온다.
+ */
+export async function publishToThreads(article: {
+  id: number;
+  title: string;
+  excerpt: string | null;
+}): Promise<PublishResult> {
+  const tags = await getArticleTags(article.id).catch(() => [] as string[]);
+  const hashtags = tags.slice(0, 3).map((tag) => `#${tag.replace(/\s+/g, "")}`).join(" ");
+  const articleUrl = `https://hom2box.com/article.php?id=${article.id}`;
+  // Threads는 500자 제한 — 제목 + 요약 두 문장 + 링크 + 태그
+  const text = [article.title, "", (article.excerpt ?? "").slice(0, 220), "", `👉 자세히: ${articleUrl}`, hashtags]
+    .join("\n")
+    .trim()
+    .slice(0, 490);
+  return postToThreads(text);
+}
+
+/**
+ * 쓰레드 봇 → 자유 텍스트/이미지 발행 (기사와 무관한 페르소나 글).
+ * 최종 문구는 호출부(threads-bot 라우터)가 공정위 문구·링크까지 합쳐서 넘긴다.
+ */
+export async function publishStandaloneThreads(input: {
+  text: string;
+  imageUrl?: string | null;
+}): Promise<PublishResult> {
+  const text = input.text.trim().slice(0, 490);
+  if (!text) throw new Error("발행할 텍스트가 비어 있습니다.");
+  return postToThreads(text, input.imageUrl ?? undefined);
 }

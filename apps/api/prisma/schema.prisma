@@ -669,6 +669,46 @@ model NewsletterSubscriber {
   @@map("newsletter_subscribers")
 }
 
+/// 쓰레드 자동작성 봇 — 페르소나(Gemini Gems 방식).
+/// 이름·설명·지침(systemPrompt)만 정의하면, 키워드를 주고 그 말투로 짧은 스레드 글을 뽑는다.
+model ThreadsPersona {
+  id           Int           @id @default(autoincrement())
+  name         String        @db.VarChar(120)
+  description  String?       @db.Text // 봇 설명(요청 사항 안내)
+  systemPrompt String        @db.Text // 지침 — 페르소나 규칙 원문
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  posts        ThreadsPost[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("threads_personas")
+}
+
+/// 쓰레드 초안·발행 기록. text는 AI가 뽑은 본문(공정위 문구·링크 제외).
+/// 최종 발행 문구 = text + (disclosure면 대가성 문구) + (linkUrl). 이미지는 사용자가 직접 첨부(공개 URL).
+model ThreadsPost {
+  id         Int             @id @default(autoincrement())
+  personaId  Int?
+  mode       String          @default("WARMUP") @db.VarChar(16) // WARMUP(밑밥) | REVENUE(수익화)
+  keyword    String?         @db.VarChar(190)
+  text       String          @db.Text
+  linkUrl    String?         @db.Text // 쿠팡 파트너스 등 제휴 링크(수익화)
+  disclosure Boolean         @default(false) // 공정위 대가성 문구를 링크 위에 자동 삽입
+  imageUrl   String?         @db.Text // 첨부 이미지 공개 URL(없으면 텍스트 전용)
+  status     String          @default("DRAFT") @db.VarChar(16) // DRAFT | POSTED | FAILED
+  threadsUrl String?         @db.Text
+  error      String?         @db.Text
+  postedAt   DateTime?
+  persona    ThreadsPersona? @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([status])
+  @@index([personaId])
+  @@map("threads_posts")
+}
+
 /// 기사 조회 로그 — 공개 사이트 article.php가 조회마다 INSERT(원시 SQL).
 /// 관리자 통계 화면이 일/월/년 집계·정렬에 사용한다.
 model ArticleView {

@@ -8,6 +8,7 @@ import KeywordsPage from "@/pages/KeywordsPage";
 import KeywordDetailPage from "./pages/KeywordDetailPage";
 import ProductsPage from "@/pages/ProductsPage";
 import CharactersPage from "@/pages/CharactersPage";
+import ThreadsBotPage from "@/pages/ThreadsBotPage";
 import ArticlesPage from "@/pages/ArticlesPage";
 import ArticleDetailPage from "@/pages/ArticleDetailPage";
 import SchedulePage from "@/pages/SchedulePage";
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/articles/:id" element={<ArticleDetailPage />} />
           <Route path="/review" element={<Navigate to="/articles?view=review" replace />} />
           <Route path="/characters" element={<CharactersPage />} />
+          <Route path="/threads-bot" element={<ThreadsBotPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/ads" element={<AdsPage />} />
           <Route path="/stats" element={<StatsPage />} />

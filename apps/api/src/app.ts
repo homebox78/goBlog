@@ -18,6 +18,7 @@ import { extensionRouter } from "./modules/extension/extension.router.js";
 import { sfRouter } from "./modules/sf/sf.router.js";
 import { communityRouter } from "./modules/community/community.router.js";
 import { charactersRouter } from "./modules/characters/characters.router.js";
+import { threadsBotRouter } from "./modules/threads/threads-bot.router.js";
 import { subscribersRouter, statsRouter } from "./modules/stats/stats.router.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
@@ -71,6 +72,7 @@ export function createApp() {
   app.use("/api/ads", adsRouter);
   app.use("/api/publish-jobs", publishRouter);
   app.use("/api/characters", charactersRouter);
+  app.use("/api/threads-bot", threadsBotRouter);
   app.use("/api/extension", extensionRouter);
   app.use("/api/sf", sfRouter);  // Shorts Factory 데이터 미러(시계열)
   app.use("/api/subscribers", subscribersRouter);
