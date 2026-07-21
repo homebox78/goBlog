@@ -111,17 +111,23 @@ export async function collectNaverNews(): Promise<IssueItem[]> {
   const clientSecret = values["naver.datalabClientSecret"];
   if (!clientId || !clientSecret) return [];
 
-  // 지원금·혜택 특화 쿼리 강화 (2026-07-17) — 정책브리핑 RSS가 중단돼 네이버 뉴스 검색으로 커버.
-  // 지원금 글감은 검색 수요가 꾸준하고 애드센스형 콘텐츠의 핵심이라 쿼리를 넉넉히 돌린다.
+  // 재테크·투자 집중 (2026-07-21, 사용자 지시) — 주식·투자·재테크 글감을 최우선 공급한다.
+  // 금융 쿼리를 다수로, 지원금·일반은 소수만 유지(생활·종합 섹션 최소 커버용).
   const queries = [
-    "오늘 이슈",
+    "오늘 증시",
+    "코스피 전망",
+    "미국 증시 뉴스",
+    "주식 급등주",
+    "공모주 청약 일정",
+    "배당주 추천",
+    "금리 인상 영향",
+    "환율 전망",
+    "ETF 투자",
+    "실적 발표 관련주",
+    "반도체 관련주",
+    "2차전지 관련주",
+    "부동산 시장 전망",
     "정부 지원금",
-    "신제품 출시",
-    "지원금 신청",
-    "보조금 지급",
-    "정부 혜택 대상",
-    "환급 신청",
-    "바우처 지원",
     "청년 지원 정책",
   ];
   const items: IssueItem[] = [];
@@ -204,7 +210,9 @@ async function collectPressFeed(source: string, urls: string[]): Promise<IssueIt
       };
       const raw = doc.rss?.channel?.item;
       const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
-      for (const item of list.slice(0, 10)) {
+      // 재테크 집중 — 금융 전문 피드는 더 많이 취해 후보 풀의 금융 비중을 키운다.
+      const cap = source === "FINANCE_NEWS" ? 20 : 10;
+      for (const item of list.slice(0, cap)) {
         // 언론 관용구 제거: [속보]·(종합)·(2보)·[단독] 등 — 키워드 후보로서의 잡음
         const title = cleanTitle(item.title)
           .replace(/\[[^\]]{1,8}\]/g, "")

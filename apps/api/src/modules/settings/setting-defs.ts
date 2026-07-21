@@ -20,8 +20,12 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "anthropic.model", group: "claude", label: "Claude 모델", secret: false, defaultValue: "claude-sonnet-5" },
   { key: "anthropic.defaultLength", group: "claude", label: "기본 글 길이", secret: false, defaultValue: "2000" },
   { key: "anthropic.minQualityScore", group: "claude", label: "자동발행 최소 품질 점수", secret: false, defaultValue: "85" },
-  // 하루 자동 생성 상한 — 대량 생성(스팸/애드센스 위험)을 막는다. 스케줄러가 이 수를 넘으면 그날은 더 안 만든다.
-  { key: "scheduler.dailyLimit", group: "claude", label: "하루 자동 생성 상한(글)", secret: false, defaultValue: "5" },
+  // 하루 자동 생성·자체 사이트 릴리즈 상한 — 자체 뉴스 사이트에 하루 몇 개를 노출/생성할지. (대량 생성 스팸 방지)
+  { key: "scheduler.dailyLimit", group: "claude", label: "하루 생성·자체 노출 상한(글)", secret: false, defaultValue: "10" },
+  // 외부 발행(워드프레스·블로거) 상한 — 자체 사이트보다 적게. 자체 10 중 앞의 N개만 외부로 내보낸다.
+  { key: "scheduler.externalPublishDaily", group: "claude", label: "하루 외부 발행 상한(WP·블로거)", secret: false, defaultValue: "5" },
+  // 섹션 가중치 — 하루 생성·발행을 어떤 뉴스 섹션에 몰지. 재테크 집중이면 경제·금융을 크게.
+  { key: "scheduler.sectionWeights", group: "claude", label: "섹션 가중치(재테크 집중)", secret: false, defaultValue: "경제·금융:6, IT·게임:1, 생활·건강:1, 여행·문화:1, 종합:1" },
   // 제휴 배너 전역 스위치 — off면 어떤 글에도 상품 배너를 삽입하지 않는다(정보성 블로그로 운영할 때).
   // 초기 운영 정책: 독자 확보 전까지 광고 없이 뉴스·가이드만 → 기본 off. 독자 모인 뒤 관리자 설정에서 켠다.
   { key: "affiliate.bannersEnabled", group: "claude", label: "제휴 배너 삽입 사용", secret: false, defaultValue: "false" },
