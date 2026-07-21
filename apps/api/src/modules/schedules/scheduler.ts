@@ -13,6 +13,7 @@ let tistorySyncJob: Cron | null = null;
 let dripJob: Cron | null = null;
 let reportJob: Cron | null = null;
 let welfareJob: Cron | null = null;
+let stockJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -667,6 +668,20 @@ export async function scheduleFromSettings(): Promise<void> {
       }
     });
     console.log("[scheduler] 복지서비스 적재 1회/일 (05:00 KST)");
+
+    // 주식 커뮤니티 — 종목 일별 시세 갱신 (장 마감 후 18:30 KST). 지연·종가.
+    stockJob?.stop();
+    stockJob = new Cron("30 18 * * 1-5", { timezone: "Asia/Seoul", protect: true }, async () => {
+      try {
+        const { refreshStockDaily, tagArticlesWithStocks } = await import("../stocks/stocks.js");
+        const r = await refreshStockDaily();
+        const tagged = await tagArticlesWithStocks();
+        console.log(`[scheduler] 종목 시세 갱신: ${r.stocks}종목 · ${r.rows}행 · 태깅 ${tagged}건`);
+      } catch (error) {
+        console.error("[scheduler] 종목 시세 갱신 실패:", (error as Error).message);
+      }
+    });
+    console.log("[scheduler] 종목 시세 갱신 평일 18:30 KST");
   } catch (error) {
     console.warn("[scheduler] 예약 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }
