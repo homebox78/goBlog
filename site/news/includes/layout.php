@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260718z2';
+const TW_CSS_VER = '20260721c';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -346,7 +346,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
 {
     // 좌측 = 기사 관련(홈·카테고리·언론사·오피니언), 우측 = 유틸(지원금·일자리·계산기·문서도구).
     // 데스크톱에선 유틸 그룹을 우측 정렬 + '|'로 분기, 모바일에선 가로 스크롤로 자연스럽게 이어진다.
-    $newsTabs = [['홈', '/']];
+    $newsTabs = [['홈', '/'], ['종목', '/stocks.php']];
     foreach (NEWS_SECTIONS as $s) {
         $newsTabs[] = [$s, '/category.php?cat=' . urlencode($s)];
     }

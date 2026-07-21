@@ -7,9 +7,22 @@ require_once __DIR__ . '/includes/layout.php';
 $code = preg_replace('/[^0-9]/', '', (string) ($_GET['code'] ?? ''));
 $db = goblog_db();
 
+// 로그인 사용자 (커뮤니티 세션 쿠키 — 테이블 없으면 null)
+$me = null;
+try {
+    $tok = (string) ($_COOKIE['h2b_uid'] ?? '');
+    if ($tok !== '') {
+        $st = $db->prepare('SELECT u.id, u.name FROM community_sessions s JOIN community_users u ON u.id=s.userId WHERE s.token=? AND s.expiresAt>NOW() LIMIT 1');
+        $st->execute([$tok]);
+        $me = $st->fetch() ?: null;
+    }
+} catch (Throwable) { $me = null; }
+
 $stock = null;
 $prices = [];
 $articles = [];
+$posts = [];
+$sentiment = ['BUY' => 0, 'HOLD' => 0, 'SELL' => 0];
 if ($code !== '') {
     try {
         $st = $db->prepare('SELECT ticker, name, market, sector FROM stocks WHERE ticker = ?');
@@ -37,6 +50,20 @@ if ($code !== '') {
             $st->execute([$code]);
             $articles = $st->fetchAll();
         } catch (Throwable) { $articles = []; }
+
+        // 커뮤니티 토론 글 + 투자의견 집계 (테이블 없으면 빈 값)
+        try {
+            $st = $db->prepare(
+                'SELECT p.id, p.body, p.stance, p.likes, p.comments, p.createdAt, u.name authorName
+                 FROM community_posts p JOIN community_users u ON u.id=p.userId
+                 WHERE p.ticker=? AND p.hidden=0 ORDER BY p.createdAt DESC LIMIT 50'
+            );
+            $st->execute([$code]);
+            $posts = $st->fetchAll();
+            $sr = $db->prepare('SELECT stance, COUNT(*) c FROM community_posts WHERE ticker=? AND hidden=0 AND stance IS NOT NULL GROUP BY stance');
+            $sr->execute([$code]);
+            foreach ($sr->fetchAll() as $s) { if (isset($sentiment[$s['stance']])) $sentiment[$s['stance']] = (int) $s['c']; }
+        } catch (Throwable) { $posts = []; }
     }
 }
 
@@ -139,11 +166,105 @@ if (count($prices) >= 2) {
       <?php endif; ?>
     </div>
 
-    <!-- 토론방 (2차 — 로그인 붙이면 활성화) -->
-    <div class="mt-8 rounded-lg border border-zinc-200 bg-zinc-50 p-5 text-center">
-      <div class="text-[14px] font-bold text-zinc-700">💬 종목 토론방 준비 중</div>
-      <div class="mt-1 text-[12.5px] text-zinc-500">로그인·글쓰기·투자의견 투표가 곧 열립니다.</div>
+    <!-- 종목 토론방 -->
+    <?php
+      $sTot = max(1, $sentiment['BUY'] + $sentiment['HOLD'] + $sentiment['SELL']);
+      $pBuy = round($sentiment['BUY'] / $sTot * 100);
+      $pHold = round($sentiment['HOLD'] / $sTot * 100);
+      $pSell = 100 - $pBuy - $pHold;
+      $loginUrl = '/goBlog/api/community/auth/google?next=' . rawurlencode('/stock.php?code=' . $code);
+    ?>
+    <div class="mt-8" id="board">
+      <div class="mb-3 flex items-center gap-2.5 border-b-2 border-zinc-900 pb-2.5">
+        <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
+        <h2 class="text-[18px] font-bold tracking-tight">💬 종목 토론</h2>
+        <span class="text-[13px] text-zinc-400"><?= count($posts) ?></span>
+      </div>
+
+      <!-- 투자의견 게이지 -->
+      <div class="mb-4 rounded-lg border border-zinc-200 bg-white p-4">
+        <div class="mb-2 flex items-center justify-between text-[12px] font-bold">
+          <span style="color:#d60000">매수 <?= $sentiment['BUY'] ?></span>
+          <span class="text-zinc-500">보유 <?= $sentiment['HOLD'] ?></span>
+          <span style="color:#1263e0">매도 <?= $sentiment['SELL'] ?></span>
+        </div>
+        <div class="flex h-2.5 overflow-hidden rounded-full bg-zinc-100">
+          <div style="width:<?= $pBuy ?>%;background:#d60000"></div>
+          <div style="width:<?= $pHold ?>%;background:#c9ccd4"></div>
+          <div style="width:<?= $pSell ?>%;background:#1263e0"></div>
+        </div>
+      </div>
+
+      <!-- 글쓰기 / 로그인 -->
+      <?php if ($me): ?>
+        <div class="mb-4 rounded-lg border border-zinc-200 bg-white p-4">
+          <textarea id="pb" rows="2" maxlength="2000" placeholder="이 종목에 대한 생각을 남겨보세요 (특정 매수·매도 권유·리딩은 제한됩니다)" class="w-full resize-none rounded-md border border-zinc-200 px-3 py-2 text-[14px] outline-none focus:border-[#134a9c]"></textarea>
+          <div class="mt-2 flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-[12px]">
+              <span class="text-zinc-400">투자의견</span>
+              <button type="button" data-st="" class="stbtn rounded-full border border-zinc-200 px-2.5 py-1 font-bold text-zinc-500">없음</button>
+              <button type="button" data-st="BUY" class="stbtn rounded-full border border-zinc-200 px-2.5 py-1 font-bold" style="color:#d60000">매수</button>
+              <button type="button" data-st="HOLD" class="stbtn rounded-full border border-zinc-200 px-2.5 py-1 font-bold text-zinc-600">보유</button>
+              <button type="button" data-st="SELL" class="stbtn rounded-full border border-zinc-200 px-2.5 py-1 font-bold" style="color:#1263e0">매도</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[12px] text-zinc-400"><?= nh($me['name']) ?></span>
+              <button type="button" id="psend" class="rounded-md bg-[#134a9c] px-4 py-1.5 text-[13px] font-bold text-white hover:bg-[#0f3d82]">등록</button>
+            </div>
+          </div>
+        </div>
+      <?php else: ?>
+        <a href="<?= nh($loginUrl) ?>" class="mb-4 flex items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-3 text-[14px] font-bold text-zinc-700 hover:border-[#134a9c] hover:text-[#134a9c]">
+          <span class="material-symbols-outlined text-[18px]">login</span> 구글로 로그인하고 토론 참여
+        </a>
+      <?php endif; ?>
+
+      <!-- 글 목록 -->
+      <?php if (!$posts): ?>
+        <div class="py-8 text-center text-[13px] text-zinc-400">첫 글을 남겨보세요.</div>
+      <?php else: ?>
+        <div class="space-y-3" id="plist">
+          <?php foreach ($posts as $p):
+            $stColor = $p['stance'] === 'BUY' ? '#d60000' : ($p['stance'] === 'SELL' ? '#1263e0' : '#888');
+            $stLabel = $p['stance'] === 'BUY' ? '매수' : ($p['stance'] === 'SELL' ? '매도' : ($p['stance'] === 'HOLD' ? '보유' : ''));
+          ?>
+            <div class="rounded-lg border border-zinc-200 bg-white p-4" data-pid="<?= (int) $p['id'] ?>">
+              <div class="mb-1.5 flex items-center gap-2 text-[12px] text-zinc-400">
+                <span class="font-bold text-zinc-600"><?= nh($p['authorName']) ?></span>
+                <?php if ($stLabel): ?><span class="rounded px-1.5 py-0.5 text-[11px] font-bold" style="color:<?= $stColor ?>;background:<?= $stColor ?>1a"><?= $stLabel ?></span><?php endif; ?>
+                <span><?= nh(news_date($p['createdAt'])) ?></span>
+              </div>
+              <div class="whitespace-pre-line text-[14px] leading-relaxed text-zinc-800"><?= nh($p['body']) ?></div>
+              <div class="mt-2 flex items-center gap-4 text-[12.5px] text-zinc-400">
+                <button type="button" class="likebtn hover:text-[#d60000]" data-pid="<?= (int) $p['id'] ?>">👍 <span class="lk"><?= (int) $p['likes'] ?></span></button>
+                <button type="button" class="cmtbtn hover:text-[#134a9c]" data-pid="<?= (int) $p['id'] ?>">💬 <span><?= (int) $p['comments'] ?></span></button>
+                <button type="button" class="reportbtn ml-auto hover:text-zinc-600" data-pid="<?= (int) $p['id'] ?>" title="신고">🚩</button>
+              </div>
+              <div class="cmts mt-3 hidden border-t border-zinc-100 pt-3"></div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
     </div>
+    <script>
+    (function(){
+      var API='/goBlog/api/community', LOGIN=<?= json_encode($loginUrl) ?>, ME=<?= $me ? 'true' : 'false' ?>, CODE=<?= json_encode($code) ?>;
+      function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+      function need(){ if(!ME){ location.href=LOGIN; return true; } return false; }
+      async function post(url,body){ var r=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); var d=await r.json().catch(function(){return{};}); if(!r.ok) throw new Error(d.error||'요청 실패'); return d; }
+      // 투자의견 선택
+      var stance='';
+      document.querySelectorAll('.stbtn').forEach(function(b){ b.addEventListener('click',function(){ stance=b.dataset.st; document.querySelectorAll('.stbtn').forEach(function(x){x.classList.remove('border-[#134a9c]','bg-[#134a9c]/5');}); b.classList.add('border-[#134a9c]','bg-[#134a9c]/5'); }); });
+      var send=document.getElementById('psend');
+      if(send) send.addEventListener('click',async function(){ if(need())return; var t=document.getElementById('pb').value.trim(); if(t.length<2){alert('내용을 입력하세요.');return;} send.disabled=true; try{ await post(API+'/stocks/'+CODE+'/posts',{body:t,stance:stance}); location.reload(); }catch(e){ alert(e.message); send.disabled=false; } });
+      // 좋아요
+      document.querySelectorAll('.likebtn').forEach(function(b){ b.addEventListener('click',async function(){ if(need())return; try{ var d=await post(API+'/posts/'+b.dataset.pid+'/like'); var lk=b.querySelector('.lk'); lk.textContent=(parseInt(lk.textContent||'0')+(d.liked?1:-1)); }catch(e){ alert(e.message); } }); });
+      // 신고
+      document.querySelectorAll('.reportbtn').forEach(function(b){ b.addEventListener('click',async function(){ if(need())return; if(!confirm('이 글을 신고할까요? (리딩·불법 글은 즉시 숨김)'))return; try{ await post(API+'/posts/'+b.dataset.pid+'/report'); b.closest('[data-pid]').style.display='none'; }catch(e){ alert(e.message); } }); });
+      // 댓글 열기/로드
+      document.querySelectorAll('.cmtbtn').forEach(function(b){ b.addEventListener('click',async function(){ var box=b.closest('[data-pid]').querySelector('.cmts'); if(!box.classList.contains('hidden')){ box.classList.add('hidden'); return; } box.classList.remove('hidden'); box.innerHTML='<div class="text-[12px] text-zinc-400">불러오는 중…</div>'; try{ var r=await fetch(API+'/posts/'+b.dataset.pid+'/comments',{credentials:'same-origin'}); var d=await r.json(); var h=(d.comments||[]).map(function(c){return '<div class="py-1.5 text-[13px]"><b class="text-zinc-600">'+esc(c.authorName)+'</b> <span class="text-zinc-800">'+esc(c.body)+'</span></div>';}).join('')||'<div class="text-[12px] text-zinc-400">첫 댓글을 남겨보세요.</div>'; h+='<div class="mt-2 flex gap-2"><input class="ci flex-1 rounded-md border border-zinc-200 px-2 py-1 text-[13px] outline-none" placeholder="댓글" maxlength="2000"><button class="cs rounded-md bg-zinc-800 px-3 text-[12px] font-bold text-white">등록</button></div>'; box.innerHTML=h; var cs=box.querySelector('.cs'), ci=box.querySelector('.ci'); cs.addEventListener('click',async function(){ if(need())return; var t=ci.value.trim(); if(t.length<2)return; try{ await post(API+'/posts/'+b.dataset.pid+'/comments',{body:t}); b.click(); b.click(); }catch(e){ alert(e.message); } }); }catch(e){ box.innerHTML='<div class="text-[12px] text-red-500">'+esc(e.message)+'</div>'; } }); });
+    })();
+    </script>
 
     <!-- 면책 고지 (필수) -->
     <div class="mt-6 rounded-md border border-zinc-200 bg-white p-3 text-[11.5px] leading-relaxed text-zinc-400">

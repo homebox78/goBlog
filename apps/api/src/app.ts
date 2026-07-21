@@ -16,6 +16,7 @@ import { publishRouter } from "./modules/publishing/publish.router.js";
 import { mediaDir } from "./modules/images/image-service.js";
 import { extensionRouter } from "./modules/extension/extension.router.js";
 import { sfRouter } from "./modules/sf/sf.router.js";
+import { communityRouter } from "./modules/community/community.router.js";
 import { charactersRouter } from "./modules/characters/characters.router.js";
 import { subscribersRouter, statsRouter } from "./modules/stats/stats.router.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
@@ -59,6 +60,8 @@ export function createApp() {
   app.use("/api/auth", authRouter);
   // OAuth 콜백은 세션 없이도 열려야 한다(구글이 브라우저를 여기로 보냄) → settingsRouter(requireAuth)보다 먼저 건다
   app.use("/api/settings", googleOAuthRouter);
+  // 주식 커뮤니티 — 공개(로그인·조회) + 인증(쓰기는 세션 쿠키). requireAuth 없음.
+  app.use("/api/community", communityRouter);
   app.use("/api/settings", settingsRouter);
   app.use("/api/analytics", dashboardRouter);
   app.use("/api/keywords", keywordsRouter);
