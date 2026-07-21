@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, MinusCircle, PlugZap, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, MinusCircle, PlugZap, RefreshCw, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -219,6 +219,18 @@ export default function SettingsPage() {
     }
   };
 
+  // 구글 재인증 — Blogger refresh token이 만료/취소되면(테스트 모드는 7일마다) 이 버튼으로 새로 받는다.
+  // 동의 창에서 Blogger 소유 계정으로 승인하면 blogger.refreshToken + Search Console 토큰이 갱신된다.
+  const handleGoogleReauth = async () => {
+    try {
+      const { url } = await api.get<{ url: string }>("/api/settings/google/oauth/start");
+      window.open(url, "_blank", "noopener");
+      toast.info("구글 동의 창에서 승인하면 Blogger 토큰이 갱신됩니다. 완료 후 연결 테스트로 확인하세요.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "재인증 시작에 실패했습니다.");
+    }
+  };
+
   // 설정 필드 하나 렌더 (모델 셀렉트 / 고정 셀렉트 / 텍스트·비밀 입력)
   const renderField = (setting: SettingView) => (
     <div key={setting.key} className="space-y-1.5">
@@ -301,21 +313,29 @@ export default function SettingsPage() {
                   <CardTitle className="text-base">{group.label}</CardTitle>
                   <CardDescription>{group.description}</CardDescription>
                 </div>
-                {group.testEndpoint && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={testing !== null}
-                    onClick={() => handleTest(group.id, group.label, group.testEndpoint!)}
-                  >
-                    {testing === group.testEndpoint ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <PlugZap className="size-4" />
-                    )}
-                    연결 테스트
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {group.id === "platforms" && (
+                    <Button variant="outline" size="sm" onClick={handleGoogleReauth}>
+                      <RefreshCw className="size-4" />
+                      구글 재인증
+                    </Button>
+                  )}
+                  {group.testEndpoint && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={testing !== null}
+                      onClick={() => handleTest(group.id, group.label, group.testEndpoint!)}
+                    >
+                      {testing === group.testEndpoint ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <PlugZap className="size-4" />
+                      )}
+                      연결 테스트
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               {testResults[group.id] && (
                 <CardContent className="pb-0">
