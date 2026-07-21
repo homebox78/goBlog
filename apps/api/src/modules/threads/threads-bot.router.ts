@@ -9,6 +9,8 @@ import { requireAuth } from "../../middleware/auth.js";
 import { callClaudeJson } from "../ai/claude.js";
 import { mediaDir, mediaPublicUrl } from "../images/image-service.js";
 import { publishStandaloneThreads } from "../publishing/connectors.js";
+import { getSettingValues, updateSettings } from "../settings/settings.service.js";
+import { threadsRedirectUri } from "../settings/threads-oauth.router.js";
 
 export const threadsBotRouter = Router();
 threadsBotRouter.use(requireAuth);
@@ -57,6 +59,65 @@ async function removeThreadsImage(imageUrl: string | null): Promise<void> {
   if (!fileName) return;
   await fs.unlink(path.join(mediaDir(), "threads", fileName)).catch(() => undefined);
 }
+
+// ── 쓰레드 계정 연결 (OAuth) ────────────────────────────────────
+
+/** 연결 상태 — 발행 대상 스레드 계정 정보와 App ID/Secret 설정 여부 */
+threadsBotRouter.get(
+  "/connection",
+  asyncHandler(async (_req, res) => {
+    const v = await getSettingValues([
+      "threads.appId",
+      "threads.appSecret",
+      "threads.accessToken",
+      "threads.username",
+      "threads.userId",
+      "threads.tokenExpiresAt",
+    ]);
+    res.json({
+      appId: v["threads.appId"] ?? "",
+      hasAppSecret: Boolean(v["threads.appSecret"]),
+      connected: Boolean(v["threads.accessToken"]),
+      username: v["threads.username"] ?? "",
+      userId: v["threads.userId"] ?? "",
+      tokenExpiresAt: v["threads.tokenExpiresAt"] ?? "",
+      redirectUri: threadsRedirectUri(),
+    });
+  }),
+);
+
+const appCredsSchema = z.object({
+  appId: z.string().trim().max(190).optional(),
+  appSecret: z.string().trim().max(300).optional(),
+});
+
+/** App ID/Secret 저장 (연결 버튼 누르기 전 1회) */
+threadsBotRouter.post(
+  "/connection/app",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(appCredsSchema, req.body);
+    const values: Record<string, string | null> = {};
+    if (body.appId !== undefined) values["threads.appId"] = body.appId;
+    // 빈 문자열이면 시크릿을 지우지 않는다(마스킹된 상태로 저장 눌러도 유지)
+    if (body.appSecret) values["threads.appSecret"] = body.appSecret;
+    await updateSettings(values);
+    res.json({ ok: true });
+  }),
+);
+
+/** 연결 해제 — 저장된 토큰·계정 정보를 지운다(App ID/Secret은 유지) */
+threadsBotRouter.post(
+  "/connection/disconnect",
+  asyncHandler(async (_req, res) => {
+    await updateSettings({
+      "threads.accessToken": null,
+      "threads.userId": null,
+      "threads.username": null,
+      "threads.tokenExpiresAt": null,
+    });
+    res.json({ ok: true });
+  }),
+);
 
 // ── 페르소나(봇) ────────────────────────────────────────────────
 

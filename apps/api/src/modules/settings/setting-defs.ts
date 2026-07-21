@@ -87,6 +87,11 @@ export const SETTING_DEFS: SettingDef[] = [
   // Threads API — '앱 만들기 → 사용 사례: Threads API 액세스'로 발급한 토큰. userId는 비우면 토큰으로 자동 조회.
   { key: "threads.accessToken", group: "platforms", label: "Threads 액세스 토큰", secret: true },
   { key: "threads.userId", group: "platforms", label: "Threads 사용자 ID (비우면 자동)", secret: false },
+  // Threads OAuth '계정 연결' 버튼용 — Meta 앱(Threads use case)의 App ID/Secret. 연결하면 토큰이 자동 발급·저장된다.
+  { key: "threads.appId", group: "platforms", label: "Threads App ID", secret: false },
+  { key: "threads.appSecret", group: "platforms", label: "Threads App Secret", secret: true },
+  { key: "threads.username", group: "platforms", label: "연결된 Threads 계정(@)", secret: false },
+  { key: "threads.tokenExpiresAt", group: "platforms", label: "Threads 토큰 만료(자동)", secret: false },
 
   // 공공데이터포털(data.go.kr) — 복지로 복지서비스(지원금) API 인증키. 중앙·지자체 공용.
   { key: "datago.serviceKey", group: "keywords", label: "공공데이터포털 인증키 (복지서비스)", secret: true },

@@ -13,6 +13,9 @@ import {
   Pencil,
   ExternalLink,
   Bot,
+  Link2,
+  CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -42,6 +45,16 @@ interface Persona {
   systemPrompt: string;
   isActive: boolean;
   sortOrder: number;
+}
+
+interface Connection {
+  appId: string;
+  hasAppSecret: boolean;
+  connected: boolean;
+  username: string;
+  userId: string;
+  tokenExpiresAt: string;
+  redirectUri: string;
 }
 
 interface Post {
@@ -101,6 +114,8 @@ export default function ThreadsBotPage() {
         </p>
       </div>
 
+      <ThreadsConnectCard />
+
       <Tabs defaultValue="generate" className="w-full">
         <TabsList>
           <TabsTrigger value="generate">
@@ -121,6 +136,176 @@ export default function ThreadsBotPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ── 쓰레드 계정 연결 ────────────────────────────────────────────
+
+function ThreadsConnectCard() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["threads-connection"],
+    queryFn: () => api.get<Connection>("/api/threads-bot/connection"),
+  });
+  const conn = query.data;
+
+  const [appId, setAppId] = useState("");
+  const [appSecret, setAppSecret] = useState("");
+  const [open, setOpen] = useState(false); // 설정 폼 펼침
+  const [connecting, setConnecting] = useState(false);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["threads-connection"] });
+
+  // 연결 완료(OAuth 팝업 종료) 감지 — 주기적으로 상태를 다시 확인
+  const pollUntilConnected = () => {
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries += 1;
+      const c = await api.get<Connection>("/api/threads-bot/connection").catch(() => null);
+      if (c?.connected || tries > 48) {
+        clearInterval(timer);
+        setConnecting(false);
+        invalidate();
+        if (c?.connected) toast.success(`@${c.username} 연결됨`);
+      }
+    }, 2500);
+  };
+
+  const disconnect = useMutation({
+    mutationFn: () => api.post("/api/threads-bot/connection/disconnect"),
+    onSuccess: () => {
+      toast.success("연결을 해제했습니다");
+      invalidate();
+    },
+  });
+
+  const handleConnect = async () => {
+    try {
+      setConnecting(true);
+      // App ID/Secret 저장(입력이 있으면)
+      if (appId.trim() || appSecret.trim()) {
+        await api.post("/api/threads-bot/connection/app", {
+          appId: appId.trim() || undefined,
+          appSecret: appSecret.trim() || undefined,
+        });
+        invalidate();
+      }
+      const { url } = await api.get<{ url: string }>("/api/threads-bot/oauth/start");
+      window.open(url, "threads-oauth", "width=600,height=760");
+      pollUntilConnected();
+    } catch (e) {
+      setConnecting(false);
+      toast.error(e instanceof Error ? e.message : "연결 시작 실패");
+    }
+  };
+
+  if (query.isPending) return <Skeleton className="h-24" />;
+
+  // 연결됨
+  if (conn?.connected) {
+    const days = conn.tokenExpiresAt
+      ? Math.max(0, Math.round((new Date(conn.tokenExpiresAt).getTime() - Date.now()) / 86400000))
+      : null;
+    return (
+      <Card className="border-emerald-500/40">
+        <CardContent className="flex flex-wrap items-center gap-3 pt-6">
+          <CheckCircle2 className="size-5 text-emerald-600" />
+          <div className="mr-auto">
+            <p className="font-semibold">
+              스레드 연결됨{conn.username ? ` — @${conn.username}` : ""}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              발행 버튼이 이 계정으로 글을 올립니다.
+              {days !== null ? ` 토큰 만료까지 약 ${days}일 (만료 전 다시 연결).` : ""}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleConnect} disabled={connecting}>
+            {connecting ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            다시 연결
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            disabled={disconnect.isPending}
+            onClick={() => disconnect.mutate()}
+          >
+            연결 해제
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 미연결
+  return (
+    <Card className="border-primary/30">
+      <CardContent className="space-y-3 pt-6">
+        <div className="flex items-center gap-2">
+          <Link2 className="size-5 text-primary" />
+          <p className="font-semibold">스레드 계정 연결</p>
+          {conn?.appId && (
+            <Badge variant="outline" className="ml-auto">
+              App ID 저장됨
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Meta 앱(Threads API)의 App ID·Secret을 넣고 “계정 연결”을 누르면, 스레드 로그인·승인만으로 발행 토큰이
+          자동 등록됩니다.
+        </p>
+
+        {!open && !conn?.appId ? (
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            App ID / Secret 입력
+          </Button>
+        ) : (
+          <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Threads App ID</Label>
+              <Input
+                value={appId}
+                onChange={(e) => setAppId(e.target.value)}
+                placeholder={conn?.appId || "예: 1234567890123456"}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Threads App Secret</Label>
+              <Input
+                type="password"
+                value={appSecret}
+                onChange={(e) => setAppSecret(e.target.value)}
+                placeholder={conn?.hasAppSecret ? "저장됨 (바꿀 때만 입력)" : "앱 시크릿"}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">리디렉션 URI (Meta 앱에 그대로 등록)</Label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 overflow-x-auto rounded bg-background px-2 py-1.5 text-xs">
+                  {conn?.redirectUri}
+                </code>
+                <Button variant="outline" size="sm" onClick={() => conn && copyText(conn.redirectUri)}>
+                  <Copy className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <Button
+            disabled={connecting || (!conn?.appId && !appId.trim())}
+            onClick={handleConnect}
+          >
+            {connecting ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+            계정 연결
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            토큰이 없어도 각 글의 <b>복사</b> 버튼으로 스레드 앱에 붙여넣을 수 있습니다.
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
