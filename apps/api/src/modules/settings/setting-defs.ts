@@ -96,6 +96,9 @@ export const SETTING_DEFS: SettingDef[] = [
   // 공공데이터포털(data.go.kr) — 복지로 복지서비스(지원금) API 인증키. 중앙·지자체 공용.
   { key: "datago.serviceKey", group: "keywords", label: "공공데이터포털 인증키 (복지서비스)", secret: true },
 
+  // 유튜브 Data API v3 키 — 랭킹(랭크튜브형) 공개 통계 수집용. 없으면 샘플 데이터로 표시.
+  { key: "youtube.apiKey", group: "keywords", label: "유튜브 Data API 키 (랭킹 수집)", secret: true },
+
   // 텔레그램 알림 — 일일 전체 운영 보고 + 발행 실패 즉시 알림 (@BotFather에서 봇 생성)
   { key: "telegram.botToken", group: "notify", label: "텔레그램 봇 토큰", secret: true },
   { key: "telegram.chatId", group: "notify", label: "텔레그램 Chat ID", secret: false },
