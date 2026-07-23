@@ -15,6 +15,7 @@ export const AD_POSITIONS: Array<{ position: string; label: string; size: string
   { position: "home-top", label: "홈 상단 배너", size: "가로형 970×90 권장" },
   { position: "home-infeed", label: "홈 섹션 사이(인피드)", size: "반응형" },
   { position: "home-sidebar", label: "홈 사이드바", size: "300×250 권장" },
+  { position: "home-partners", label: "홈 사이드바 '파트너스 추천'", size: "300px 폭 · 미설정 시 자동 상품" },
   { position: "article-top", label: "기사 상단(본문 위)", size: "반응형" },
   { position: "article-bottom", label: "기사 하단(본문 아래)", size: "반응형" },
   { position: "category-top", label: "카테고리 상단", size: "가로형 권장" },

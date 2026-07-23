@@ -29,11 +29,11 @@ const DOC_DEFS = [
     'service'    => ['icon' => 'engineering',        'title' => '용역계약서',          'desc' => '용역 내용·기간·대금을 담은 용역계약서를 작성합니다.'],
     'supply'     => ['icon' => 'local_shipping',     'title' => '공급(납품)계약서',     'desc' => '품목·대금·납품·검수 조건을 담은 공급계약서를 작성합니다.'],
     'purchase'   => ['icon' => 'shopping_bag',       'title' => '물품구매 계약서',      'desc' => '물품·금액·인도 조건을 담은 물품구매 계약서를 작성합니다.'],
-    'mou'        => ['icon' => 'diversity_3',        'title' => '업무협약서(MOU)',      'desc' => '협약 목적·협력 내용을 담은 업무협약서(MOU)를 작성합니다.'],
+    'mou'        => ['icon' => 'handshake',          'title' => '업무협약서(MOU)',      'desc' => '협약 목적·협력 내용을 담은 업무협약서(MOU)를 작성합니다.'],
     'consulting' => ['icon' => 'support_agent',      'title' => '컨설팅 계약서',        'desc' => '컨설팅 범위·보수·비밀유지를 담은 컨설팅 계약서를 작성합니다.'],
     'swdev'      => ['icon' => 'code',               'title' => '소프트웨어 개발 계약서', 'desc' => '개발 범위·대금·검수·권리 귀속을 담은 SW 개발 계약서를 작성합니다.'],
     // 법률
-    'partnership'=> ['icon' => 'groups_2',           'title' => '동업계약서',          'desc' => '출자·손익분배·역할을 담은 동업계약서를 작성합니다.'],
+    'partnership'=> ['icon' => 'groups',             'title' => '동업계약서',          'desc' => '출자·손익분배·역할을 담은 동업계약서를 작성합니다.'],
     'copyright'  => ['icon' => 'copyright',          'title' => '저작권 양도 계약서',    'desc' => '저작물·양도 범위·대금을 담은 저작권 양도 계약서를 작성합니다.'],
     'transfer'   => ['icon' => 'swap_horiz',         'title' => '양도양수 계약서',      'desc' => '양도 대상·대금·인도 조건을 담은 양도양수 계약서를 작성합니다.'],
     // 정책·약관

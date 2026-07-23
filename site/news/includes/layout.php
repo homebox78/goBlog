@@ -564,6 +564,22 @@ function render_ad(string $position): void
     }
 }
 
+/** 광고 슬롯 행 전체를 반환(enabled 무관) — 미설정이면 null. 커스텀 렌더(파트너스 추천 등)에 사용. */
+function ad_slot(string $position): ?array
+{
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        try {
+            $rows = goblog_db()->query("SELECT position, enabled, type, adsenseCode, imageUrl, linkUrl, newTab, sponsored FROM ad_slots")->fetchAll();
+            foreach ($rows as $r) $cache[$r['position']] = $r;
+        } catch (Throwable) {
+            $cache = [];
+        }
+    }
+    return $cache[$position] ?? null;
+}
+
 /** 광고/노출 슬롯이 켜져 있는지 — 배너가 아닌 '섹션 노출 토글'(예: home-deals)에 사용. 기본 꺼짐. */
 function ad_enabled(string $position): bool
 {
