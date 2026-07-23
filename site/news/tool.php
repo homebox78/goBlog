@@ -20,6 +20,10 @@ const CALC_ID_MAP = [
     'brokerage' => 'brokerage', 'autotax' => 'autotax', 'inherit' => 'inherit', 'comprop' => 'comprop',
     // 창업·사업
     'breakeven' => 'breakeven', 'smartstore' => 'smartstore', 'corpvsindiv' => 'corpvsindiv', 'marketingroi' => 'marketingroi',
+    // 급여·노무
+    'avgwage' => 'avgwage', 'parentleave' => 'parentleave', 'withholding' => 'withholding', 'laborcost' => 'laborcost',
+    // 크리에이터 수익
+    'streaming' => 'streaming', 'xrevenue' => 'xrevenue', 'freelancerfee' => 'freelancerfee',
 ];
 
 $id = (string) ($_GET['id'] ?? '');
@@ -666,6 +670,125 @@ function calc_content(): array
             'faqs' => [
                 ['q' => "ROAS와 ROI 차이는?", 'a' => "ROAS는 광고비 대비 '매출'을, ROI는 광고비 대비 '이익'을 봅니다. ROI가 흑자·적자를 판단하는 지표입니다."],
                 ['q' => "매출총이익률은 어떻게 정하나요?", 'a' => "판매가에서 원가·배송·수수료 등 변동비를 뺀 비율입니다. 스마트스토어 마진 계산기로 먼저 구해도 됩니다."],
+            ],
+            'articles' => [],
+        ],
+        'avgwage' => [
+            'basis' => [
+                "1일 평균임금 = 산정 사유 발생일 이전 3개월간 임금 총액 ÷ 그 기간의 총 일수(달력일).",
+                "임금 총액에는 기본급·정기수당·연장근로수당과, 상여금·연차수당의 3개월분(연간 지급액 × 3/12)을 포함합니다.",
+                "평균임금이 통상임금보다 적으면 통상임금을 평균임금으로 봅니다.",
+            ],
+            'disclaimer' => "실제 평균임금은 포함·제외 임금 항목 판단에 따라 달라집니다. 퇴직금·산재보상 등 정확한 산정은 노무 전문가에게 확인하세요.",
+            'tips' => [
+                "총 일수는 근무일이 아니라 달력상 날짜 수(3개월이면 보통 89~92일)입니다.",
+                "상여금·연차수당을 3개월분으로 환산해 넣는 것을 빠뜨리면 평균임금이 과소 계산됩니다.",
+            ],
+            'faqs' => [
+                ['q' => "평균임금과 통상임금 차이는?", 'a' => "평균임금은 실제 받은 임금 전체의 하루치(퇴직금·산재 기준), 통상임금은 정기·일률적으로 지급되는 소정근로의 대가(연장·야간수당 기준)입니다."],
+                ['q' => "3개월 중 결근이 있으면?", 'a' => "결근으로 임금이 줄면 평균임금도 낮아질 수 있어, 이 경우 통상임금과 비교해 큰 쪽을 적용합니다."],
+            ],
+            'articles' => [],
+        ],
+        'parentleave' => [
+            'basis' => [
+                "2025년 개정 기준 육아휴직급여는 월 통상임금의 100%를 지급합니다(종전 80%).",
+                "월 상한: 1~3개월 250만원, 4~6개월 200만원, 7개월 이후 160만원. 하한 70만원.",
+                "종전 사후지급금(급여의 25%를 복직 6개월 후 지급) 제도가 폐지되어 휴직 중 전액 지급됩니다.",
+            ],
+            'disclaimer' => "부모가 같은 자녀에 대해 함께 사용할 때의 '6+6 특례' 등 추가 우대는 반영하지 않은 기본 계산입니다. 정확한 금액은 고용노동부·고용보험 사이트에서 확인하세요.",
+            'tips' => [
+                "생후 18개월 내 부모가 순차·동시 사용하면 첫 6개월 상한이 더 높은 '6+6 부모육아휴직제' 특례가 있습니다.",
+                "육아휴직급여는 신청일이 속한 달의 다음 달에 지급되며, 휴직 시작 후 1년 이내 신청해야 합니다.",
+            ],
+            'faqs' => [
+                ['q' => "통상임금이 상한보다 낮으면?", 'a' => "통상임금 100%가 상한보다 낮으면 통상임금 전액을, 하한(70만원)보다 낮으면 하한을 지급합니다."],
+                ['q' => "육아휴직급여도 세금을 떼나요?", 'a' => "육아휴직급여는 비과세 소득이라 소득세·4대보험료를 공제하지 않고 전액 지급됩니다."],
+            ],
+            'articles' => [],
+        ],
+        'withholding' => [
+            'basis' => [
+                "사업소득(프리랜서·인적용역) 원천징수 = 지급액 × 3.3% (소득세 3% + 지방소득세 0.3%).",
+                "실수령액 = 지급액 − 원천징수세액.",
+                "원천징수된 세액은 다음 해 5월 종합소득세 신고에서 정산됩니다.",
+            ],
+            'disclaimer' => "근로소득·기타소득·이자·배당 등은 원천징수율이 다릅니다. 이 계산기는 사업소득 3.3% 기준입니다.",
+            'tips' => [
+                "경비율이 높거나 소득이 적으면 5월 종합소득세 신고 때 원천징수분의 상당액을 환급받는 경우가 많습니다.",
+                "지급명세서·원천징수영수증을 보관하면 종합소득세 신고 시 편리합니다.",
+            ],
+            'faqs' => [
+                ['q' => "3.3%는 무슨 세금인가요?", 'a' => "소득세 3%와 그 소득세의 10%인 지방소득세 0.3%를 합한 사업소득 원천징수율입니다."],
+                ['q' => "환급은 언제 받나요?", 'a' => "다음 해 5월 종합소득세 신고 후 보통 6~7월에 환급됩니다. 미리 낸 세금이 실제 세액보다 많으면 돌려받습니다."],
+            ],
+            'articles' => [],
+        ],
+        'laborcost' => [
+            'basis' => [
+                "실제 고용비용 = 월급 + 사업주 부담 4대보험 + 산재보험 + 퇴직급여 충당.",
+                "사업주 부담 요율(근로자와 별도): 국민연금 4.5%, 건강보험 3.545%, 장기요양(건보료의 12.95%), 고용보험 약 1.15%.",
+                "산재보험은 업종별로 다르며 평균 약 0.7%, 퇴직급여 충당은 월급의 약 1/12(8.33%)로 반영했습니다.",
+            ],
+            'disclaimer' => "산재보험료율은 업종에 따라 0.7~18%로 크게 다르고, 고용보험 고용안정·직업능력개발 부담은 기업 규모별로 다릅니다. 정확한 금액은 근로복지공단·건강보험공단에서 확인하세요.",
+            'tips' => [
+                "직원 1명을 채용하면 월급 외에 약 20% 안팎의 추가 비용이 든다는 점을 예산에 반영하세요.",
+                "두루누리 사회보험료 지원(소규모 사업장·저임금 근로자)으로 사업주 부담을 줄일 수 있습니다.",
+            ],
+            'faqs' => [
+                ['q' => "월급 300만원이면 실제 얼마가 드나요?", 'a' => "사업주 4대보험·산재·퇴직충당까지 더하면 대략 월 360만원 안팎이 실제 고용비용입니다(업종·규모에 따라 변동)."],
+                ['q' => "퇴직충당도 매달 나가는 비용인가요?", 'a' => "실제 지출은 퇴직 시점이지만, 매달 1/12씩 쌓아 두는 것으로 보면 실질 인건비를 정확히 파악할 수 있습니다."],
+            ],
+            'articles' => [],
+        ],
+        'streaming' => [
+            'basis' => [
+                "월 수익 = (유료 구독자 수 × 구독 단가 + 후원·도네 합계) × (1 − 플랫폼 수수료율).",
+                "치지직·유튜브·SOOP(아프리카) 등 플랫폼 수수료와 결제 수수료를 합쳐 약 30%를 기본값으로 두었습니다.",
+                "표시 금액은 세전이며, 사업소득세 등은 별도로 정산됩니다.",
+            ],
+            'disclaimer' => "플랫폼·후원 상품별 수수료율이 다르고 정산 주기·환율(해외 후원)에 따라 실수령이 달라집니다. 정확한 정산액은 각 플랫폼 크리에이터 센터를 확인하세요.",
+            'tips' => [
+                "구독·후원 수익은 조회수 광고 수익보다 팬덤 규모에 비례하는 경향이 큽니다.",
+                "여러 플랫폼 동시 송출(멀티스트리밍)로 후원 창구를 늘릴 수 있으나 플랫폼 정책을 확인하세요.",
+            ],
+            'faqs' => [
+                ['q' => "플랫폼 수수료는 보통 얼마인가요?", 'a' => "후원·구독 상품에 따라 다르지만 결제·플랫폼 수수료를 합쳐 대략 20~40% 수준입니다."],
+                ['q' => "세금은 어떻게 되나요?", 'a' => "스트리밍 수익은 사업소득으로 종합소득세 신고 대상입니다. 원천징수·경비 처리는 원천징수·종합소득세 계산기를 참고하세요."],
+            ],
+            'articles' => [],
+        ],
+        'xrevenue' => [
+            'basis' => [
+                "월 수익 = 월 광고 노출수 ÷ 1,000 × RPM(1,000노출당 광고분배 단가).",
+                "X(트위터) 광고 수익 분배는 프리미엄 인증 가입자의 답글에 노출된 광고에 비례해 지급됩니다.",
+                "RPM은 지역·계절·광고 시장에 따라 크게 변동합니다.",
+            ],
+            'disclaimer' => "실제 분배 단가(RPM)는 공개되지 않고 변동이 큽니다. 슈퍼팔로우·팁 등 직접 후원 수익은 포함하지 않습니다.",
+            'tips' => [
+                "광고 수익 분배는 팔로워 수보다 '인증 사용자에게 노출된 답글 노출량'이 핵심입니다.",
+                "수익화 요건(팔로워·인증·최근 노출 기준)을 충족해야 분배 대상이 됩니다.",
+            ],
+            'faqs' => [
+                ['q' => "임프레션은 어디서 확인하나요?", 'a' => "X 애널리틱스에서 게시물·계정의 월 노출수(임프레션)를 확인할 수 있습니다."],
+                ['q' => "RPM은 얼마로 넣어야 하나요?", 'a' => "계정·시기에 따라 편차가 크지만 1,000노출당 수십~수백원 수준으로 잡아 보수적으로 추정하세요."],
+            ],
+            'articles' => [],
+        ],
+        'freelancerfee' => [
+            'basis' => [
+                "실수령액 = 계약금액 − 플랫폼 수수료 − 원천징수세액(선택).",
+                "플랫폼 수수료 = 계약금액 × 수수료율(크몽·숨고 등 보통 5~20%).",
+                "원천징수 적용 시 (수수료 차감 후 금액) × 3.3%를 추가로 공제합니다.",
+            ],
+            'disclaimer' => "플랫폼별 수수료 체계(정률·정액·구간)와 부가세 처리가 다릅니다. 정확한 정산은 각 플랫폼 정산 정책을 확인하세요.",
+            'tips' => [
+                "수수료는 거래액이 커질수록 낮아지는 구간제인 플랫폼도 있어 실제 요율을 확인하세요.",
+                "사업자라면 부가세(10%)를 별도로 청구·정산해야 합니다.",
+            ],
+            'faqs' => [
+                ['q' => "원천징수 3.3%는 언제 적용되나요?", 'a' => "지급하는 곳이 사업자면 사업소득으로 3.3%를 원천징수하는 경우가 많습니다. 개인 간 거래는 적용되지 않을 수 있습니다."],
+                ['q' => "수수료와 세금을 다 떼면 얼마 남나요?", 'a' => "예를 들어 300만원 계약에 수수료 10%·원천징수 3.3%면 약 261만원이 실수령입니다."],
             ],
             'articles' => [],
         ],
@@ -1451,6 +1574,84 @@ function build(view) {
       rows: [ { label: "광고비", value: fmt(cost) + "원" }, { label: "광고 매출", value: fmt(revenue) + "원" }, { label: "ROAS(광고수익률)", value: fmt(roas) + "%" }, { label: "매출총이익 (" + fmt1(marginRate) + "%)", value: fmt(grossProfit) + "원" }, { label: "순이익 / ROI", value: fmt(netProfit) + "원 / " + fmt1(roi) + "%" } ] };
     fields = [ numField("mr_cost", "광고비", "원", 1000000), numField("mr_rev", "광고로 발생한 매출", "원", 5000000), numField("mr_margin", "매출총이익률", "%", 30) ];
     formula = [ "ROAS = 광고매출 ÷ 광고비 × 100 (매출 기준 회수율)", "ROI = (매출×이익률 − 광고비) ÷ 광고비 × 100 (실이익 기준)", "ROAS가 높아도 이익률이 낮으면 ROI는 마이너스일 수 있습니다." ];
+  } else if (view === "avgwage") {
+    const total = num("aw_total", 12000000);
+    const days = num("aw_days", 92);
+    const perDay = days > 0 ? total / days : 0;
+    const perMonth = perDay * 30;
+    result = { bigLabel: "1일 평균임금", bigValue: "₩ " + fmt(perDay), bigSub: "월 환산 약 " + fmt(perMonth) + "원",
+      rows: [ { label: "3개월 임금 총액", value: fmt(total) + "원" }, { label: "3개월 총 일수", value: fmt(days) + "일" }, { label: "1일 평균임금", value: fmt(perDay) + "원" }, { label: "월 평균임금(×30)", value: fmt(perMonth) + "원" } ] };
+    fields = [ numField("aw_total", "퇴직 전 3개월 임금 총액", "원", 12000000), numField("aw_days", "3개월 총 일수(달력일)", "일", 92) ];
+    formula = [ "1일 평균임금 = 최근 3개월 임금 총액 ÷ 3개월 총 일수(달력일)", "임금 총액에는 기본급·정기수당·연장근로수당과 상여금·연차수당의 3개월분(연액×3/12)을 포함합니다.", "퇴직금·휴업수당 등은 평균임금을 기준으로 산정합니다." ];
+  } else if (view === "parentleave") {
+    const wage = num("pl_wage", 3000000);
+    const stage = tog("pl_stage", "1~3개월");
+    let cap, rateLabel;
+    if (stage === "1~3개월") { cap = 2500000; rateLabel = "통상임금 100% (상한 250만)"; }
+    else if (stage === "4~6개월") { cap = 2000000; rateLabel = "통상임금 100% (상한 200만)"; }
+    else { cap = 1600000; rateLabel = "통상임금 100% (상한 160만)"; }
+    let pay = wage;
+    if (pay > cap) pay = cap;
+    if (pay < 700000) pay = Math.min(700000, wage);
+    result = { bigLabel: "월 육아휴직급여", bigValue: "₩ " + fmt(pay), bigSub: stage + " · " + rateLabel,
+      rows: [ { label: "월 통상임금", value: fmt(wage) + "원" }, { label: "지급 구간", value: stage }, { label: "상한액", value: fmt(cap) + "원" }, { label: "하한액", value: "700,000원" }, { label: "월 지급액", value: fmt(pay) + "원" } ] };
+    fields = [ numField("pl_wage", "월 통상임금", "원", 3000000), togField("pl_stage", "육아휴직 개월차", ["1~3개월", "4~6개월", "7개월~"], "1~3개월") ];
+    formula = [ "2025년 개정: 육아휴직급여 = 월 통상임금 100% (구간별 상한 적용)", "상한: 1~3개월 250만원 · 4~6개월 200만원 · 7개월 이후 160만원 / 하한 70만원", "사후지급금(25% 분할)이 폐지되어 휴직 중 전액 지급됩니다." ];
+  } else if (view === "withholding") {
+    const amt = num("wh_amt", 3000000);
+    const it = amt * 0.03;
+    const local = it * 0.1;
+    const tax = it + local;
+    const net = amt - tax;
+    result = { bigLabel: "실수령액 (원천징수 후)", bigValue: "₩ " + fmt(net), bigSub: "원천징수세액 " + fmt(tax) + "원 (3.3%)",
+      rows: [ { label: "지급액(세전)", value: fmt(amt) + "원" }, { label: "소득세 (3%)", value: "-" + fmt(it) + "원" }, { label: "지방소득세 (0.3%)", value: "-" + fmt(local) + "원" }, { label: "원천징수 합계 (3.3%)", value: "-" + fmt(tax) + "원" }, { label: "실수령액", value: fmt(net) + "원" } ] };
+    fields = [ numField("wh_amt", "지급액(사업소득)", "원", 3000000) ];
+    formula = [ "사업소득 원천징수 = 지급액 × 3.3% (소득세 3% + 지방소득세 0.3%)", "실수령액 = 지급액 − 원천징수세액", "5월 종합소득세 신고 시 정산되어 환급 또는 추가납부됩니다." ];
+  } else if (view === "laborcost") {
+    const wage = num("lc_wage", 3000000);
+    const np = wage * 0.045;
+    const hi = wage * 0.03545;
+    const ltc = hi * 0.1295;
+    const ei = wage * 0.0115;
+    const wc = wage * 0.007;
+    const sev = wage / 12;
+    const addon = np + hi + ltc + ei + wc + sev;
+    const total = wage + addon;
+    result = { bigLabel: "월 실제 고용비용", bigValue: "₩ " + fmt(total), bigSub: "월급 대비 +" + fmt1(addon / wage * 100) + "% (사업주 부담)",
+      rows: [ { label: "월급(세전)", value: fmt(wage) + "원" }, { label: "국민연금 (4.5%)", value: "+" + fmt(np) + "원" }, { label: "건강+장기요양", value: "+" + fmt(hi + ltc) + "원" }, { label: "고용보험 (1.15%)", value: "+" + fmt(ei) + "원" }, { label: "산재보험 (약 0.7%)", value: "+" + fmt(wc) + "원" }, { label: "퇴직충당 (1/12)", value: "+" + fmt(sev) + "원" }, { label: "실제 고용비용", value: fmt(total) + "원" } ] };
+    fields = [ numField("lc_wage", "월급(세전)", "원", 3000000) ];
+    formula = [ "실제 고용비용 = 월급 + 사업주 4대보험 + 산재 + 퇴직충당", "사업주 부담: 국민연금 4.5%, 건강 3.545%(+장기요양), 고용 약 1.15%, 산재 업종평균 0.7%", "퇴직급여 충당은 월급의 약 1/12(8.33%)로 반영했습니다." ];
+  } else if (view === "streaming") {
+    const subs = num("st_subs", 200);
+    const price = num("st_price", 5000);
+    const dona = num("st_dona", 500000);
+    const feeRate = num("st_fee", 30);
+    const gross = subs * price + dona;
+    const net = gross * (1 - feeRate / 100);
+    result = { bigLabel: "월 예상 수익 (수수료 후)", bigValue: "₩ " + fmt(net), bigSub: "구독 " + fmt(subs) + "명 + 후원 " + fmt(dona) + "원",
+      rows: [ { label: "구독 수익", value: fmt(subs * price) + "원" }, { label: "후원(도네) 합계", value: fmt(dona) + "원" }, { label: "총 수익(수수료 전)", value: fmt(gross) + "원" }, { label: "플랫폼 수수료 (" + fmt1(feeRate) + "%)", value: "-" + fmt(gross - net) + "원" }, { label: "실 수익", value: fmt(net) + "원" } ] };
+    fields = [ numField("st_subs", "유료 구독자 수", "명", 200), numField("st_price", "구독 단가", "원", 5000), numField("st_dona", "월 후원(도네) 총액", "원", 500000), numField("st_fee", "플랫폼 수수료율", "%", 30) ];
+    formula = [ "월 수익 = (구독자수 × 구독단가 + 후원액) × (1 − 수수료율)", "치지직·유튜브·아프리카 등 플랫폼 수수료(약 30%)와 결제 수수료를 합쳐 계산합니다.", "세금(사업소득 3.3% 등)은 별도로 원천징수 계산기를 참고하세요." ];
+  } else if (view === "xrevenue") {
+    const imp = num("xr_imp", 3000000);
+    const rpm = num("xr_rpm", 200);
+    const revenue = imp / 1000 * rpm;
+    result = { bigLabel: "월 예상 광고 수익", bigValue: "₩ " + fmt(revenue), bigSub: "월 노출 " + fmt1(imp / 10000) + "만 · 1,000노출당 " + fmt(rpm) + "원",
+      rows: [ { label: "월 광고 노출수", value: fmt(imp) + "회" }, { label: "1,000노출당 단가(RPM)", value: fmt(rpm) + "원" }, { label: "월 예상 수익", value: fmt(revenue) + "원" }, { label: "연 환산", value: fmt(revenue * 12) + "원" } ] };
+    fields = [ numField("xr_imp", "월 광고 노출수(임프레션)", "회", 3000000), numField("xr_rpm", "1,000노출당 광고분배 단가", "원", 200) ];
+    formula = [ "월 수익 = 광고 노출수 ÷ 1,000 × RPM", "X(트위터) 크리에이터 광고 분배는 인증(프리미엄) 가입자의 답글 노출에 비례합니다.", "슈퍼팔로우·팁 등 직접 후원 수익은 별도입니다." ];
+  } else if (view === "freelancerfee") {
+    const amt = num("ff_amt", 3000000);
+    const feeRate = num("ff_fee", 10);
+    const wh = tog("ff_wh", "적용");
+    const fee = amt * feeRate / 100;
+    const afterFee = amt - fee;
+    const tax = wh === "적용" ? afterFee * 0.033 : 0;
+    const net = afterFee - tax;
+    result = { bigLabel: "실수령액", bigValue: "₩ " + fmt(net), bigSub: "수수료 " + fmt1(feeRate) + "%" + (wh === "적용" ? " + 원천징수 3.3%" : ""),
+      rows: [ { label: "계약(프로젝트) 금액", value: fmt(amt) + "원" }, { label: "플랫폼 수수료 (" + fmt1(feeRate) + "%)", value: "-" + fmt(fee) + "원" }, { label: "수수료 차감 후", value: fmt(afterFee) + "원" }, { label: "원천징수 (3.3%)", value: (wh === "적용" ? "-" + fmt(tax) : "미적용") + (wh === "적용" ? "원" : "") }, { label: "실수령액", value: fmt(net) + "원" } ] };
+    fields = [ numField("ff_amt", "계약(프로젝트) 금액", "원", 3000000), numField("ff_fee", "플랫폼 수수료율", "%", 10), togField("ff_wh", "원천징수 3.3%", ["적용", "미적용"], "적용") ];
+    formula = [ "실수령액 = 계약금액 − 플랫폼 수수료 − 원천징수세액", "크몽·숨고 등 플랫폼 수수료는 보통 5~20% 수준입니다.", "사업소득 원천징수 3.3%는 5월 종합소득세로 정산됩니다." ];
   }
   return { fields: fields, result: result, formula: formula, tables: tables, hasFormula: formula.length > 0, hasTables: tables.length > 0 };
 }
