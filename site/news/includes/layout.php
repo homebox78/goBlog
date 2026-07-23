@@ -54,6 +54,11 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 {
     $canonical = $canonical !== '' ? $canonical : news_canonical();
     $isArticle = str_contains($canonical, '/article.php');
+    // 페이지뷰 기록 — 유형·식별키는 스크립트로 자동 판정, 라벨은 페이지 제목 앞부분(사이트명 접미 제거)
+    if (function_exists('record_page_view')) {
+        $label = trim(preg_split('/\s[|\-–—]\s/u', $title)[0] ?? '');
+        record_page_view(null, null, $label);
+    }
     ?>
 <!DOCTYPE html>
 <html lang="ko">

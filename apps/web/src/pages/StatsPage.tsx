@@ -1,8 +1,23 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
-import { TrendingUp, TrendingDown, Eye, Users, Mail, ExternalLink } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Eye,
+  Users,
+  Mail,
+  ExternalLink,
+  LayoutGrid,
+  Calculator,
+  FileText,
+  MapPin,
+  Globe,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -42,8 +57,63 @@ interface ArticleStat {
   lastViewedAt: string | null;
 }
 
+interface PageStat {
+  total: { views: number; uniques: number };
+  pages: { type: string; views: number; uniques: number }[];
+}
+interface PopItem {
+  key: string;
+  title: string;
+  views: number;
+  uniques: number;
+  lastViewedAt: string | null;
+}
+interface GeoStat {
+  byCountry: { country: string; views: number; uniques: number }[];
+  byRegion: { region: string; country: string; views: number; uniques: number }[];
+  pendingGeo: number;
+}
+interface Visitor {
+  ip: string;
+  type: string;
+  key: string | null;
+  title: string | null;
+  referer: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  isp: string | null;
+  viewedAt: string | null;
+}
+
 type Gran = "day" | "month" | "year";
 type Period = "all" | "today" | "month" | "year";
+type PPeriod = "today" | "month" | "year";
+
+// 페이지 유형 → 한글 라벨
+const PAGE_LABEL: Record<string, string> = {
+  home: "홈",
+  article: "기사",
+  tool: "계산기",
+  tools: "계산기 목록",
+  doc: "문서(개별)",
+  docs: "문서 목록",
+  category: "카테고리",
+  press: "언론사",
+  opinion: "오피니언",
+  welfare: "지원금",
+  jobs: "노인일자리",
+  stocks: "종목",
+  stock: "종목 상세",
+  rank: "랭킹",
+  search: "검색",
+  shop: "쇼핑",
+  subscribe: "구독",
+  about: "소개",
+  contact: "문의",
+  privacy: "개인정보",
+};
+const pageLabel = (t: string) => PAGE_LABEL[t] ?? t;
 
 const chartConfig: ChartConfig = {
   views: { label: "조회수", color: "var(--chart-1)" },
@@ -70,6 +140,40 @@ export default function StatsPage() {
     queryKey: ["stats-articles", period, sort],
     queryFn: () => api.get<{ articles: ArticleStat[] }>(`/api/stats/articles?period=${period}&sort=${sort}&limit=50`),
   });
+
+  // 페이지뷰 기반 섹션 (메뉴별 / 계산기 / 문서 / 지역) — 공용 기간
+  const [pp, setPp] = useState<PPeriod>("month");
+  const pages = useQuery({
+    queryKey: ["stats-pages", pp],
+    queryFn: () => api.get<PageStat>(`/api/stats/pages?period=${pp}`),
+  });
+  const tools = useQuery({
+    queryKey: ["stats-tools", pp],
+    queryFn: () => api.get<{ items: PopItem[] }>(`/api/stats/tools?period=${pp}&limit=50`),
+  });
+  const docs = useQuery({
+    queryKey: ["stats-docs", pp],
+    queryFn: () => api.get<{ items: PopItem[] }>(`/api/stats/docs?period=${pp}&limit=50`),
+  });
+  const geo = useQuery({
+    queryKey: ["stats-geo", pp],
+    queryFn: () => api.get<GeoStat>(`/api/stats/geo?period=${pp}`),
+  });
+  const visitors = useQuery({
+    queryKey: ["stats-visitors"],
+    queryFn: () => api.get<{ visitors: Visitor[] }>(`/api/stats/visitors?limit=120`),
+  });
+
+  const [resolving, setResolving] = useState(false);
+  const resolveGeo = async () => {
+    setResolving(true);
+    try {
+      await api.post("/api/stats/geo/resolve", { limit: 120 });
+      await Promise.all([geo.refetch(), visitors.refetch()]);
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const o = overview.data;
 
@@ -224,6 +328,279 @@ export default function StatsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── 페이지뷰 통계 (메뉴·계산기·문서·지역) ──────────────── */}
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          <h2 className="text-lg font-bold">페이지·방문자 통계</h2>
+          <p className="text-sm text-muted-foreground">전체 페이지뷰 기준 — 메뉴별·계산기·문서 인기와 방문 지역</p>
+        </div>
+        <Tabs value={pp} onValueChange={(v) => setPp(v as PPeriod)}>
+          <TabsList>
+            <TabsTrigger value="today">오늘</TabsTrigger>
+            <TabsTrigger value="month">이달</TabsTrigger>
+            <TabsTrigger value="year">올해</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* 메뉴별 통계 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <LayoutGrid className="size-4" /> 메뉴별 통계
+          </CardTitle>
+          <CardDescription>
+            전체 {(pages.data?.total.views ?? 0).toLocaleString()} 조회 · 순방문{" "}
+            {(pages.data?.total.uniques ?? 0).toLocaleString()}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {pages.isPending ? (
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : (pages.data?.pages ?? []).length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">아직 방문 데이터가 없습니다.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {pages.data!.pages.map((p) => {
+                const max = pages.data!.pages[0]?.views || 1;
+                return (
+                  <div key={p.type} className="flex items-center gap-3">
+                    <span className="w-24 shrink-0 text-sm font-medium">{pageLabel(p.type)}</span>
+                    <div className="relative h-6 flex-1 overflow-hidden rounded bg-muted">
+                      <div
+                        className="h-full rounded bg-primary/70"
+                        style={{ width: `${Math.max(3, (p.views / max) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="w-16 shrink-0 text-right text-sm font-semibold tabular-nums">
+                      {p.views.toLocaleString()}
+                    </span>
+                    <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                      {p.uniques.toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 계산기 / 문서 인기 */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <PopularityCard title="인기 계산기" icon={Calculator} q={tools} baseUrl="/tool.php?id=" />
+        <PopularityCard title="인기 문서" icon={FileText} q={docs} baseUrl="/docs.php?doc=" />
+      </div>
+
+      {/* 지역별 방문 */}
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="size-4" /> 지역별 방문
+            </CardTitle>
+            <CardDescription>
+              방문 IP를 국가·시/도로 변환 (미확인 {geo.data?.pendingGeo ?? 0}건)
+            </CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={resolveGeo} disabled={resolving}>
+            {resolving ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            지금 변환
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {geo.isPending ? (
+            <Skeleton className="h-40 w-full" />
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
+                  <Globe className="size-3.5" /> 국가
+                </div>
+                <GeoList
+                  rows={(geo.data?.byCountry ?? []).map((r) => ({ label: r.country, views: r.views, uniques: r.uniques }))}
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
+                  <MapPin className="size-3.5" /> 시·도 (국내)
+                </div>
+                <GeoList
+                  rows={(geo.data?.byRegion ?? []).map((r) => ({
+                    label: r.region,
+                    sub: r.country && !/korea|대한민국|내부/i.test(r.country) ? r.country : undefined,
+                    views: r.views,
+                    uniques: r.uniques,
+                  }))}
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 최근 방문자 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="size-4" /> 최근 방문자
+          </CardTitle>
+          <CardDescription>IP · 지역 · 본 페이지 (최근 120건)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {visitors.isPending ? (
+            <div className="space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : (visitors.data?.visitors ?? []).length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">방문 기록이 없습니다.</p>
+          ) : (
+            <div className="max-h-[520px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>IP</TableHead>
+                    <TableHead>지역</TableHead>
+                    <TableHead>페이지</TableHead>
+                    <TableHead className="text-right">시각</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visitors.data!.visitors.map((v, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-mono text-xs">{v.ip || "-"}</TableCell>
+                      <TableCell className="text-xs">
+                        {v.region || v.country ? (
+                          <span>
+                            {[v.country && v.country !== v.region ? v.country : null, v.region, v.city]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">미확인</span>
+                        )}
+                        {v.isp && <span className="ml-1 text-muted-foreground">({v.isp})</span>}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <Badge variant="secondary" className="mr-1 text-[10px]">
+                          {pageLabel(v.type)}
+                        </Badge>
+                        <span className="text-muted-foreground">{v.title || v.key || ""}</span>
+                      </TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground">
+                        {v.viewedAt
+                          ? new Date(v.viewedAt).toLocaleString("ko-KR", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function PopularityCard({
+  title,
+  icon: Icon,
+  q,
+  baseUrl,
+}: {
+  title: string;
+  icon: typeof Eye;
+  q: { isPending: boolean; data?: { items: PopItem[] } };
+  baseUrl: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Icon className="size-4" /> {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {q.isPending ? (
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
+        ) : (q.data?.items ?? []).length === 0 ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">방문 기록이 없습니다.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-8">#</TableHead>
+                <TableHead>이름</TableHead>
+                <TableHead className="text-right">조회</TableHead>
+                <TableHead className="text-right">순방문</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {q.data!.items.map((it, i) => (
+                <TableRow key={it.key}>
+                  <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                  <TableCell>
+                    <a
+                      href={`https://hom2box.com${baseUrl}${encodeURIComponent(it.key)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-medium hover:underline"
+                    >
+                      <span className="line-clamp-1">{it.title}</span>
+                      <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+                    </a>
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">{it.views.toLocaleString()}</TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                    {it.uniques.toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function GeoList({ rows }: { rows: { label: string; sub?: string; views: number; uniques: number }[] }) {
+  if (rows.length === 0) return <p className="py-6 text-center text-sm text-muted-foreground">데이터 없음</p>;
+  const max = rows[0]?.views || 1;
+  return (
+    <div className="space-y-1.5">
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="w-20 shrink-0 truncate text-sm">
+            {r.label}
+            {r.sub && <span className="ml-1 text-[10px] text-muted-foreground">{r.sub}</span>}
+          </span>
+          <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted">
+            <div className="h-full rounded bg-primary/60" style={{ width: `${Math.max(3, (r.views / max) * 100)}%` }} />
+          </div>
+          <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums">
+            {r.uniques.toLocaleString()}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

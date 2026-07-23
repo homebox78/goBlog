@@ -14,6 +14,7 @@ let dripJob: Cron | null = null;
 let reportJob: Cron | null = null;
 let welfareJob: Cron | null = null;
 let stockJob: Cron | null = null;
+let geoJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -682,6 +683,20 @@ export async function scheduleFromSettings(): Promise<void> {
       }
     });
     console.log("[scheduler] 종목 시세 갱신 평일 18:30 KST");
+
+    // 방문 IP → 지역 변환 (외부 무료 API). 5분마다 미해석 IP를 소량씩 캐시(ip_geo).
+    geoJob?.stop();
+    geoJob = new Cron("*/5 * * * *", { timezone: "Asia/Seoul", protect: true }, async () => {
+      try {
+        const { ensureStatsSchema, resolvePendingGeo } = await import("../stats/geo.js");
+        await ensureStatsSchema();
+        const r = await resolvePendingGeo(60);
+        if (r.resolved > 0) console.log(`[scheduler] IP 지역 변환: ${r.resolved}건`);
+      } catch (error) {
+        console.error("[scheduler] IP 지역 변환 실패:", (error as Error).message);
+      }
+    });
+    console.log("[scheduler] IP 지역 변환 5분/회");
   } catch (error) {
     console.warn("[scheduler] 예약 실패 (DB 미연결일 수 있음):", (error as Error).message);
   }

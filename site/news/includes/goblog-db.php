@@ -209,6 +209,62 @@ function record_article_view(int $articleId): void
     }
 }
 
+/** 요청 스크립트명 + 쿼리로 페이지 유형·식별키를 판정 → [type, key] */
+function pageview_identify(): array
+{
+    $script = basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php'));
+    switch ($script) {
+        case '':
+        case 'index.php':      return ['home', null];
+        case 'article.php':    return ['article', isset($_GET['id']) ? (string) $_GET['id'] : null];
+        case 'tool.php':       return ['tool', isset($_GET['id']) ? (string) $_GET['id'] : null];
+        case 'tools.php':      return ['tools', null];
+        case 'docs.php':       return isset($_GET['doc']) ? ['doc', (string) $_GET['doc']] : ['docs', null];
+        case 'category.php':   return ['category', isset($_GET['cat']) ? (string) $_GET['cat'] : null];
+        case 'press.php':      return ['press', null];
+        case 'opinion.php':    return ['opinion', null];
+        case 'welfare.php':    return ['welfare', null];
+        case 'jobs.php':       return ['jobs', null];
+        case 'stocks.php':     return ['stocks', null];
+        case 'stock.php':      return ['stock', (string) ($_GET['ticker'] ?? $_GET['code'] ?? '') ?: null];
+        case 'search.php':     return ['search', null];
+        case 'shop.php':       return ['shop', null];
+        case 'subscribe.php':  return ['subscribe', null];
+        case 'about.php':      return ['about', null];
+        case 'contact.php':    return ['contact', null];
+        case 'privacy.php':    return ['privacy', null];
+        default:               return [preg_replace('/\.php$/', '', $script) ?: 'other', null];
+    }
+}
+
+/** 페이지뷰 1건 기록 — 모든 공개 페이지(render_head)에서 호출. 봇·비GET 제외, 실패해도 무영향.
+ *  $type/$key를 주면 그대로, 없으면 스크립트로 자동 판정. $title은 노출 라벨(계산기·문서 이름 등). */
+function record_page_view(?string $type = null, ?string $key = null, ?string $title = null): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') return;
+    $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|monitor|curl|wget|python-requests|headless|lighthouse|Googlebot|AdsBot|PetalBot|YandexBot|Bytespider/i', $ua)) return;
+    if ($type === null) {
+        [$type, $key] = pageview_identify();
+    }
+    try {
+        $st = goblog_db()->prepare(
+            'INSERT INTO page_views (type, pkey, title, ip, userAgent, referer, path) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        );
+        $st->execute([
+            mb_substr($type, 0, 24),
+            $key !== null && $key !== '' ? mb_substr($key, 0, 160) : null,
+            $title !== null && $title !== '' ? mb_substr($title, 0, 200) : null,
+            client_ip() ?: null,
+            mb_substr($ua, 0, 255),
+            mb_substr((string) ($_SERVER['HTTP_REFERER'] ?? ''), 0, 500) ?: null,
+            mb_substr((string) ($_SERVER['REQUEST_URI'] ?? ''), 0, 255),
+        ]);
+    } catch (Throwable) {
+        // 페이지뷰 기록 실패는 조용히 무시
+    }
+}
+
 /**
  * 제휴 상품 전시용 조회 — 쿠팡 파트너스 + 네이버 커넥트 (트래킹 링크 보유분만).
  * ⚠️ 수수료는 트래킹 링크(link.coupang·coupa.ng·naver.me)에서만 발생 → 그것만 노출.

@@ -723,3 +723,40 @@ model ArticleView {
   @@index([viewedAt])
   @@map("article_views")
 }
+
+/// 전체 페이지뷰 로그 — 공개 사이트 render_head가 매 요청 INSERT(원시 SQL).
+/// type=home|article|tool|doc|category|press|opinion|welfare|jobs|stocks|... , pkey=계산기 id·문서 key·카테고리명 등.
+/// 관리자 통계(메뉴별·계산기/문서 인기·지역)가 집계에 사용. 테이블은 raw SQL(ensureStatsSchema)로 생성.
+model PageView {
+  id        BigInt   @id @default(autoincrement())
+  type      String   @db.VarChar(24)
+  pkey      String?  @db.VarChar(160)
+  title     String?  @db.VarChar(200)
+  ip        String?  @db.VarChar(45)
+  userAgent String?  @db.VarChar(255)
+  referer   String?  @db.VarChar(500)
+  path      String?  @db.VarChar(255)
+  viewedAt  DateTime @default(now())
+
+  @@index([type])
+  @@index([type, pkey])
+  @@index([viewedAt])
+  @@index([ip])
+  @@map("page_views")
+}
+
+/// 방문 IP → 지역 캐시. 서버가 외부 무료 API(ipwho.is)로 주기 변환해 채운다.
+model IpGeo {
+  ip          String   @id @db.VarChar(45)
+  country     String?  @db.VarChar(64)
+  countryCode String?  @db.VarChar(4)
+  region      String?  @db.VarChar(96)
+  city        String?  @db.VarChar(96)
+  isp         String?  @db.VarChar(160)
+  status      String?  @db.VarChar(16)
+  resolvedAt  DateTime @default(now())
+
+  @@index([region])
+  @@index([country])
+  @@map("ip_geo")
+}
