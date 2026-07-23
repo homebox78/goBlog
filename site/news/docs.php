@@ -60,7 +60,7 @@ if ($isDetail) {
         'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
     ]);
 } else {
-    render_head('무료 문서 서식 10종 — 각서·차용증·사직서·근로계약서 | HOM2BOX 문서도구', '각서·위임장·차용증·합의서·사직서·경위서·재직증명서·근로계약서·견적서·영수증. 정보만 입력하면 완성된 문서가 바로 만들어집니다. 무료·로그인 없이·PDF 저장.');
+    render_head('무료 문서 서식 ' . count(DOC_DEFS) . '종 — 각서·차용증·근로계약서·NDA·급여명세서 | HOM2BOX 문서도구', '각서·위임장·차용증·합의서·NDA·내용증명·사직서·경위서·연차신청서·재직/경력/퇴직증명서·급여명세서·근로계약서·견적서·거래명세서·영수증. 정보만 입력하면 완성 문서가 바로 만들어지고, 빈 양식은 Word로 바로 다운로드. 무료·로그인 없이.');
     // 허브 = 서식 10종 디렉터리(CollectionPage + ItemList)
     news_breadcrumb_ld([
         ['name' => '홈', 'url' => 'https://hom2box.com/'],
@@ -79,8 +79,8 @@ if ($isDetail) {
     news_jsonld([
         '@context' => 'https://schema.org',
         '@type' => 'CollectionPage',
-        'name' => '무료 문서 서식 10종',
-        'description' => '각서·위임장·차용증·합의서·사직서·경위서·재직증명서·근로계약서·견적서·영수증을 무료로 작성·PDF 저장.',
+        'name' => '무료 문서 서식 ' . count(DOC_DEFS) . '종',
+        'description' => '각서·위임장·차용증·합의서·NDA·내용증명·사직서·연차신청서·재직/경력/퇴직증명서·급여명세서·근로계약서·견적서·거래명세서·영수증을 무료로 작성·다운로드.',
         'url' => 'https://hom2box.com/docs.php',
         'inLanguage' => 'ko',
         'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
