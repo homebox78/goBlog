@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260723a';
+const TW_CSS_VER = '20260723b';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -562,6 +562,22 @@ function render_ad(string $position): void
         }
         echo '<span class="sr-only">광고</span></div>';
     }
+}
+
+/** 광고/노출 슬롯이 켜져 있는지 — 배너가 아닌 '섹션 노출 토글'(예: home-deals)에 사용. 기본 꺼짐. */
+function ad_enabled(string $position): bool
+{
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        try {
+            $rows = goblog_db()->query("SELECT position FROM ad_slots WHERE enabled=1")->fetchAll();
+            foreach ($rows as $r) $cache[$r['position']] = true;
+        } catch (Throwable) {
+            $cache = [];
+        }
+    }
+    return !empty($cache[$position]);
 }
 
 function render_footer(): void

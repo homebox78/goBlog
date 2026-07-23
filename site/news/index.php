@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/goblog-db.php';
 require_once __DIR__ . '/includes/press-rss.php';
 require_once __DIR__ . '/includes/layout.php';
 require_once __DIR__ . '/includes/tools-data.php';
+require_once __DIR__ . '/includes/docs-data.php'; // DOC_DEFS · DOC_CATS (홈 문서 바로가기 셀렉트)
 require_once __DIR__ . '/includes/senuri.php';
 
 $articles = [];
@@ -228,25 +229,76 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
       </div>
     </div>
 
-    <!-- 문서도구·계산기 프로모 카드 (시안) -->
+    <!-- 문서도구·계산기 바로가기 (서식/계산기 선택 → 바로 이동) -->
+    <?php
+      $calcByCat = [];
+      foreach (TOOLS as $tid => $tv) { $calcByCat[$tv['category']][$tid] = $tv; }
+      $calcCatOrder = ['급여·노무', '세금', '금융·부동산', '크리에이터 수익', '생활·건강'];
+    ?>
     <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <a href="/docs.php" class="group flex items-center gap-3.5 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md hover:border-[<?= $P ?>]/40">
-        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-[<?= $P ?>]/10 text-[<?= $P ?>]"><span class="material-symbols-outlined text-[24px]">draft</span></span>
-        <span class="min-w-0 flex-1">
-          <span class="flex items-center gap-1.5 text-[14.5px] font-extrabold group-hover:text-[<?= $P ?>]">문서 도구<span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-bold text-zinc-500">10종</span></span>
-          <span class="mt-0.5 block text-[12px] leading-snug text-zinc-500">각서 위임장 등 10종 서식 바로 작성</span>
-        </span>
-        <span class="material-symbols-outlined flex-none text-[18px] text-zinc-300 group-hover:text-[<?= $P ?>]">chevron_right</span>
-      </a>
-      <a href="/tools.php" class="group flex items-center gap-3.5 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md hover:border-[<?= $P ?>]/40">
-        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-[<?= $P ?>]/10 text-[<?= $P ?>]"><span class="material-symbols-outlined text-[24px]">calculate</span></span>
-        <span class="min-w-0 flex-1">
-          <span class="flex items-center gap-1.5 text-[14.5px] font-extrabold group-hover:text-[<?= $P ?>]">계산기<span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-bold text-zinc-500"><?= count(TOOLS) ?>종</span></span>
-          <span class="mt-0.5 block text-[12px] leading-snug text-zinc-500">연봉 세금 대출 등 <?= count(TOOLS) ?>종 바로 계산</span>
-        </span>
-        <span class="material-symbols-outlined flex-none text-[18px] text-zinc-300 group-hover:text-[<?= $P ?>]">chevron_right</span>
-      </a>
+      <!-- 문서 도구 -->
+      <div class="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div class="flex items-center gap-3">
+          <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-[<?= $P ?>]/10 text-[<?= $P ?>]"><span class="material-symbols-outlined text-[24px]">draft</span></span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 text-[14.5px] font-extrabold">문서 도구<span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-bold text-zinc-500"><?= count(DOC_DEFS) ?>종</span></div>
+            <div class="mt-0.5 text-[12px] leading-snug text-zinc-500">각서·위임장 등 서식 바로 작성</div>
+          </div>
+          <a href="/docs.php" class="flex flex-none items-center gap-0.5 text-[12px] font-medium text-zinc-400 hover:text-[<?= $P ?>]">전체<span class="material-symbols-outlined text-[15px]">chevron_right</span></a>
+        </div>
+        <div class="relative mt-3" data-dd>
+          <button type="button" class="dd-btn flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-zinc-300 bg-white px-3.5 text-[13.5px] font-bold text-zinc-600 outline-none focus:ring-2 focus:ring-[<?= $P ?>]/30">
+            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-[<?= $P ?>]">edit_document</span>서식 선택해서 바로 작성</span>
+            <span class="material-symbols-outlined text-[20px] text-zinc-400">expand_more</span>
+          </button>
+          <div class="dd-menu absolute left-0 right-0 z-30 mt-1 hidden max-h-[320px] overflow-auto rounded-xl border border-zinc-200 bg-white py-1.5 shadow-xl">
+            <?php foreach (DOC_CATS as [$dct, $dkeys]): ?>
+              <div class="px-3.5 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400"><?= nh($dct) ?></div>
+              <?php foreach ($dkeys as $dk): $dv = DOC_DEFS[$dk]; ?>
+                <button type="button" class="dd-opt flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[13.5px] hover:bg-zinc-50" data-url="/docs.php?doc=<?= nh($dk) ?>"><span class="material-symbols-outlined text-[18px] text-[<?= $P ?>]"><?= nh($dv['icon']) ?></span><?= nh($dv['title']) ?></button>
+              <?php endforeach; ?>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+      <!-- 계산기 -->
+      <div class="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div class="flex items-center gap-3">
+          <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-[<?= $P ?>]/10 text-[<?= $P ?>]"><span class="material-symbols-outlined text-[24px]">calculate</span></span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 text-[14.5px] font-extrabold">계산기<span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-bold text-zinc-500"><?= count(TOOLS) ?>종</span></div>
+            <div class="mt-0.5 text-[12px] leading-snug text-zinc-500">연봉·세금·대출 등 바로 계산</div>
+          </div>
+          <a href="/tools.php" class="flex flex-none items-center gap-0.5 text-[12px] font-medium text-zinc-400 hover:text-[<?= $P ?>]">전체<span class="material-symbols-outlined text-[15px]">chevron_right</span></a>
+        </div>
+        <div class="relative mt-3" data-dd>
+          <button type="button" class="dd-btn flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-zinc-300 bg-white px-3.5 text-[13.5px] font-bold text-zinc-600 outline-none focus:ring-2 focus:ring-[<?= $P ?>]/30">
+            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-[<?= $P ?>]">function</span>계산기 선택해서 바로 계산</span>
+            <span class="material-symbols-outlined text-[20px] text-zinc-400">expand_more</span>
+          </button>
+          <div class="dd-menu absolute left-0 right-0 z-30 mt-1 hidden max-h-[320px] overflow-auto rounded-xl border border-zinc-200 bg-white py-1.5 shadow-xl">
+            <?php foreach ($calcCatOrder as $cc): if (empty($calcByCat[$cc])) continue; ?>
+              <div class="px-3.5 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400"><?= nh($cc) ?></div>
+              <?php foreach ($calcByCat[$cc] as $tid => $tv): ?>
+                <button type="button" class="dd-opt flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[13.5px] hover:bg-zinc-50" data-url="/tool.php?id=<?= nh($tid) ?>"><span class="material-symbols-outlined text-[18px] text-[<?= $P ?>]"><?= nh($tv['icon']) ?></span><?= nh($tv['name']) ?></button>
+              <?php endforeach; ?>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
     </div>
+    <script>
+    (function(){
+      function closeAll(except){ document.querySelectorAll('.dd-menu').forEach(function(m){ if(m!==except) m.classList.add('hidden'); }); }
+      document.querySelectorAll('[data-dd]').forEach(function(dd){
+        var btn=dd.querySelector('.dd-btn'), menu=dd.querySelector('.dd-menu');
+        btn.addEventListener('click',function(e){ e.stopPropagation(); var open=menu.classList.contains('hidden'); closeAll(menu); menu.classList.toggle('hidden', !open); });
+        menu.querySelectorAll('.dd-opt').forEach(function(o){ o.addEventListener('click',function(){ location.href=o.getAttribute('data-url'); }); });
+      });
+      document.addEventListener('click',function(){ closeAll(null); });
+      document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeAll(null); });
+    })();
+    </script>
 
     <!-- 계산기 도구 — 그룹별 가로 마퀴 -->
     <?php
@@ -504,8 +556,8 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
 
   </div>
 
-  <?php // ── 제휴 상품 특가 캐러셀 (쿠팡 파트너스 + 네이버 커넥트 섞어서) ── ?>
-  <?php $shopProducts = news_shop_mixed(12); if ($shopProducts): ?>
+  <?php // ── 제휴 상품 특가 캐러셀 — 관리자 '광고 관리'에서 '홈 특가 상품'(home-deals)을 켜야 노출(기본 숨김) ── ?>
+  <?php $shopProducts = ad_enabled('home-deals') ? news_shop_mixed(12) : []; if ($shopProducts): ?>
   <section class="border-t border-zinc-100">
     <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-9">
       <div class="mb-4 flex items-end justify-between gap-3">

@@ -14,6 +14,7 @@ interface AdSlot {
   position: string;
   label: string;
   size: string;
+  toggleOnly?: boolean;
   enabled: boolean;
   type: "ADSENSE" | "IMAGE";
   adsenseCode: string;
@@ -137,6 +138,31 @@ function SlotCard({ slot }: { slot: AdSlot }) {
       setUploading(false);
     }
   };
+
+  // 노출 여부만 제어하는 슬롯(예: 홈 특가 상품 섹션) — 배너 필드 없이 토글 + 저장만
+  if (slot.toggleOnly) {
+    return (
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+          <div>
+            <div className="font-semibold">{form.label}</div>
+            <div className="text-xs text-muted-foreground">
+              {form.size} · <code className="text-[11px]">{form.position}</code>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={form.enabled} onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))} />
+              {form.enabled ? "노출" : "숨김"}
+            </label>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              {save.isPending && <Loader2 className="size-4 animate-spin" />}저장
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
