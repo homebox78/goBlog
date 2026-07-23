@@ -294,6 +294,9 @@ export async function generateArticle(
   // 트렌드 맥락 — 지금 뜨는 소재인지, 며칠째 지속되는 수요인지. 글의 시의성 표현이 달라져야 한다.
   const { trendSignalFor } = await import("../keywords/trend-signal.js");
   const trend = await trendSignalFor(topic).catch(() => null);
+  // 우리 사이트 독자 관심사 — 통계(page_views)·유입 검색어에서 '지금 독자가 실제로 보는·찾는 것'.
+  const { siteAudienceBrief } = await import("../stats/audience-brief.js");
+  const audience = await siteAudienceBrief().catch(() => null);
   // 수요층 — 이 키워드를 실제로 검색하는 연령·성별(네이버 쇼핑인사이트 실측). 쇼핑성 키워드만 값이 있다.
   const { fetchDemographics, demographicsPrompt } = await import("../keywords/demographics.js");
   const demographics = keyword
@@ -551,6 +554,16 @@ export async function generateArticle(
             "- 후보에 없는 id를 지어내지 않는다.",
           ].join("\n")
         : "",
+      audience
+        ? [
+            "",
+            "[👥 우리 사이트 독자 관심사 — userPayload.siteAudience 참고]",
+            "- 이 사이트 방문자가 실제로 많이 보는 계산기·문서, 최근 인기 기사, 유입 검색어다(방문 통계·Search Console 실측). '지금 독자가 뭘 궁금해하는지'의 신호다.",
+            "- FAQ 질문과 소제목을 정할 때, 이 글 주제와 관련된 '유입검색어'가 있으면 그 표현·의도를 반영한다(사람들이 실제로 검색하는 말투로).",
+            "- 이 글 주제와 자연스럽게 이어지는 인기 계산기·문서가 있으면 본문에서 한 번 언급·추천할 수 있다(예: '연봉 실수령액은 계산기로 바로 확인'). 단 억지로 넣지 말고 주제를 벗어나지 않는다.",
+            "- 어디까지나 참고 신호다 — 이 글의 핵심 주제(topic)를 대체하거나 흐리지 않는다.",
+          ].join("\n")
+        : "",
       "",
       "본문 목표 분량을 충분히 채우되 물타기 없이 밀도 있게 쓴다. 반드시 JSON만 출력한다.",
     ]
@@ -593,6 +606,15 @@ export async function generateArticle(
       // 트렌드 신호 — 시계열에서 실측한 이 키워드의 상승/지속 상태
       trendContext: trend
         ? { summary: trend.summary, daysSeen: trend.daysSeen, rankDelta: trend.rankDelta }
+        : null,
+      // 우리 사이트 독자 관심사 — 통계·유입 검색어 실측(참고용). 주제를 벗어나지 않는 선에서 활용.
+      siteAudience: audience
+        ? {
+            자주쓰는계산기: audience.popularTools,
+            자주찾는문서: audience.popularDocs,
+            최근인기기사: audience.popularArticles,
+            유입검색어: audience.searchQueries,
+          }
         : null,
       // 자가학습 — 내 글의 실제 성과에서 뽑은 규칙 (표본이 모이면 자동으로 채워진다)
       selfLearning: selfLearning
