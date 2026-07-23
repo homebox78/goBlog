@@ -684,6 +684,15 @@ export async function scheduleFromSettings(): Promise<void> {
     });
     console.log("[scheduler] 종목 시세 갱신 평일 18:30 KST");
 
+    // 통계 테이블(page_views/ip_geo)을 부팅 시 즉시 보장 — PHP가 배포 직후 바로 기록할 수 있게.
+    try {
+      const { ensureStatsSchema } = await import("../stats/geo.js");
+      await ensureStatsSchema();
+      console.log("[scheduler] 통계 스키마(page_views·ip_geo) 확인");
+    } catch (error) {
+      console.error("[scheduler] 통계 스키마 생성 실패:", (error as Error).message);
+    }
+
     // 방문 IP → 지역 변환 (외부 무료 API). 5분마다 미해석 IP를 소량씩 캐시(ip_geo).
     geoJob?.stop();
     geoJob = new Cron("*/5 * * * *", { timezone: "Asia/Seoul", protect: true }, async () => {
