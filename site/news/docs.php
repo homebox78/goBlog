@@ -6,21 +6,29 @@ require_once __DIR__ . '/includes/goblog-db.php';
 require_once __DIR__ . '/includes/layout.php';
 
 const DOC_DEFS = [
-    'pledge'  => ['icon' => 'history_edu',     'title' => '각서',            'desc' => '이행할 사항과 당사자 정보를 입력하면 완성된 각서가 즉시 만들어집니다.'],
-    'poa'     => ['icon' => 'assignment_ind',  'title' => '위임장',          'desc' => '위임인·수임인 정보와 위임 내용을 입력해 위임장을 작성합니다.'],
-    'loan'    => ['icon' => 'request_quote',   'title' => '차용증',          'desc' => '차용 금액·이자·변제 조건을 담은 차용증을 작성합니다.'],
-    'settle'  => ['icon' => 'handshake',       'title' => '합의서',          'desc' => '당사자 간 합의 내용과 합의금을 정리한 합의서를 작성합니다.'],
-    'resign'  => ['icon' => 'logout',          'title' => '사직서',          'desc' => '소속·사유·퇴사 희망일을 담은 사직서를 작성합니다.'],
-    'incident'=> ['icon' => 'report',          'title' => '경위서',          'desc' => '사건 발생 경위와 재발 방지 대책을 정리한 경위서를 작성합니다.'],
-    'empcert' => ['icon' => 'badge',           'title' => '재직증명서',      'desc' => '직원의 재직 사실을 증명하는 재직증명서를 작성합니다.'],
-    'labor'   => ['icon' => 'contract',        'title' => '표준 근로계약서',  'desc' => '근무 조건과 임금을 담은 간이 근로계약서를 작성합니다.'],
-    'quote'   => ['icon' => 'receipt_long',    'title' => '견적서',          'desc' => '공급자·수신처·견적 내역을 담은 견적서를 작성합니다.'],
-    'receipt' => ['icon' => 'paid',            'title' => '영수증',          'desc' => '받은 금액과 항목을 기재한 영수증을 작성합니다.'],
+    'pledge'     => ['icon' => 'history_edu',        'title' => '각서',                'desc' => '이행할 사항과 당사자 정보를 입력하면 완성된 각서가 즉시 만들어집니다.'],
+    'poa'        => ['icon' => 'assignment_ind',     'title' => '위임장',              'desc' => '위임인·수임인 정보와 위임 내용을 입력해 위임장을 작성합니다.'],
+    'loan'       => ['icon' => 'request_quote',      'title' => '차용증',              'desc' => '차용 금액·이자·변제 조건을 담은 차용증을 작성합니다.'],
+    'settle'     => ['icon' => 'handshake',          'title' => '합의서',              'desc' => '당사자 간 합의 내용과 합의금을 정리한 합의서를 작성합니다.'],
+    'nda'        => ['icon' => 'lock',               'title' => '비밀유지계약서(NDA)',  'desc' => '협업·투자 전 정보 유출을 막는 비밀유지계약서(NDA)를 작성합니다.'],
+    'certmail'   => ['icon' => 'mail',               'title' => '내용증명',            'desc' => '대금 청구·계약 해지 등 통지 사실을 남기는 내용증명을 작성합니다.'],
+    'resign'     => ['icon' => 'logout',             'title' => '사직서',              'desc' => '소속·사유·퇴사 희망일을 담은 사직서를 작성합니다.'],
+    'incident'   => ['icon' => 'report',             'title' => '경위서',              'desc' => '사건 발생 경위와 재발 방지 대책을 정리한 경위서를 작성합니다.'],
+    'leaveapp'   => ['icon' => 'event_available',    'title' => '연차신청서',          'desc' => '휴가 종류·기간·사유를 담은 연차(휴가) 신청서를 작성합니다.'],
+    'empcert'    => ['icon' => 'badge',              'title' => '재직증명서',          'desc' => '직원의 재직 사실을 증명하는 재직증명서를 작성합니다.'],
+    'career'     => ['icon' => 'workspace_premium',  'title' => '경력증명서',          'desc' => '재직 기간·담당 업무를 담은 경력증명서를 작성합니다.'],
+    'retirecert' => ['icon' => 'assignment_turned_in','title' => '퇴직증명서',         'desc' => '입·퇴사일과 퇴사 사유를 담은 퇴직증명서를 작성합니다.'],
+    'payslip'    => ['icon' => 'payments',           'title' => '급여명세서',          'desc' => '지급·공제 내역과 실지급액을 정리한 급여명세서를 작성합니다.'],
+    'labor'      => ['icon' => 'contract',           'title' => '표준 근로계약서',      'desc' => '근무 조건과 임금을 담은 간이 근로계약서를 작성합니다.'],
+    'parttime'   => ['icon' => 'schedule',           'title' => '알바·단기 근로계약서',  'desc' => '시급·근무일·근무시간을 담은 단시간 근로계약서를 작성합니다.'],
+    'quote'      => ['icon' => 'receipt_long',       'title' => '견적서',              'desc' => '공급자·수신처·견적 내역을 담은 견적서를 작성합니다.'],
+    'transdetail'=> ['icon' => 'list_alt',           'title' => '거래명세서',          'desc' => '거래 내역과 공급가액·부가세를 정리한 거래명세서를 작성합니다.'],
+    'receipt'    => ['icon' => 'paid',               'title' => '영수증',              'desc' => '받은 금액과 항목을 기재한 영수증을 작성합니다.'],
 ];
 const DOC_CATS = [
-    ['법률·계약', ['pledge', 'poa', 'loan', 'settle']],
-    ['직장·인사', ['resign', 'incident', 'empcert', 'labor']],
-    ['거래·회계', ['quote', 'receipt']],
+    ['법률·계약', ['pledge', 'poa', 'loan', 'settle', 'nda', 'certmail']],
+    ['직장·인사', ['resign', 'incident', 'leaveapp', 'empcert', 'career', 'retirecert', 'payslip', 'labor', 'parttime']],
+    ['거래·회계', ['quote', 'transdetail', 'receipt']],
 ];
 
 $doc = (string) ($_GET['doc'] ?? '');
@@ -89,6 +97,31 @@ render_nav('문서도구', [], true);
 <?php if (!$isDetail): ?>
   <?php render_util_hero('DOCUMENTS', '문서 도구 허브', '각서·위임장·차용증부터 사직서·견적서까지 자주 쓰는 서식 ' . count(DOC_DEFS) . '종. 정보만 입력하면 완성된 문서가 바로 만들어집니다.', ['각서', '차용증', '사직서', '근로계약서', '견적서'], '/assets/hero/docs.jpg'); ?>
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6 py-9">
+    <!-- 양식 바로 다운로드 -->
+    <div class="mb-8 rounded-2xl border border-[<?= $P ?>]/20 bg-[<?= $P ?>]/[0.04] p-5 sm:p-6">
+      <div class="flex items-center gap-2 text-[16px] sm:text-[18px] font-extrabold"><span class="material-symbols-outlined text-[22px] text-[<?= $P ?>]">download</span>양식 바로 다운로드</div>
+      <p class="mt-1.5 text-[12.5px] sm:text-[13px] leading-relaxed text-zinc-500">필요한 서식을 선택하고 바로 내려받아 빈 양식에 채워 쓰세요. 내려받은 파일은 <b>Word·한글(HWP)</b>에서 열립니다.</p>
+      <div class="mt-4 flex flex-col gap-2.5 sm:flex-row">
+        <div id="dlsel" class="relative flex-1" data-val="pledge">
+          <button type="button" id="dlbtn" class="flex h-12 w-full items-center justify-between gap-2 rounded-lg border border-zinc-300 bg-white px-4 text-[14px] font-bold text-zinc-700 outline-none focus:ring-2 focus:ring-[<?= $P ?>]/30">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[19px] text-[<?= $P ?>]" id="dlicon">history_edu</span><span id="dllabel">각서</span></span>
+            <span class="material-symbols-outlined text-[20px] text-zinc-400">expand_more</span>
+          </button>
+          <div id="dlmenu" class="absolute left-0 right-0 z-30 mt-1 hidden max-h-[340px] overflow-auto rounded-xl border border-zinc-200 bg-white py-1.5 shadow-xl">
+            <?php foreach (DOC_CATS as [$catTitle, $keys]): ?>
+              <div class="px-3.5 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-zinc-400"><?= nh($catTitle) ?></div>
+              <?php foreach ($keys as $k): $c = DOC_DEFS[$k]; ?>
+                <button type="button" class="dlopt flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] hover:bg-zinc-50" data-k="<?= nh($k) ?>" data-icon="<?= nh($c['icon']) ?>" data-title="<?= nh($c['title']) ?>">
+                  <span class="material-symbols-outlined text-[19px] text-[<?= $P ?>]"><?= nh($c['icon']) ?></span><?= nh($c['title']) ?>
+                </button>
+              <?php endforeach; ?>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <button type="button" id="dldo" class="flex h-12 flex-none items-center justify-center gap-1.5 rounded-lg bg-[<?= $P ?>] px-6 text-[14px] font-bold text-white transition-colors hover:bg-[#0f3d82]"><span class="material-symbols-outlined text-[18px]">download</span>다운로드</button>
+      </div>
+    </div>
+
     <?php foreach (DOC_CATS as [$catTitle, $keys]): ?>
       <div class="mb-4 mt-10 first:mt-0 flex items-center gap-2.5 border-b border-zinc-200 pb-2.5">
         <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
@@ -113,6 +146,28 @@ render_nav('문서도구', [], true);
     </div>
     <?php render_ad("home-infeed"); ?>
   </div>
+  <script src="/assets/js/docs-engine.js?v=<?= TW_CSS_VER ?>"></script>
+  <script>
+  (function(){
+    var sel=document.getElementById('dlsel'),btn=document.getElementById('dlbtn'),menu=document.getElementById('dlmenu');
+    var label=document.getElementById('dllabel'),icon=document.getElementById('dlicon');
+    function close(){menu.classList.add('hidden');}
+    btn.addEventListener('click',function(e){e.stopPropagation();menu.classList.toggle('hidden');});
+    document.addEventListener('click',function(e){if(!sel.contains(e.target))close();});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+    Array.prototype.forEach.call(menu.querySelectorAll('.dlopt'),function(o){
+      o.addEventListener('click',function(){
+        sel.setAttribute('data-val',o.getAttribute('data-k'));
+        label.textContent=o.getAttribute('data-title');
+        icon.textContent=o.getAttribute('data-icon');
+        close();
+      });
+    });
+    document.getElementById('dldo').addEventListener('click',function(){
+      if(window.H2BDocs) H2BDocs.download(sel.getAttribute('data-val'));
+    });
+  })();
+  </script>
 <?php else: ?>
   <!-- 상세 -->
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6 pt-6">
@@ -183,6 +238,7 @@ render_nav('문서도구', [], true);
     </aside>
   </div>
 
+  <script src="/assets/js/docs-engine.js?v=<?= TW_CSS_VER ?>"></script>
   <script>
   // 인쇄 · PDF — 미리보기 시트만 독립 A4 문서로 열어 인쇄(빈 페이지·여백 문제 방지)
   function docPrint(){
@@ -271,6 +327,8 @@ render_nav('문서도구', [], true);
       }
       return {fields:fields,doc:doc,faqs:faqs};
     }
+    // 신규 서식 포함 — 공용 엔진(docs-engine.js)을 단일 진리원으로 사용(위 build 정의는 미사용)
+    build = function(){ return H2BDocs.build(view, vals); };
 
     function renderForm(fields){
       var el=document.getElementById('docform');
@@ -283,14 +341,7 @@ render_nav('문서도구', [], true);
       }).join('');
     }
     function renderDoc(doc){
-      var el=document.getElementById('docsheet');
-      el.innerHTML=doc.map(function(b){
-        if(b.t==='title') return '<div class="mb-8 text-center text-[24px] font-extrabold tracking-[0.35em] text-zinc-900">'+esc(b.text)+'</div>';
-        if(b.t==='kv') return '<div class="flex items-start gap-3 py-[5px] text-[13.5px] leading-relaxed"><span class="w-24 flex-none font-bold text-zinc-500">'+esc(b.k)+'</span><span class="min-w-0 flex-1 whitespace-pre-wrap border-b border-zinc-200 pb-1 text-zinc-900">'+esc(b.v)+'</span></div>';
-        if(b.t==='para') return '<div class="'+b.cls+'" style="white-space:pre-wrap">'+esc(b.text)+'</div>';
-        if(b.t==='sp') return '<div class="h-4"></div>';
-        return '';
-      }).join('');
+      document.getElementById('docsheet').innerHTML = H2BDocs.sheetHtml(doc, 'screen');
     }
     var faqOpen=0;
     function renderFaq(faqs){
