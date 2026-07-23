@@ -17,17 +17,31 @@ try {
     )->fetchAll();
 } catch (Throwable) { $rows = []; }
 
+// 실시간 시세(네이버 realtime — 마켓 스트립과 동일 소스). 있으면 종가 대신 현재가로 표시.
+$rt = [];
+try { $rt = stock_realtime(array_map(fn($r) => $r['ticker'], $rows)); } catch (Throwable) {}
+$isLive = !empty($rt);
+
 // 파생 지표 계산
 $items = [];
 foreach ($rows as $r) {
-    $close = (int) ($r['close'] ?? 0);
-    if ($close <= 0) continue;
-    $prev = (int) ($r['prevClose'] ?? $close);
-    $diff = $close - $prev;
-    $rate = $prev > 0 ? ($diff / $prev) * 100 : 0;
+    $tk = (string) $r['ticker'];
+    $dbClose = (int) ($r['close'] ?? 0);
+    $prev = (int) ($r['prevClose'] ?? $dbClose);
     $vol = (int) ($r['volume'] ?? 0);
+    if (isset($rt[$tk])) {
+        // 실시간: 현재가·등락률·전일대비를 실측값으로
+        $close = (int) round($rt[$tk]['close']);
+        $rate = $rt[$tk]['ratio'] ?? ($prev > 0 ? (($close - $prev) / $prev) * 100 : 0);
+        $diff = $rt[$tk]['diff'] !== null ? (int) round($rt[$tk]['diff']) : ($close - $prev);
+    } else {
+        $close = $dbClose;
+        $diff = $close - $prev;
+        $rate = $prev > 0 ? ($diff / $prev) * 100 : 0;
+    }
+    if ($close <= 0) continue;
     $items[] = [
-        'ticker' => $r['ticker'], 'name' => $r['name'], 'market' => $r['market'],
+        'ticker' => $tk, 'name' => $r['name'], 'market' => $r['market'],
         'close' => $close, 'diff' => $diff, 'rate' => $rate, 'vol' => $vol, 'value' => $close * $vol,
     ];
 }
@@ -52,7 +66,7 @@ $UP = '#d60000'; $DOWN = '#1263e0';
 function sgn(float $r): string { return $r > 0 ? '#d60000' : ($r < 0 ? '#1263e0' : '#666'); }
 function arr(float $r): string { return $r > 0 ? '▲' : ($r < 0 ? '▼' : '−'); }
 
-render_head('종목 시세·랭킹 — HOM2BOX 주식', '급등·급락·거래대금 상위 종목과 AI 분석. 무료·지연 종가.');
+render_head('종목 시세·랭킹 — HOM2BOX 주식', '실시간 시세와 급등·급락·거래대금 상위 종목, 종목별 AI 분석·토론.');
 render_ticker($ticker);
 render_topbar();
 render_masthead();
@@ -80,7 +94,7 @@ function rank_card(string $title, string $emoji, array $list, array $discuss): s
     <div class="flex items-end justify-between border-b-2 border-zinc-900 pb-3">
       <div>
         <h1 class="text-[24px] font-extrabold tracking-tight">종목 시세 · 랭킹</h1>
-        <p class="mt-1 text-[13px] text-zinc-500">무료·지연 종가 기준 · AI가 매일 종목을 분석합니다</p>
+        <p class="mt-1 text-[13px] text-zinc-500"><?= $isLive ? '실시간 시세(네이버)' : '무료·지연 종가' ?> 기준 · AI가 매일 종목을 분석합니다</p>
       </div>
     </div>
 
@@ -120,7 +134,7 @@ function rank_card(string $title, string $emoji, array $list, array $discuss): s
       </div>
 
       <div class="mt-6 rounded-md border border-zinc-200 bg-white p-3 text-[11.5px] leading-relaxed text-zinc-400">
-        ⚠️ 시세는 <b>지연 종가</b>이며 정보 제공 목적입니다. 특정 종목의 매수·매도를 권유하지 않으며, <b>투자 판단과 책임은 이용자 본인</b>에게 있습니다.
+        ⚠️ 시세는 <?= $isLive ? '네이버 <b>실시간(장중 현재가·장마감 후 종가)</b>' : '<b>지연 종가</b>' ?> 기준 정보 제공 목적입니다. 특정 종목의 매수·매도를 권유하지 않으며, <b>투자 판단과 책임은 이용자 본인</b>에게 있습니다.
       </div>
     <?php endif; ?>
   </div>

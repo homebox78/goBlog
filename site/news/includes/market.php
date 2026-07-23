@@ -21,6 +21,37 @@ function mkt_fetch(string $url, int $timeout = 4): ?array
     return is_array($j) ? $j : null;
 }
 
+/**
+ * 종목 실시간 시세 — 네이버 realtime 폴링(마켓 스트립과 동일 소스). 60초 캐시.
+ * @return array ticker => ['close'=>float, 'ratio'=>float|null, 'diff'=>float|null]  (장중 현재가·장마감 후 종가)
+ */
+function stock_realtime(array $tickers): array
+{
+    $tickers = array_values(array_unique(array_filter(array_map('strval', $tickers))));
+    if (!$tickers) return [];
+    sort($tickers);
+    $cacheFile = sys_get_temp_dir() . '/goblog_rt_' . md5(implode(',', $tickers)) . '.json';
+    if (is_file($cacheFile) && time() - filemtime($cacheFile) < 60) {
+        $c = json_decode((string) file_get_contents($cacheFile), true);
+        if (is_array($c)) return $c;
+    }
+    $out = [];
+    foreach (array_chunk($tickers, 30) as $chunk) {
+        $j = mkt_fetch('https://polling.finance.naver.com/api/realtime/domestic/stock/' . implode(',', $chunk));
+        foreach (($j['datas'] ?? []) as $d) {
+            $code = (string) ($d['itemCode'] ?? '');
+            if ($code === '' || empty($d['closePrice'])) continue;
+            $out[$code] = [
+                'close' => (float) str_replace(',', '', (string) $d['closePrice']),
+                'ratio' => isset($d['fluctuationsRatio']) ? (float) $d['fluctuationsRatio'] : null,
+                'diff'  => isset($d['compareToPreviousClosePrice']) ? (float) str_replace(',', '', (string) $d['compareToPreviousClosePrice']) : null,
+            ];
+        }
+    }
+    if ($out) @file_put_contents($cacheFile, json_encode($out), LOCK_EX);
+    return $out;
+}
+
 /** 시세 목록 — [['label','value','ratio'(float|null),'up'(bool|null)], ...] */
 function market_quotes(): array
 {

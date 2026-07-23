@@ -77,6 +77,19 @@ $close = $last ? (int) $last['close'] : 0;
 $prevClose = $prev ? (int) $prev['close'] : $close;
 $diff = $close - $prevClose;
 $rate = $prevClose > 0 ? ($diff / $prevClose) * 100 : 0;
+// 실시간 시세(네이버 realtime — 마켓 스트립과 동일). 있으면 현재가로 표시.
+$isLive = false;
+if ($code !== '') {
+    try {
+        $rt = stock_realtime([$code]);
+        if (isset($rt[$code])) {
+            $isLive = true;
+            $close = (int) round($rt[$code]['close']);
+            $rate = $rt[$code]['ratio'] ?? ($prevClose > 0 ? (($close - $prevClose) / $prevClose) * 100 : 0);
+            $diff = $rt[$code]['diff'] !== null ? (int) round($rt[$code]['diff']) : ($close - $prevClose);
+        }
+    } catch (Throwable) {}
+}
 // 한국식: 상승=빨강, 하락=파랑
 $upColor = '#d60000';
 $downColor = '#1263e0';
@@ -84,7 +97,7 @@ $sign = $diff > 0 ? $upColor : ($diff < 0 ? $downColor : '#666');
 $arrow = $diff > 0 ? '▲' : ($diff < 0 ? '▼' : '−');
 
 $title = $stock ? ($stock['name'] . ' (' . $code . ') 주가·분석 — HOM2BOX') : '종목을 찾을 수 없습니다 — HOM2BOX';
-render_head($title, $stock ? ($stock['name'] . ' 주가(지연 종가)와 AI 분석·토론.') : '');
+render_head($title, $stock ? ($stock['name'] . ' 실시간 주가와 종목 AI 분석·토론.') : '');
 render_ticker($ticker);
 render_topbar();
 render_masthead();
@@ -130,7 +143,7 @@ if (count($prices) >= 2) {
           <span class="text-[30px] font-extrabold" style="color:<?= $sign ?>"><?= number_format($close) ?></span>
           <span class="text-[16px] font-bold" style="color:<?= $sign ?>"><?= $arrow ?> <?= number_format(abs($diff)) ?> (<?= number_format($rate, 2) ?>%)</span>
         </div>
-        <div class="mt-1 text-[12px] text-zinc-400"><?= $last ? nh($last['date']) . ' 종가 기준 (지연 시세)' : '시세 준비 중' ?></div>
+        <div class="mt-1 text-[12px] text-zinc-400"><?= $isLive ? '네이버 실시간 (장중 현재가·장마감 후 종가)' : ($last ? nh($last['date']) . ' 종가 기준 (지연 시세)' : '시세 준비 중') ?></div>
       </div>
       <a href="/" class="text-[13px] font-bold text-zinc-400 hover:text-[#134a9c]">← 홈</a>
     </div>
@@ -268,7 +281,7 @@ if (count($prices) >= 2) {
 
     <!-- 면책 고지 (필수) -->
     <div class="mt-6 rounded-md border border-zinc-200 bg-white p-3 text-[11.5px] leading-relaxed text-zinc-400">
-      ⚠️ 본 페이지의 시세는 <b>지연 종가</b>이며, 분석·정보는 참고용입니다. 특정 종목의 매수·매도를 권유하지 않으며, <b>투자 판단과 책임은 이용자 본인</b>에게 있습니다. HOM2BOX는 투자 결과에 대해 책임지지 않습니다.
+      ⚠️ 본 페이지의 시세는 <?= $isLive ? '네이버 <b>실시간</b>(장중 현재가·장마감 후 종가)' : '<b>지연 종가</b>' ?>이며, 분석·정보는 참고용입니다. 특정 종목의 매수·매도를 권유하지 않으며, <b>투자 판단과 책임은 이용자 본인</b>에게 있습니다. HOM2BOX는 투자 결과에 대해 책임지지 않습니다.
     </div>
   <?php endif; ?>
   </div>
