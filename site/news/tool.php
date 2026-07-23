@@ -16,6 +16,10 @@ const CALC_ID_MAP = [
     'naverblog' => 'blog', 'coupang' => 'coupang', 'exchange' => 'fx', 'incometax' => 'tax',
     'yearend' => 'yearend', 'minwage' => 'minwage', 'wageconv' => 'wageconv', 'rentyield' => 'rentyield',
     'gifttax' => 'gifttax', 'corptax' => 'corptax', 'area' => 'area', 'bmi' => 'bmi',
+    // 부동산·자동차
+    'brokerage' => 'brokerage', 'autotax' => 'autotax', 'inherit' => 'inherit', 'comprop' => 'comprop',
+    // 창업·사업
+    'breakeven' => 'breakeven', 'smartstore' => 'smartstore', 'corpvsindiv' => 'corpvsindiv', 'marketingroi' => 'marketingroi',
 ];
 
 $id = (string) ($_GET['id'] ?? '');
@@ -524,6 +528,144 @@ function calc_content(): array
                 ['q' => "틱톡도 조회수로 돈을 버나요?", 'a' => "크리에이티비티 프로그램(1분+ 영상)으로 조회 기반 수익이 있지만, 유튜브보다 단가가 낮아 협찬·라이브·커머스 비중이 큽니다."],
                 ['q' => "협찬 단가는 어떻게 정해지나요?", 'a' => "팔로워 수와 참여율(완주율·공유)이 핵심이며, 카테고리·독점 조건에 따라 달라집니다."],
                 ['q' => "크리에이티비티 프로그램 조건은?", 'a' => "팔로워 1만 이상, 최근 30일 10만 조회 등 요건을 충족하고 1분 이상 영상이어야 합니다."],
+            ],
+            'articles' => [],
+        ],
+        'brokerage' => [
+            'basis' => [
+                "매매·교환: 5천만원 미만 0.6%(한도 25만원), 5천만~2억 0.5%(한도 80만원), 2억~9억 0.4%, 9억~12억 0.5%, 12억~15억 0.6%, 15억 이상 0.7%.",
+                "임대차: 5천만원 미만 0.5%(한도 20만원), 5천만~1억 0.4%(한도 30만원), 1억~6억 0.3%, 6억~12억 0.4%, 12억~15억 0.5%, 15억 이상 0.6%.",
+                "월세는 환산보증금(보증금 + 월세×100, 5천만원 미만이면 ×70)을 기준으로 요율을 적용합니다.",
+                "표시 금액은 법정 상한이며, 실제 보수는 상한 이내에서 공인중개사와 협의로 정합니다.",
+            ],
+            'disclaimer' => "지자체 조례로 요율이 다를 수 있고, 중개사가 부가세 과세사업자면 VAT가 별도 부과됩니다. 정확한 금액은 중개사무소에 확인하세요.",
+            'tips' => [
+                "요율은 '상한'이므로 협의로 낮출 수 있습니다. 계약 전 보수를 미리 합의하세요.",
+                "6억·9억·12억 등 구간 경계에서는 금액이 조금만 넘어도 요율이 올라가니 확인이 필요합니다.",
+                "중개보수도 양도세 계산 시 필요경비(취득·양도비용)로 인정될 수 있습니다.",
+            ],
+            'faqs' => [
+                ['q' => "월세 중개보수는 어떻게 계산하나요?", 'a' => "보증금 + (월세×100)으로 환산보증금을 구해 요율을 적용합니다. 환산액이 5천만원 미만이면 월세에 100 대신 70을 곱합니다."],
+                ['q' => "부가세는 항상 붙나요?", 'a' => "중개사가 일반과세자면 보수의 10%가 VAT로 별도 부과되고, 간이과세자·면세는 다를 수 있습니다."],
+            ],
+            'articles' => [],
+        ],
+        'autotax' => [
+            'basis' => [
+                "비영업용 승용차 기준 cc당 세액: 1,000cc 이하 80원, 1,600cc 이하 140원, 1,600cc 초과 200원.",
+                "자동차세 = 배기량(cc) × cc당 세액, 여기에 지방교육세 30%가 더해집니다.",
+                "차령(등록 후 경과 연수) 3년차부터 매년 5%씩 경감되며 최대 50%(12년 이상)까지 낮아집니다.",
+            ],
+            'disclaimer' => "영업용·화물·전기차 등은 과세 방식이 다릅니다. 연납 신청 시 세액 공제가 있으며, 정확한 금액은 위택스·자동차세 고지서를 확인하세요.",
+            'tips' => [
+                "1월에 연납(일시납)하면 세액의 일부를 공제받을 수 있습니다.",
+                "전기차·수소차는 배기량이 없어 정액(비영업용 승용 기준 연 10만원 수준)으로 과세됩니다.",
+            ],
+            'faqs' => [
+                ['q' => "왜 오래된 차일수록 세금이 줄어드나요?", 'a' => "차량 가치 하락을 반영해 3년차부터 매년 5%씩 최대 50%까지 자동차세를 경감해 주기 때문입니다."],
+                ['q' => "지방교육세는 무엇인가요?", 'a' => "자동차세에 부가되는 세금으로 자동차세액의 30%가 함께 부과됩니다."],
+            ],
+            'articles' => [],
+        ],
+        'inherit' => [
+            'basis' => [
+                "상속세 = 과세표준 × 세율 − 누진공제. 과세표준 = 상속재산 − 상속공제.",
+                "세율: 1억 이하 10%, 5억 이하 20%(누진 1천만), 10억 이하 30%(6천만), 30억 이하 40%(1.6억), 30억 초과 50%(4.6억).",
+                "상속공제 기본값은 일괄공제 5억원입니다. 배우자상속공제(최소 5억)·금융재산공제 등은 별도 반영이 필요합니다.",
+            ],
+            'disclaimer' => "실제 상속세는 사전증여 합산, 배우자·동거주택 공제, 가업상속공제 등에 따라 크게 달라집니다. 세무 전문가 상담을 권장합니다.",
+            'tips' => [
+                "배우자가 있으면 배우자상속공제로 과세표준이 크게 줄어드는 경우가 많습니다.",
+                "10년 내 사전증여 재산은 상속재산에 합산되니 증여 시점 관리가 중요합니다.",
+            ],
+            'faqs' => [
+                ['q' => "일괄공제 5억이 뭔가요?", 'a' => "기초공제와 인적공제 합계 대신 5억원을 공제받는 방식으로, 대부분의 상속에서 더 유리해 기본값으로 두었습니다."],
+                ['q' => "증여세와 세율이 같나요?", 'a' => "누진세율(10~50%)은 같지만 공제 항목과 과세 방식이 달라 실제 세액은 다릅니다."],
+            ],
+            'articles' => [],
+        ],
+        'comprop' => [
+            'basis' => [
+                "과세표준 = (주택 공시가격 합계 − 기본공제) × 공정시장가액비율(60%).",
+                "기본공제: 1세대 1주택 12억원, 그 외 9억원.",
+                "1주택 일반세율(개략): 3억 이하 0.5% ~ 94억 초과 2.7%의 누진세율에 누진공제를 적용합니다.",
+            ],
+            'disclaimer' => "세부담 상한, 1세대 1주택자 연령·보유기간 세액공제, 다주택 중과세율 등은 반영하지 않은 개략치입니다. 정확한 금액은 국세청·홈택스를 확인하세요.",
+            'tips' => [
+                "종부세는 인별 과세라 부부 공동명의로 나누면 기본공제를 각각 받아 유리할 수 있습니다.",
+                "1세대 1주택 고령자·장기보유 세액공제는 최대 80%까지 종부세를 줄여줍니다.",
+            ],
+            'faqs' => [
+                ['q' => "공시가격은 어디서 확인하나요?", 'a' => "'부동산공시가격 알리미'에서 개별주택·공동주택 공시가격을 조회할 수 있습니다."],
+                ['q' => "재산세와 다른가요?", 'a' => "재산세는 모든 부동산에 지자체가 부과하고, 종부세는 일정 공시가격을 초과하는 주택·토지에 국세로 추가 부과됩니다."],
+            ],
+            'articles' => [],
+        ],
+        'breakeven' => [
+            'basis' => [
+                "손익분기 판매량 = 고정비 ÷ 개당 공헌이익.",
+                "공헌이익 = 판매단가 − 개당 변동비. 공헌이익률 = 공헌이익 ÷ 판매단가.",
+                "손익분기 매출액 = 손익분기 판매량 × 판매단가.",
+            ],
+            'disclaimer' => "고정비·변동비 구분과 판매단가가 실제와 다르면 결과가 달라집니다. 세금·재고 손실 등은 포함하지 않은 단순 모델입니다.",
+            'tips' => [
+                "임대료·인건비 등 매출과 무관한 비용은 고정비, 원재료·수수료처럼 판매량에 비례하는 비용은 변동비로 나눕니다.",
+                "공헌이익률이 높을수록 손익분기점을 빨리 넘고 이익이 빠르게 늘어납니다.",
+            ],
+            'faqs' => [
+                ['q' => "공헌이익이 뭔가요?", 'a' => "매출에서 변동비를 뺀 금액으로, 고정비를 회수하고 이익을 만드는 데 '공헌'하는 몫입니다."],
+                ['q' => "고정비에 내 인건비도 넣나요?", 'a' => "1인 사업자라면 본인 최소 생활비를 고정비에 포함해 실제로 남는 이익을 보는 것이 현실적입니다."],
+            ],
+            'articles' => [],
+        ],
+        'smartstore' => [
+            'basis' => [
+                "순이익 = 판매가 − 원가 − 판매수수료 − 기타비용(배송·포장 등).",
+                "마진율 = 순이익 ÷ 판매가 × 100.",
+                "판매 수수료 기본값 5.85% = 스마트스토어 결제수수료(약 3.63%) + 네이버쇼핑 매출연동 수수료(2%).",
+            ],
+            'disclaimer' => "카테고리·결제수단·프로모션에 따라 수수료가 달라지고, 광고비·반품·부가세는 별도입니다. 정확한 수수료는 판매자센터에서 확인하세요.",
+            'tips' => [
+                "무료배송으로 판매가에 배송비를 녹이면 검색 노출은 유리하지만 마진 관리가 중요합니다.",
+                "네이버쇼핑 유입이 아닌 스토어 직접 유입은 매출연동 2% 수수료가 없어 마진이 올라갑니다.",
+            ],
+            'faqs' => [
+                ['q' => "스마트스토어 수수료는 총 얼마인가요?", 'a' => "결제수수료가 결제수단별로 약 1.98~3.85%이고, 네이버쇼핑을 통해 유입되면 매출연동 2%가 추가됩니다."],
+                ['q' => "부가세도 빼야 하나요?", 'a' => "일반과세자라면 매출·매입 부가세를 별도로 정산합니다. 이 계산기는 부가세 전 기준 마진입니다."],
+            ],
+            'articles' => [],
+        ],
+        'corpvsindiv' => [
+            'basis' => [
+                "개인사업자: 종합소득세 6~45% 누진세율 + 지방소득세 10%.",
+                "법인: 법인세 9%(과세표준 2억 이하)·19%(2억~200억) + 지방소득세 10%.",
+                "동일 과세표준(순이익)에 대한 순수 세액만 비교한 값입니다.",
+            ],
+            'disclaimer' => "법인은 대표이사 급여·배당에 대한 추가 소득세와 4대보험, 설립·유지 비용이 발생합니다. 실제 유불리는 소득 규모·자금 사용 계획에 따라 달라지므로 세무 상담을 권장합니다.",
+            'tips' => [
+                "이익이 커질수록(대략 과세표준 1~2억 초과) 법인의 낮은 세율이 유리해지는 구간이 생깁니다.",
+                "번 돈을 대부분 생활비로 써야 한다면 배당·급여 이중과세로 법인이 오히려 불리할 수 있습니다.",
+            ],
+            'faqs' => [
+                ['q' => "법인 전환은 언제 유리한가요?", 'a' => "이익이 커서 소득세 최고세율 구간에 가깝고, 번 돈을 회사에 유보해 재투자할 계획이라면 법인이 유리한 경우가 많습니다."],
+                ['q' => "세금만 보면 되나요?", 'a' => "아닙니다. 법인은 대표 급여·배당 소득세, 4대보험, 회계·기장 비용까지 함께 따져야 실제 유불리를 알 수 있습니다."],
+            ],
+            'articles' => [],
+        ],
+        'marketingroi' => [
+            'basis' => [
+                "ROAS = 광고매출 ÷ 광고비 × 100 (광고비 대비 매출 회수율).",
+                "순이익 = 광고매출 × 매출총이익률 − 광고비.",
+                "ROI = 순이익 ÷ 광고비 × 100 (광고비 대비 실이익률).",
+            ],
+            'disclaimer' => "매출총이익률·기여 매출을 어떻게 잡느냐에 따라 결과가 크게 달라집니다. 브랜드·재구매 효과 등 장기 가치는 포함하지 않습니다.",
+            'tips' => [
+                "ROAS가 높아도 이익률이 낮으면 ROI는 마이너스일 수 있으니 둘을 함께 보세요.",
+                "손익분기 ROAS = 100 ÷ 매출총이익률(%). 이익률 30%면 ROAS 333% 이상이어야 흑자입니다.",
+            ],
+            'faqs' => [
+                ['q' => "ROAS와 ROI 차이는?", 'a' => "ROAS는 광고비 대비 '매출'을, ROI는 광고비 대비 '이익'을 봅니다. ROI가 흑자·적자를 판단하는 지표입니다."],
+                ['q' => "매출총이익률은 어떻게 정하나요?", 'a' => "판매가에서 원가·배송·수수료 등 변동비를 뺀 비율입니다. 스마트스토어 마진 계산기로 먼저 구해도 됩니다."],
             ],
             'articles' => [],
         ],
@@ -1183,6 +1325,132 @@ function build(view) {
       rows: [ { label: "월 조회수", value: fmt(views) + "회" }, { label: "크리에이티비티 프로그램", value: fmt(fund) + "원" }, { label: "협찬 게시물 1건", value: fmt(sponsor) + "원" }, { label: "월 4회 협찬 시", value: fmt(fund + sponsor * 4) + "원" } ] };
     fields = [ numField("tk_views", "월 조회수", "만회", 100), numField("tk_followers", "팔로워 수", "명", 50000), numField("tk_engage", "평균 참여율", "%", 5), numField("tk_rpm", "1,000회당 펀드 단가", "원", 40) ];
     formula = [ "월 수익 = 펀드 수익 + 협찬 단가", "펀드 = " + fmt(views) + " ÷ 1,000 × " + fmt(rpm) + "원 = " + fmt(fund) + "원", "협찬 = " + fmt(followers) + " × 12원 × " + fmt1(engMult) + "(참여율) = " + fmt(sponsor) + "원" ];
+  } else if (view === "brokerage") {
+    const type = tog("bk_type", "매매");
+    const price = num("bk_price", 300000000);
+    const rentM = num("bk_rentm", 1000000);
+    let baseAmt = price, rate = 0, cap = 0, label;
+    if (type === "매매") {
+      if (price < 50000000) { rate = 0.6; cap = 250000; }
+      else if (price < 200000000) { rate = 0.5; cap = 800000; }
+      else if (price < 900000000) rate = 0.4;
+      else if (price < 1200000000) rate = 0.5;
+      else if (price < 1500000000) rate = 0.6;
+      else rate = 0.7;
+      label = "매매·교환";
+    } else {
+      if (type === "월세") { baseAmt = price + rentM * 100; if (baseAmt < 50000000) baseAmt = price + rentM * 70; }
+      if (baseAmt < 50000000) { rate = 0.5; cap = 200000; }
+      else if (baseAmt < 100000000) { rate = 0.4; cap = 300000; }
+      else if (baseAmt < 600000000) rate = 0.3;
+      else if (baseAmt < 1200000000) rate = 0.4;
+      else if (baseAmt < 1500000000) rate = 0.5;
+      else rate = 0.6;
+      label = "임대차(" + type + ")";
+    }
+    let fee = baseAmt * rate / 100;
+    if (cap > 0) fee = Math.min(fee, cap);
+    const vat = fee * 0.1;
+    result = { bigLabel: "중개보수 상한", bigValue: "₩ " + fmt(fee), bigSub: label + " · 상한요율 " + fmt1(rate) + "%",
+      rows: [ { label: "거래(환산)금액", value: fmt(baseAmt) + "원" }, { label: "상한 요율", value: fmt1(rate) + "%" }, (cap > 0 ? { label: "한도액", value: fmt(cap) + "원" } : { label: "한도", value: "없음(요율만)" }), { label: "부가세(중개사 과세 시)", value: fmt(vat) + "원" }, { label: "VAT 포함 시", value: fmt(fee + vat) + "원" } ] };
+    fields = [ togField("bk_type", "거래 유형", ["매매", "전세", "월세"], "매매"), numField("bk_price", type === "월세" ? "보증금" : (type === "전세" ? "전세보증금" : "매매가"), "원", 300000000) ].concat(type === "월세" ? [numField("bk_rentm", "월세", "원", 1000000)] : []);
+    formula = [ "중개보수 = 거래(환산)금액 × 상한요율 (한도 적용)", (type === "월세" ? "환산보증금 = 보증금 + 월세×100 (5천만원 미만이면 ×70)" : ""), "실제 보수는 상한 이내에서 중개사와 협의로 정합니다." ].filter(Boolean);
+  } else if (view === "autotax") {
+    const cc = num("at_cc", 1998);
+    const age = num("at_age", 3);
+    let per;
+    if (cc <= 1000) per = 80; else if (cc <= 1600) per = 140; else per = 200;
+    const baseTax = cc * per;
+    const reduceRate = Math.min(50, Math.max(0, age - 2) * 5);
+    const reducedBase = baseTax * (1 - reduceRate / 100);
+    const reducedEdu = reducedBase * 0.3;
+    const total = reducedBase + reducedEdu;
+    result = { bigLabel: "연간 자동차세 (경감 후)", bigValue: "₩ " + fmt(total), bigSub: "배기량 " + fmt(cc) + "cc · 차령 " + age + "년(경감 " + reduceRate + "%)",
+      rows: [ { label: "cc당 세액", value: per + "원" }, { label: "자동차세(경감 전)", value: fmt(baseTax) + "원" }, { label: "차령 경감", value: "-" + reduceRate + "% (" + fmt(baseTax - reducedBase) + "원)" }, { label: "자동차세(경감 후)", value: fmt(reducedBase) + "원" }, { label: "지방교육세 (30%)", value: fmt(reducedEdu) + "원" } ] };
+    fields = [ numField("at_cc", "배기량", "cc", 1998), numField("at_age", "차령(등록 후 경과 연수)", "년", 3) ];
+    formula = [ "자동차세 = 배기량(cc) × cc당 세액 + 지방교육세(30%)", "cc당 세액: 1,000cc 이하 80원 · 1,600cc 이하 140원 · 초과 200원(비영업 승용)", "차령 3년차부터 매년 5%씩 경감(최대 50%)" ];
+  } else if (view === "inherit") {
+    const estate = num("ih_estate", 1000000000);
+    const ded = num("ih_ded", 500000000);
+    const base = Math.max(0, estate - ded);
+    let rate, prog;
+    if (base <= 100000000) { rate = 10; prog = 0; }
+    else if (base <= 500000000) { rate = 20; prog = 10000000; }
+    else if (base <= 1000000000) { rate = 30; prog = 60000000; }
+    else if (base <= 3000000000) { rate = 40; prog = 160000000; }
+    else { rate = 50; prog = 460000000; }
+    let tax = base * rate / 100 - prog;
+    if (tax < 0) tax = 0;
+    result = { bigLabel: "예상 상속세", bigValue: "₩ " + fmt(tax), bigSub: "과세표준 " + fmt(base) + "원 · 세율 " + rate + "%",
+      rows: [ { label: "상속재산", value: fmt(estate) + "원" }, { label: "상속공제", value: "-" + fmt(ded) + "원" }, { label: "과세표준", value: fmt(base) + "원" }, { label: "세율", value: rate + "% (누진공제 " + fmt(prog) + "원)" } ] };
+    fields = [ numField("ih_estate", "상속재산 총액", "원", 1000000000), numField("ih_ded", "상속공제 합계", "원", 500000000) ];
+    formula = [ "상속세 = 과세표준 × 세율 − 누진공제", "과세표준 = 상속재산 − 상속공제", "공제는 일괄공제 5억원을 기본값으로 두었습니다. 배우자공제·금융재산공제 등은 별도 반영이 필요합니다." ];
+  } else if (view === "comprop") {
+    const price = num("pt_price", 1500000000);
+    const houses = tog("pt_houses", "1주택");
+    const basicDed = houses === "1주택" ? 1200000000 : 900000000;
+    const base = Math.max(0, (price - basicDed) * 0.6);
+    let rate, prog;
+    if (base <= 300000000) { rate = 0.5; prog = 0; }
+    else if (base <= 600000000) { rate = 0.7; prog = 600000; }
+    else if (base <= 1200000000) { rate = 1.0; prog = 2400000; }
+    else if (base <= 2500000000) { rate = 1.3; prog = 6000000; }
+    else if (base <= 5000000000) { rate = 1.5; prog = 11000000; }
+    else if (base <= 9400000000) { rate = 2.0; prog = 36000000; }
+    else { rate = 2.7; prog = 100600000; }
+    let tax = base * rate / 100 - prog;
+    if (tax < 0) tax = 0;
+    result = { bigLabel: "예상 종합부동산세", bigValue: "₩ " + fmt(tax), bigSub: houses + " · 과세표준 " + fmt(base) + "원",
+      rows: [ { label: "공시가격 합계", value: fmt(price) + "원" }, { label: "기본공제", value: "-" + fmt(basicDed) + "원" }, { label: "공정시장가액비율", value: "60%" }, { label: "과세표준", value: fmt(base) + "원" }, { label: "세율", value: fmt1(rate) + "% (누진공제 " + fmt(prog) + "원)" } ] };
+    fields = [ numField("pt_price", "주택 공시가격 합계", "원", 1500000000), togField("pt_houses", "보유 주택", ["1주택", "다주택"], "1주택") ];
+    formula = [ "종부세 = 과세표준 × 세율 − 누진공제", "과세표준 = (공시가격 합계 − 기본공제) × 공정시장가액비율(60%)", "기본공제: 1세대 1주택 12억원 · 그 외 9억원. 1주택 일반세율 기준 개략치입니다(세부담 상한·연령/보유 세액공제 미반영)." ];
+  } else if (view === "breakeven") {
+    const fixed = num("be_fixed", 5000000);
+    const price = num("be_price", 20000);
+    const varc = num("be_var", 8000);
+    const cm = price - varc;
+    const cmr = price > 0 ? cm / price * 100 : 0;
+    const bepQty = cm > 0 ? Math.ceil(fixed / cm) : 0;
+    const bepSales = bepQty * price;
+    result = { bigLabel: "손익분기점 판매량", bigValue: (cm > 0 ? fmt(bepQty) + "개" : "계산 불가"), bigSub: cm > 0 ? "손익분기 매출 " + fmt(bepSales) + "원" : "단가가 변동비보다 커야 합니다",
+      rows: [ { label: "개당 공헌이익", value: fmt(cm) + "원" }, { label: "공헌이익률", value: fmt1(cmr) + "%" }, { label: "손익분기 판매량", value: fmt(bepQty) + "개" }, { label: "손익분기 매출액", value: fmt(bepSales) + "원" } ] };
+    fields = [ numField("be_fixed", "월 고정비", "원", 5000000), numField("be_price", "판매 단가", "원", 20000), numField("be_var", "개당 변동비", "원", 8000) ];
+    formula = [ "손익분기 판매량 = 고정비 ÷ 개당 공헌이익", "공헌이익 = 판매단가 − 개당 변동비 = " + fmt(cm) + "원", "손익분기 매출 = 손익분기 판매량 × 단가 = " + fmt(bepSales) + "원" ];
+  } else if (view === "smartstore") {
+    const price = num("ss_price", 30000);
+    const cost = num("ss_cost", 12000);
+    const feeRate = num("ss_fee", 5.85);
+    const etc = num("ss_etc", 3000);
+    const fee = price * feeRate / 100;
+    const profit = price - cost - fee - etc;
+    const margin = price > 0 ? profit / price * 100 : 0;
+    result = { bigLabel: "개당 순이익", bigValue: "₩ " + fmt(profit), bigSub: "마진율 " + fmt1(margin) + "%",
+      rows: [ { label: "판매가", value: fmt(price) + "원" }, { label: "상품 원가", value: "-" + fmt(cost) + "원" }, { label: "판매 수수료 (" + fmt1(feeRate) + "%)", value: "-" + fmt(fee) + "원" }, { label: "기타비용(배송·포장)", value: "-" + fmt(etc) + "원" }, { label: "순이익 / 마진율", value: fmt(profit) + "원 / " + fmt1(margin) + "%" } ] };
+    fields = [ numField("ss_price", "판매가", "원", 30000), numField("ss_cost", "상품 원가(사입가)", "원", 12000), numField("ss_fee", "판매 수수료율", "%", 5.85), numField("ss_etc", "기타비용(배송·포장)", "원", 3000) ];
+    formula = [ "순이익 = 판매가 − 원가 − 수수료 − 기타비용", "마진율 = 순이익 ÷ 판매가 × 100", "스마트스토어 결제수수료 약 3.63% + 네이버쇼핑 매출연동 2%를 합쳐 기본 5.85%로 두었습니다." ];
+  } else if (view === "corpvsindiv") {
+    const income = num("ci_income", 100000000);
+    function personalTax(y){var t;if(y<=14000000)t=y*0.06;else if(y<=50000000)t=840000+(y-14000000)*0.15;else if(y<=88000000)t=6240000+(y-50000000)*0.24;else if(y<=150000000)t=15360000+(y-88000000)*0.35;else if(y<=300000000)t=37060000+(y-150000000)*0.38;else if(y<=500000000)t=94060000+(y-300000000)*0.4;else if(y<=1000000000)t=174060000+(y-500000000)*0.42;else t=384060000+(y-1000000000)*0.45;return t;}
+    function corpTax(y){var t;if(y<=200000000)t=y*0.09;else if(y<=20000000000)t=18000000+(y-200000000)*0.19;else if(y<=300000000000)t=3800000000+(y-20000000000)*0.21;else t=62800000000+(y-300000000000)*0.24;return t;}
+    const pTax = personalTax(income) * 1.1;
+    const cTax = corpTax(income) * 1.1;
+    const diff = pTax - cTax;
+    result = { bigLabel: "세액 차이 (개인 − 법인)", bigValue: "₩ " + fmt(Math.abs(diff)), bigSub: diff > 0 ? "법인이 " + fmt(diff) + "원 낮음(세액 기준)" : "개인이 " + fmt(-diff) + "원 낮음",
+      rows: [ { label: "과세표준(순이익)", value: fmt(income) + "원" }, { label: "개인사업자 종합소득세", value: fmt(pTax) + "원" }, { label: "법인세", value: fmt(cTax) + "원" }, { label: "세액 차이", value: fmt(Math.abs(diff)) + "원" } ] };
+    fields = [ numField("ci_income", "연 과세표준(순이익)", "원", 100000000) ];
+    formula = [ "개인: 종합소득세 6~45% 누진 + 지방소득세 10%", "법인: 9%(2억↓)·19%(2억~200억) + 지방소득세 10%", "법인은 대표 급여·배당의 추가 소득세와 4대보험 등 실효 부담이 있어 순수 세액 비교입니다." ];
+  } else if (view === "marketingroi") {
+    const cost = num("mr_cost", 1000000);
+    const revenue = num("mr_rev", 5000000);
+    const marginRate = num("mr_margin", 30);
+    const roas = cost > 0 ? revenue / cost * 100 : 0;
+    const grossProfit = revenue * marginRate / 100;
+    const netProfit = grossProfit - cost;
+    const roi = cost > 0 ? netProfit / cost * 100 : 0;
+    result = { bigLabel: "광고 ROI", bigValue: fmt1(roi) + "%", bigSub: "ROAS " + fmt(roas) + "% · 순이익 " + fmt(netProfit) + "원",
+      rows: [ { label: "광고비", value: fmt(cost) + "원" }, { label: "광고 매출", value: fmt(revenue) + "원" }, { label: "ROAS(광고수익률)", value: fmt(roas) + "%" }, { label: "매출총이익 (" + fmt1(marginRate) + "%)", value: fmt(grossProfit) + "원" }, { label: "순이익 / ROI", value: fmt(netProfit) + "원 / " + fmt1(roi) + "%" } ] };
+    fields = [ numField("mr_cost", "광고비", "원", 1000000), numField("mr_rev", "광고로 발생한 매출", "원", 5000000), numField("mr_margin", "매출총이익률", "%", 30) ];
+    formula = [ "ROAS = 광고매출 ÷ 광고비 × 100 (매출 기준 회수율)", "ROI = (매출×이익률 − 광고비) ÷ 광고비 × 100 (실이익 기준)", "ROAS가 높아도 이익률이 낮으면 ROI는 마이너스일 수 있습니다." ];
   }
   return { fields: fields, result: result, formula: formula, tables: tables, hasFormula: formula.length > 0, hasTables: tables.length > 0 };
 }
