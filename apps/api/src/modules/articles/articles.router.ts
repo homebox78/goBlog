@@ -102,6 +102,7 @@ const generateSchema = z.object({
   length: z.number().int().min(500).max(6000).optional(),
   tone: z.string().optional(),
   allowSimilar: z.boolean().optional(),
+  angle: z.string().max(600).optional(),
   product: z
     .object({
       source: z.enum(["COUPANG", "BRANDCONNECT"]),
