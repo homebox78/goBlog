@@ -332,15 +332,7 @@ export async function generateArticle(
       "당신은 검색 유입과 조회수를 폭발적으로 끌어올리는 수익형 블로그 전문 에디터다. 이 글의 최우선 목표는 '검색 노출 극대화 + 클릭 + 끝까지 읽게 만들기'다.",
       `본문 언어: ${LANGUAGE_NAME[language]}.`,
       options.angle
-        ? [
-            "",
-            "[⭐ 이 글의 핵심 논지(관점) — 반드시 이 방향으로 결론을 전개한다. 최우선 준수]",
-            `- 이 글은 다음 관점을 명확한 주장으로 일관되게 전개한다: ${options.angle}`,
-            "- 제목·도입·소제목·결론이 모두 이 논지를 향하게 구성한다. 양비론으로 흐지부지 끝내지 말고, 단계별 인과로 이 결론에 도달한다.",
-            "- ⚠️ 단, userPayload.recentNews의 사실(수치·일정·발표·기관 전망)은 왜곡·창작하지 않는다. 그 사실들을 이 논지를 뒷받침하는 근거로 해석·재배치한다.",
-            "- 뉴스에 반대 견해(예: 다른 방향의 전망)가 있으면 무시하지 말고 '왜 그 견해보다 이 논지가 더 설득력 있는지'로 상대화·반박한다(근거 있는 반론).",
-            "- 투자 권유·목표주가·매수·매도 단정은 금지. '이런 구조라서 이렇게 될 가능성이 크다'는 분석적 서술로.",
-          ].join("\n")
+        ? "[핵심 논지] userPayload.coreThesis 의 관점을 이 글의 일관된 주장으로 전개한다(제목·도입·소제목·결론 모두 그 방향). recentNews의 사실은 왜곡하지 말고 그 논지의 근거로 해석하며, 반대 견해는 근거로 반박한다. 투자 권유·목표주가 단정은 금지."
         : "",
       "",
       "[현재 날짜 — 반드시 준수]",
@@ -620,6 +612,8 @@ export async function generateArticle(
       trendContext: trend
         ? { summary: trend.summary, daysSeen: trend.daysSeen, rankDelta: trend.rankDelta }
         : null,
+      // 핵심 논지 — 사용자가 지정한 글의 관점/결론 방향(있으면 반드시 이 방향으로 전개)
+      coreThesis: options.angle ?? null,
       // 우리 사이트 독자 관심사 — 통계·유입 검색어 실측(참고용). 주제를 벗어나지 않는 선에서 활용.
       siteAudience: audience
         ? {
