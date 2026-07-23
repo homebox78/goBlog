@@ -21,9 +21,29 @@ const DOC_DEFS = [
     'quote'      => ['icon' => 'receipt_long',       'title' => '견적서',              'desc' => '공급자·수신처·견적 내역을 담은 견적서를 작성합니다.'],
     'transdetail'=> ['icon' => 'list_alt',           'title' => '거래명세서',          'desc' => '거래 내역과 공급가액·부가세를 정리한 거래명세서를 작성합니다.'],
     'receipt'    => ['icon' => 'paid',               'title' => '영수증',              'desc' => '받은 금액과 항목을 기재한 영수증을 작성합니다.'],
+    // 인사
+    'leaveofabsence' => ['icon' => 'event_busy',     'title' => '휴직신청서',          'desc' => '휴직 종류·기간·사유를 담은 휴직신청서를 작성합니다.'],
+    'recresign'  => ['icon' => 'person_remove',      'title' => '권고사직서',          'desc' => '권고 사유와 퇴직 조건을 담은 권고사직서를 작성합니다.'],
+    // 비즈니스 계약
+    'freelance'  => ['icon' => 'work',               'title' => '프리랜서 계약서',      'desc' => '업무·대금·지급 조건을 담은 프리랜서 계약서를 작성합니다.'],
+    'service'    => ['icon' => 'engineering',        'title' => '용역계약서',          'desc' => '용역 내용·기간·대금을 담은 용역계약서를 작성합니다.'],
+    'supply'     => ['icon' => 'local_shipping',     'title' => '공급(납품)계약서',     'desc' => '품목·대금·납품·검수 조건을 담은 공급계약서를 작성합니다.'],
+    'purchase'   => ['icon' => 'shopping_bag',       'title' => '물품구매 계약서',      'desc' => '물품·금액·인도 조건을 담은 물품구매 계약서를 작성합니다.'],
+    'mou'        => ['icon' => 'diversity_3',        'title' => '업무협약서(MOU)',      'desc' => '협약 목적·협력 내용을 담은 업무협약서(MOU)를 작성합니다.'],
+    'consulting' => ['icon' => 'support_agent',      'title' => '컨설팅 계약서',        'desc' => '컨설팅 범위·보수·비밀유지를 담은 컨설팅 계약서를 작성합니다.'],
+    'swdev'      => ['icon' => 'code',               'title' => '소프트웨어 개발 계약서', 'desc' => '개발 범위·대금·검수·권리 귀속을 담은 SW 개발 계약서를 작성합니다.'],
+    // 법률
+    'partnership'=> ['icon' => 'groups_2',           'title' => '동업계약서',          'desc' => '출자·손익분배·역할을 담은 동업계약서를 작성합니다.'],
+    'copyright'  => ['icon' => 'copyright',          'title' => '저작권 양도 계약서',    'desc' => '저작물·양도 범위·대금을 담은 저작권 양도 계약서를 작성합니다.'],
+    'transfer'   => ['icon' => 'swap_horiz',         'title' => '양도양수 계약서',      'desc' => '양도 대상·대금·인도 조건을 담은 양도양수 계약서를 작성합니다.'],
+    // 정책·약관
+    'privacy'    => ['icon' => 'privacy_tip',        'title' => '개인정보처리방침',      'desc' => '수집 항목·이용 목적·보유 기간을 담은 개인정보처리방침을 작성합니다.'],
+    'terms'      => ['icon' => 'gavel',              'title' => '이용약관',            'desc' => '서비스 이용 조건·이용자 의무·책임 제한을 담은 이용약관을 작성합니다.'],
 ];
 const DOC_CATS = [
-    ['법률·계약', ['pledge', 'poa', 'loan', 'settle', 'nda', 'certmail']],
-    ['직장·인사', ['resign', 'incident', 'leaveapp', 'empcert', 'career', 'retirecert', 'payslip', 'labor', 'parttime']],
+    ['법률·계약', ['pledge', 'poa', 'loan', 'settle', 'nda', 'certmail', 'partnership', 'copyright', 'transfer']],
+    ['직장·인사', ['resign', 'recresign', 'incident', 'leaveapp', 'leaveofabsence', 'empcert', 'career', 'retirecert', 'payslip', 'labor', 'parttime']],
+    ['비즈니스 계약', ['freelance', 'service', 'supply', 'purchase', 'mou', 'consulting', 'swdev']],
     ['거래·회계', ['quote', 'transdetail', 'receipt']],
+    ['정책·약관', ['privacy', 'terms']],
 ];
