@@ -30,7 +30,7 @@ let currentRestricted = null; // 쇼핑 커넥트 활동 제한 채널명(있으
 init();
 
 async function init() {
-  const stored = await chrome.storage.local.get(["apiBase", "token", "tistoryBlog", "connectMemberId"]);
+  const stored = await chrome.storage.local.get(["apiBase", "token", "tistoryBlog", "connectMemberId", "hidePublished"]);
   config.apiBase = stored.apiBase || "https://hom2box.com/goBlog";
   config.token = stored.token || "";
   config.tistoryBlog = stored.tistoryBlog || "hom2box";
@@ -53,6 +53,12 @@ async function init() {
   $("#saveSetup").addEventListener("click", saveSetup);
   $("#openSetup").addEventListener("click", () => $("#setup").classList.toggle("hidden"));
   $("#refresh").addEventListener("click", loadArticles);
+  // '이미 발행한 글 숨기기' — 상태 저장·복원, 변경 시 목록 갱신
+  if (stored.hidePublished === false) $("#hidePublished").checked = false;
+  $("#hidePublished").addEventListener("change", () => {
+    chrome.storage.local.set({ hidePublished: $("#hidePublished").checked });
+    if (config.token) loadArticles();
+  });
   // 플랫폼별 글쓰기 바로가기 — 네이버·티스토리는 자동 입력, 인스타는 캐러셀 캡션 복사 지원
   $("#openNaverWrite").addEventListener("click", () => {
     chrome.tabs.create({ url: "https://blog.naver.com/GoBlogWrite.naver" }); // 내 블로그 글쓰기로 리다이렉트
@@ -161,7 +167,11 @@ async function loadArticles() {
   $("#list").innerHTML = '<p class="muted">불러오는 중...</p>';
   try {
     // 플랫폼별로 아직 발행 안 한 글만 받는다 — 티스토리에 올린 글이 네이버 목록에서 사라지면 안 된다.
-    const q = currentPlatform === "NAVER_BLOG" || currentPlatform === "TISTORY" ? `?platform=${currentPlatform}` : "";
+    const params = [];
+    if (currentPlatform === "NAVER_BLOG" || currentPlatform === "TISTORY") params.push(`platform=${currentPlatform}`);
+    // '이미 발행한 글 숨기기' 체크 해제 시에만 다른 곳에 발행한 글도 함께 노출한다(기본=숨김).
+    if ($("#hidePublished") && !$("#hidePublished").checked) params.push("hidePublished=0");
+    const q = params.length ? `?${params.join("&")}` : "";
     const { articles } = await api("/api/extension/articles" + q);
     if (articles.length === 0) {
       const where = currentPlatform === "TISTORY" ? "티스토리" : currentPlatform === "NAVER_BLOG" ? "네이버" : "";
