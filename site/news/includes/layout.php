@@ -70,6 +70,7 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <!-- 포털 검색 등록 소유확인 -->
 <meta name="naver-site-verification" content="9ecc3c8fb1e58fdffb9406529b6cb1f887b10208">
+<meta name="google-adsense-account" content="ca-pub-2061625131722900">
 <link rel="canonical" href="<?= nh($canonical) ?>">
 <meta property="og:type" content="<?= $isArticle ? 'article' : 'website' ?>">
 <meta property="og:site_name" content="HOM2BOX 뉴스">
