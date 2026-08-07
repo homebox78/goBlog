@@ -23,6 +23,11 @@ export const AD_POSITIONS: Array<{ position: string; label: string; size: string
   { position: "tool-bottom", label: "계산기 결과 아래", size: "반응형" },
   // 배너가 아니라 홈 '지금 가장 많이 담는 특가' 상품 섹션의 노출 여부만 제어(기본 숨김).
   { position: "home-deals", label: "홈 '특가 상품' 섹션", size: "노출 여부만 (배너 아님)", toggleOnly: true },
+  // AdSense 광고 유닛 — 코드는 PHP에 내장, 여기선 노출 on/off만 제어.
+  { position: "adsense-infeed", label: "AdSense · 기사 목록 인피드", size: "카드 사이 (카테고리·목록)", toggleOnly: true },
+  { position: "adsense-inarticle", label: "AdSense · 기사 본문 중간", size: "인아티클 (문단 사이)", toggleOnly: true },
+  { position: "adsense-display", label: "AdSense · 디스플레이 배너", size: "반응형 (홈·도구·계산기 등)", toggleOnly: true },
+  { position: "adsense-multiplex", label: "AdSense · 콘텐츠 끝 멀티플렉스", size: "추천형 그리드 (기사 하단)", toggleOnly: true },
 ];
 
 /** 슬롯 목록 — 정의된 위치 전부(미설정은 기본값). */

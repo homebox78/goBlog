@@ -543,6 +543,7 @@ function render_util_hero(string $eyebrow, string $title, string $subtitle, arra
 /** AdSense 인피드 광고(4548345559) — 기사 목록 카드 사이. */
 function adsense_infeed(): void
 {
+    if (!ad_enabled('adsense-infeed')) return;
     ?>
 <div class="my-4">
   <ins class="adsbygoogle" style="display:block" data-ad-format="fluid" data-ad-layout-key="-g5-1e+5c-9l+8q" data-ad-client="ca-pub-2061625131722900" data-ad-slot="4548345559"></ins>
@@ -554,6 +555,7 @@ function adsense_infeed(): void
 /** AdSense 인아티클 광고(8111085965) — 기사 본문 문단 사이. */
 function adsense_inarticle(): void
 {
+    if (!ad_enabled('adsense-inarticle')) return;
     ?>
 <ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-2061625131722900" data-ad-slot="8111085965"></ins>
 <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
@@ -563,6 +565,7 @@ function adsense_inarticle(): void
 /** AdSense 반응형 디스플레이 광고(2802918963) — 일반 배너 위치. */
 function adsense_display(): void
 {
+    if (!ad_enabled('adsense-display')) return;
     ?>
 <div class="my-5">
   <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2061625131722900" data-ad-slot="2802918963" data-ad-format="auto" data-full-width-responsive="true"></ins>
@@ -574,6 +577,7 @@ function adsense_display(): void
 /** AdSense 멀티플렉스 광고(1922182217) — 콘텐츠 끝 추천형 네이티브 그리드. */
 function adsense_multiplex(): void
 {
+    if (!ad_enabled('adsense-multiplex')) return;
     ?>
 <div class="my-6">
   <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed" data-ad-client="ca-pub-2061625131722900" data-ad-slot="1922182217"></ins>
