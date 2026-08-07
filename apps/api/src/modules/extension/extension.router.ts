@@ -43,25 +43,22 @@ extensionRouter.get(
   asyncHandler(async (req, res) => {
     const platform = typeof req.query.platform === "string" ? req.query.platform : null;
     const isExtPlatform = platform === "NAVER_BLOG" || platform === "TISTORY";
-    // hidePublished=1 이면 '어디든 이미 발행된 글'을 목록에서 뺀다(백로그 정리용, 기본 켜짐).
-    // 끄면(0) 다른 플랫폼에 발행된 글도 함께 보여준다(부분 발행 마무리·크로스포스팅).
-    const hidePublished = req.query.hidePublished !== "0";
+    // 기본: 이 플랫폼(네이버/티스토리)에 아직 발행 안 한 글은 **전부** 노출 —
+    //   발행 예정일이 지났든, 다른 곳(WP·블로거)에 이미 올렸든 상관없이(수동으로 하나씩 올릴 수 있게).
+    //   이미 이 플랫폼에 올린 글만 목록에서 빠진다.
+    // hidePublished=1 옵션: 다른 곳에도 아직 안 올린 '완전 새 글'만 보고 싶을 때 백로그를 숨긴다.
+    const hidePublished = req.query.hidePublished === "1";
 
     const rows = await prisma.article.findMany({
       where: {
         status: { in: [...PUBLISHABLE_STATUSES] },
         ...(isExtPlatform
-          ? hidePublished
-            ? {
-                // 아직 어디에도 발행 안 된, 릴리즈된 글만 (이미 발행한 백로그는 숨김)
-                publishJobs: { none: { status: "SUCCEEDED" } },
-                publishAt: { not: null },
-              }
-            : {
-                // 이 플랫폼에 아직 발행 안 된 글 + 다른 곳 발행분도 마저 올릴 수 있게 노출
-                publishJobs: { none: { platform, status: "SUCCEEDED" } },
-                OR: [{ publishAt: { not: null } }, { publishJobs: { some: { status: "SUCCEEDED" } } }],
-              }
+          ? {
+              AND: [
+                { publishJobs: { none: { platform, status: "SUCCEEDED" } } }, // 이 플랫폼 미발행
+                ...(hidePublished ? [{ publishJobs: { none: { status: "SUCCEEDED" } } }] : []), // 옵션: 어디에도 미발행
+              ],
+            }
           : { extensionDoneAt: null }), // 플랫폼 미지정(감지 전)은 기존 동작 유지
       },
       orderBy: { updatedAt: "desc" },

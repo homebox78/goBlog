@@ -53,8 +53,8 @@ async function init() {
   $("#saveSetup").addEventListener("click", saveSetup);
   $("#openSetup").addEventListener("click", () => $("#setup").classList.toggle("hidden"));
   $("#refresh").addEventListener("click", loadArticles);
-  // '이미 발행한 글 숨기기' — 상태 저장·복원, 변경 시 목록 갱신
-  if (stored.hidePublished === false) $("#hidePublished").checked = false;
+  // '다른 곳에 이미 올린 글도 숨기기' — 기본 꺼짐, 저장·복원, 변경 시 목록 갱신
+  if (stored.hidePublished === true) $("#hidePublished").checked = true;
   $("#hidePublished").addEventListener("change", () => {
     chrome.storage.local.set({ hidePublished: $("#hidePublished").checked });
     if (config.token) loadArticles();
@@ -169,8 +169,8 @@ async function loadArticles() {
     // 플랫폼별로 아직 발행 안 한 글만 받는다 — 티스토리에 올린 글이 네이버 목록에서 사라지면 안 된다.
     const params = [];
     if (currentPlatform === "NAVER_BLOG" || currentPlatform === "TISTORY") params.push(`platform=${currentPlatform}`);
-    // '이미 발행한 글 숨기기' 체크 해제 시에만 다른 곳에 발행한 글도 함께 노출한다(기본=숨김).
-    if ($("#hidePublished") && !$("#hidePublished").checked) params.push("hidePublished=0");
+    // 기본은 이 플랫폼 미발행 글 전부 노출. 체크하면 다른 곳에도 안 올린 새 글만.
+    if ($("#hidePublished") && $("#hidePublished").checked) params.push("hidePublished=1");
     const q = params.length ? `?${params.join("&")}` : "";
     const { articles } = await api("/api/extension/articles" + q);
     if (articles.length === 0) {
