@@ -56,6 +56,17 @@ $image = $imgRow ? ($imgRow['webpUrl'] ?: $imgRow['originalUrl']) : null;
 
 $html = strip_external_images($article['contentHtml']);
 
+// 본문 중간 광고(3번째 문단 뒤) — 관리자에서 'article-mid' 슬롯 설정 시에만 삽입. 미설정이면 render_ad가 빈 출력이라 원문 유지.
+ob_start();
+render_ad('article-mid');
+$midAd = trim(ob_get_clean());
+if ($midAd !== '') {
+    $parts = explode('</p>', $html);
+    if (count($parts) > 4) { // 문단이 충분할 때만(짧은 글은 하단 광고만)
+        $html = implode('</p>', array_slice($parts, 0, 3)) . '</p>' . $midAd . implode('</p>', array_slice($parts, 3));
+    }
+}
+
 // 대표이미지는 목록 썸네일·og:image 용도 — 본문에 이미 들어있는 이미지면 상단에 다시 노출하지 않는다(중복 방지).
 $showFigure = $image !== null && strpos($html, $image) === false;
 
