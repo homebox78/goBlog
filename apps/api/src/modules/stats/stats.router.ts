@@ -261,6 +261,62 @@ function popularityHandler(type: "tool" | "doc") {
 statsRouter.get("/tools", popularityHandler("tool"));
 statsRouter.get("/docs", popularityHandler("doc"));
 
+// 커뮤니티(종목 토론) + 이슈피드 발행 성과
+statsRouter.get(
+  "/community",
+  asyncHandler(async (_req, res) => {
+    const [tot] = (await prisma.$queryRaw`
+      SELECT (SELECT COUNT(*) FROM community_posts WHERE hidden=0) posts,
+             (SELECT COUNT(*) FROM community_users) users,
+             (SELECT COUNT(DISTINCT ticker) FROM community_posts WHERE hidden=0) tickers,
+             (SELECT COUNT(*) FROM community_posts WHERE hidden=0 AND createdAt >= NOW() - INTERVAL 7 DAY) posts7d`) as Array<{
+      posts: bigint;
+      users: bigint;
+      tickers: bigint;
+      posts7d: bigint;
+    }>;
+    const topStocks = (await prisma.$queryRaw`
+      SELECT p.ticker, COALESCE(s.name, p.ticker) name, COUNT(*) c
+      FROM community_posts p LEFT JOIN stocks s ON s.ticker = p.ticker
+      WHERE p.hidden=0 GROUP BY p.ticker, s.name ORDER BY c DESC LIMIT 10`) as Array<{
+      ticker: string;
+      name: string;
+      c: bigint;
+    }>;
+    const topComments = (await prisma.$queryRaw`
+      SELECT COALESCE(s.name, p.ticker) stockName, u.name author, LEFT(p.body, 50) body, p.likes
+      FROM community_posts p JOIN community_users u ON u.id = p.userId
+      LEFT JOIN stocks s ON s.ticker = p.ticker
+      WHERE p.hidden=0 ORDER BY p.likes DESC, p.id DESC LIMIT 8`) as Array<{
+      stockName: string;
+      author: string;
+      body: string;
+      likes: bigint;
+    }>;
+    const [ifTot] = (await prisma.$queryRaw`SELECT COUNT(*) c FROM articles WHERE articleType='news'`) as Array<{ c: bigint }>;
+    const issuefeedRecent = (await prisma.$queryRaw`
+      SELECT id, title, publishAt FROM articles WHERE articleType='news' ORDER BY id DESC LIMIT 10`) as Array<{
+      id: number;
+      title: string;
+      publishAt: Date | null;
+    }>;
+    res.json({
+      community: {
+        posts: num(tot?.posts),
+        users: num(tot?.users),
+        tickers: num(tot?.tickers),
+        posts7d: num(tot?.posts7d),
+        topStocks: topStocks.map((s) => ({ ticker: s.ticker, name: s.name, count: num(s.c) })),
+        topComments: topComments.map((c) => ({ stockName: c.stockName, author: c.author, body: c.body, likes: num(c.likes) })),
+      },
+      issuefeed: {
+        total: num(ifTot?.c),
+        recent: issuefeedRecent.map((a) => ({ id: a.id, title: a.title, at: a.publishAt })),
+      },
+    });
+  }),
+);
+
 // 지역별 방문 — 국가·시/도 집계 (ip_geo 조인)
 statsRouter.get(
   "/geo",

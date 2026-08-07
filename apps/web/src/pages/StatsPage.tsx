@@ -77,6 +77,18 @@ interface Visitor {
   viewedAt: string | null;
 }
 
+interface CommunityStat {
+  community: {
+    posts: number;
+    users: number;
+    tickers: number;
+    posts7d: number;
+    topStocks: { ticker: string; name: string; count: number }[];
+    topComments: { stockName: string; author: string; body: string; likes: number }[];
+  };
+  issuefeed: { total: number; recent: { id: number; title: string; at: string | null }[] };
+}
+
 type Gran = "day" | "month" | "year";
 type Period = "all" | "today" | "month" | "year";
 type PPeriod = "today" | "month" | "year";
@@ -151,6 +163,10 @@ export default function StatsPage() {
     queryKey: ["stats-visitors"],
     queryFn: () => api.get<{ visitors: Visitor[] }>(`/api/stats/visitors?limit=120`),
   });
+  const community = useQuery({
+    queryKey: ["stats-community"],
+    queryFn: () => api.get<CommunityStat>(`/api/stats/community`),
+  });
 
   const [resolving, setResolving] = useState(false);
   const resolveGeo = async () => {
@@ -186,6 +202,7 @@ export default function StatsPage() {
           <TabsTrigger value="articles">기사</TabsTrigger>
           <TabsTrigger value="pages">메뉴·도구</TabsTrigger>
           <TabsTrigger value="geo">지역·방문자</TabsTrigger>
+          <TabsTrigger value="community">커뮤니티·발행</TabsTrigger>
         </TabsList>
 
         {/* ── 추이 ── */}
@@ -498,6 +515,63 @@ export default function StatsPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ── 커뮤니티·발행 ── */}
+        <TabsContent value="community" className="mt-4 space-y-4">
+          {community.isPending ? (
+            <Skeleton className="h-64 w-full" />
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                <div className="rounded-lg border p-3.5"><div className="text-xs text-muted-foreground">총 코멘트</div><div className="mt-1 text-2xl font-bold">{community.data?.community.posts ?? 0}</div></div>
+                <div className="rounded-lg border p-3.5"><div className="text-xs text-muted-foreground">참여자</div><div className="mt-1 text-2xl font-bold">{community.data?.community.users ?? 0}</div></div>
+                <div className="rounded-lg border p-3.5"><div className="text-xs text-muted-foreground">토론 종목</div><div className="mt-1 text-2xl font-bold">{community.data?.community.tickers ?? 0}</div></div>
+                <div className="rounded-lg border p-3.5"><div className="text-xs text-muted-foreground">최근 7일 코멘트</div><div className="mt-1 text-2xl font-bold">{community.data?.community.posts7d ?? 0}</div></div>
+                <div className="rounded-lg border p-3.5"><div className="text-xs text-muted-foreground">이슈피드 발행</div><div className="mt-1 text-2xl font-bold">{community.data?.issuefeed.total ?? 0}</div></div>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">토론 많은 종목</CardTitle></CardHeader>
+                  <CardContent className="space-y-1.5">
+                    {(community.data?.community.topStocks ?? []).map((s, i) => (
+                      <div key={s.ticker} className="flex items-center gap-2 text-sm">
+                        <span className="w-4 text-xs font-bold text-muted-foreground">{i + 1}</span>
+                        <span className="flex-1 truncate font-medium">{s.name}</span>
+                        <span className="font-bold">{s.count}</span>
+                      </div>
+                    ))}
+                    {(community.data?.community.topStocks ?? []).length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">아직 코멘트가 없습니다.</p>}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">🔥 인기 코멘트</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {(community.data?.community.topComments ?? []).map((c, i) => (
+                      <div key={i} className="border-b pb-2 text-sm last:border-0">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-muted px-1.5 text-xs font-bold">{c.stockName}</span>
+                          <span className="text-xs text-muted-foreground">👍 {c.likes}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">{c.author}</span>
+                        </div>
+                        <div className="mt-0.5 truncate text-muted-foreground">{c.body}</div>
+                      </div>
+                    ))}
+                    {(community.data?.community.topComments ?? []).length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">아직 코멘트가 없습니다.</p>}
+                  </CardContent>
+                </Card>
+              </div>
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base">이슈피드 최근 발행 <span className="text-xs font-normal text-muted-foreground">디시이슈 연예기사</span></CardTitle></CardHeader>
+                <CardContent className="space-y-1.5">
+                  {(community.data?.issuefeed.recent ?? []).map((a) => (
+                    <a key={a.id} href={`https://hom2box.com/article.php?id=${a.id}`} target="_blank" rel="noopener" className="block truncate text-sm hover:underline">{a.title}</a>
+                  ))}
+                  {(community.data?.issuefeed.recent ?? []).length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">아직 발행된 이슈피드 기사가 없습니다.</p>}
+                </CardContent>
+              </Card>
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </div>
