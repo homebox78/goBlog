@@ -87,6 +87,7 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32.png">
 <link rel="apple-touch-icon" href="/favicon/apple-touch-icon-180.png">
+<link rel="alternate" type="application/rss+xml" title="HOM2BOX 뉴스 RSS" href="/rss.xml">
 <!-- 폰트 전량 자체호스팅(외부 CDN 호출 없음). MS 기본 클래스는 tailwind.css 앞에 둬 text-[Npx]가 뒤에서 크기를 이기게 함 -->
 <link rel="preload" href="/assets/fonts/S-CoreDream-4Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/MaterialSymbolsOutlined.woff2" as="font" type="font/woff2" crossorigin>
