@@ -33,7 +33,7 @@ export async function ensureCommunitySchema(): Promise<void> {
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS community_posts (
       id        INT AUTO_INCREMENT PRIMARY KEY,
-      ticker    VARCHAR(6)  NOT NULL,
+      ticker    VARCHAR(16) NOT NULL,
       userId    INT         NOT NULL,
       body      TEXT        NOT NULL,
       stance    VARCHAR(4)  NULL,

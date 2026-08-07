@@ -49,7 +49,7 @@ communityRouter.get(
   asyncHandler(async (req, res) => {
     const code = typeof req.query.code === "string" ? req.query.code : null;
     const next = safeNext(req.query.state);
-    if (!code) return res.redirect(`${next}?login=fail`);
+    if (!code) return res.redirect(`${next}${next.includes("?") ? "&" : "?"}login=fail`);
     const cfg = await getSettingValues(["blogger.clientId", "blogger.clientSecret"]);
     if (!cfg["blogger.clientId"] || !cfg["blogger.clientSecret"]) throw new HttpError(400, "구글 OAuth 설정이 없습니다.");
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -64,9 +64,9 @@ communityRouter.get(
       }),
     });
     const data = (await tokenRes.json()) as { id_token?: string; error?: string };
-    if (!data.id_token) return res.redirect(`${next}?login=fail`);
+    if (!data.id_token) return res.redirect(`${next}${next.includes("?") ? "&" : "?"}login=fail`);
     const p = decodeIdToken(data.id_token);
-    if (!p.sub || !p.email) return res.redirect(`${next}?login=fail`);
+    if (!p.sub || !p.email) return res.redirect(`${next}${next.includes("?") ? "&" : "?"}login=fail`);
     await loginUser(res, {
       provider: "GOOGLE",
       providerId: p.sub,
@@ -74,7 +74,7 @@ communityRouter.get(
       name: (p.name || (p.email ?? "").split("@")[0] || "투자자").slice(0, 40),
       avatar: p.picture ?? null,
     });
-    res.redirect(`${next}?login=ok`);
+    res.redirect(`${next}${next.includes("?") ? "&" : "?"}login=ok`);
   }),
 );
 
