@@ -31,6 +31,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "affiliate.bannersEnabled", group: "claude", label: "제휴 배너 삽입 사용", secret: false, defaultValue: "false" },
   // 드립 자동 발행 — on이면 검토 끝난 글을 하루 상한만큼 카테고리 고르게 자동 발행(대량 배포 방지). off면 수동 발행.
   { key: "scheduler.autoPublishDaily", group: "claude", label: "하루 자동 발행(드립)", secret: false, defaultValue: "true" },
+  { key: "issuefeed.dailyCount", group: "claude", label: "디시이슈 연예기사 하루 발행 수", secret: false, defaultValue: "2" },
 
   // Gemini
   { key: "gemini.apiKey", group: "gemini", label: "Gemini API Key", secret: true },

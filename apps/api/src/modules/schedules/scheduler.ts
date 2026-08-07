@@ -689,9 +689,13 @@ export async function scheduleFromSettings(): Promise<void> {
     issuefeedJob?.stop();
     issuefeedJob = new Cron("0 8,20 * * *", { timezone: "Asia/Seoul", protect: true }, async () => {
       try {
+        const { getSettingValues } = await import("../settings/settings.service.js");
+        const daily = Math.max(0, Number((await getSettingValues(["issuefeed.dailyCount"]))["issuefeed.dailyCount"] ?? 2) || 2);
+        if (daily <= 0) return; // 0이면 발행 중지
+        const perRun = Math.max(1, Math.round(daily / 2)); // 08:00·20:00 두 번에 나눠 발행
         const { publishIssuefeed } = await import("../issuefeed/issuefeed.js");
-        const r = await publishIssuefeed(1);
-        console.log(`[scheduler] 이슈피드 발행: ${r.created}건 (스킵 ${r.skipped})`);
+        const r = await publishIssuefeed(perRun);
+        console.log(`[scheduler] 이슈피드 발행: ${r.created}건 (스킵 ${r.skipped}, 목표 ${perRun})`);
       } catch (error) {
         console.error("[scheduler] 이슈피드 발행 실패:", (error as Error).message);
       }
