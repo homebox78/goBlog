@@ -293,13 +293,17 @@ statsRouter.get(
       body: string;
       likes: bigint;
     }>;
-    const [ifTot] = (await prisma.$queryRaw`SELECT COUNT(*) c FROM articles WHERE articleType='news'`) as Array<{ c: bigint }>;
-    const issuefeedRecent = (await prisma.$queryRaw`
-      SELECT id, title, publishAt FROM articles WHERE articleType='news' ORDER BY id DESC LIMIT 10`) as Array<{
-      id: number;
-      title: string;
-      publishAt: Date | null;
-    }>;
+    // 이슈피드 발행 = ArticleSource(원문 URL이 issuefeed)인 기사만 정확히 집계
+    const ifTotal = await prisma.articleSource.count({ where: { url: { contains: "issuefeed" } } });
+    const ifSrc = await prisma.articleSource.findMany({
+      where: { url: { contains: "issuefeed" } },
+      orderBy: { id: "desc" },
+      take: 10,
+      select: { article: { select: { id: true, title: true, publishAt: true } } },
+    });
+    const issuefeedRecent = ifSrc
+      .map((s) => s.article)
+      .filter((a): a is { id: number; title: string; publishAt: Date | null } => a !== null);
     res.json({
       community: {
         posts: num(tot?.posts),
@@ -310,7 +314,7 @@ statsRouter.get(
         topComments: topComments.map((c) => ({ stockName: c.stockName, author: c.author, body: c.body, likes: num(c.likes) })),
       },
       issuefeed: {
-        total: num(ifTot?.c),
+        total: ifTotal,
         recent: issuefeedRecent.map((a) => ({ id: a.id, title: a.title, at: a.publishAt })),
       },
     });
