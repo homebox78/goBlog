@@ -194,8 +194,11 @@ try {
 $related = [];
 try {
     preg_match_all('/[0-9a-z가-힣]{2,}/u', mb_strtolower((string) ($article['title'] ?? '')), $mm);
-    $stop = ['그리고', '하지만', '에서', '으로', '합니다', '했다', '있다', '대한', '위한', '통해', '최신', '속보', '오늘', '정리', '방법'];
-    $curTok = array_values(array_diff(array_unique($mm[0]), $stop));
+    // 매칭 신호가 약한 토큰 제거: 일반어 + 달력(숫자·N월·연도)
+    $stop = ['그리고', '하지만', '에서', '으로', '합니다', '했다', '있다', '대한', '위한', '통해', '최신', '속보', '오늘',
+        '정리', '방법', '내년', '올해', '지난', '지난해', '이번', '첫선', '공개', '발표', '완전', '비교', '차이', '정보', '출연', '현황', '핵심', '내용', '특징'];
+    $curTok = array_values(array_filter(array_diff(array_unique($mm[0]), $stop), fn($t) =>
+        !preg_match('/^\d+$/', $t) && !preg_match('/^\d{1,2}월$/u', $t) && !preg_match('/^20\d\d$/', $t)));
 
     $scored = [];
     $all = news_articles();
@@ -204,7 +207,8 @@ try {
         $t = mb_strtolower((string) ($a['title'] ?? '') . ' ' . (string) ($a['kwText'] ?? ''));
         $overlap = 0;
         foreach ($curTok as $tok) if ($tok !== '' && mb_strpos($t, $tok) !== false) $overlap++;
-        $score = $overlap * 10 + ($a['section'] === $section ? 3 : 0);
+        // 2토큰 이상 겹치면 강한 관련(엔터티·주제 일치), 1토큰은 약하게 → 일반어 단일매칭 노이즈 억제
+        $score = ($overlap >= 2 ? $overlap * 10 : $overlap) + ($a['section'] === $section ? 3 : 0);
         if ($score > 0) $scored[] = ['a' => $a, 's' => $score];
     }
     usort($scored, fn($x, $y) => $y['s'] <=> $x['s']); // PHP 8 usort는 안정정렬 → 동점은 최신순 유지
