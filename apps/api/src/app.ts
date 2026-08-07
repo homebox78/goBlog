@@ -23,6 +23,13 @@ import { threadsBotRouter } from "./modules/threads/threads-bot.router.js";
 import { subscribersRouter, statsRouter } from "./modules/stats/stats.router.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
+// BigInt(예: KeywordMetric.cpcMicros)를 JSON 응답에 그대로 담으면 res.json이
+// "Do not know how to serialize a BigInt"로 터진다 → 전역으로 숫자 직렬화 허용.
+// (검색량·CPC 등은 Number 안전 범위라 정밀도 손실 없음)
+(BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function () {
+  return Number(this as unknown as bigint);
+};
+
 export function createApp() {
   const app = express();
 
