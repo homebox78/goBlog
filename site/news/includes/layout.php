@@ -84,6 +84,11 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <meta name="twitter:description" content="<?= nh($desc) ?>">
 <?php if ($ogImage): ?><meta property="og:image" content="<?= nh($ogImage) ?>">
 <meta name="twitter:image" content="<?= nh($ogImage) ?>"><?php endif; ?>
+<?php if ($isArticle && !empty($GLOBALS['h2bArticleMeta'])): $am = $GLOBALS['h2bArticleMeta']; ?>
+<?php if (!empty($am['published'])): ?><meta property="article:published_time" content="<?= nh($am['published']) ?>">
+<?php endif; ?><?php if (!empty($am['section'])): ?><meta property="article:section" content="<?= nh($am['section']) ?>">
+<?php endif; ?><?php if (!empty($am['author'])): ?><meta property="article:author" content="<?= nh($am['author']) ?>">
+<?php endif; ?><?php endif; ?>
 <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32.png">
 <link rel="apple-touch-icon" href="/favicon/apple-touch-icon-180.png">

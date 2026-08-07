@@ -241,6 +241,12 @@ $topRanked = $allForNav;
 usort($topRanked, fn($a, $b) => ($b['quality'] <=> $a['quality']) ?: strcmp($b['publishedAt'], $a['publishedAt']));
 $topRanked = array_slice(array_filter($topRanked, fn($a) => $a['id'] !== $id), 0, 8);
 
+// 뉴스 신선도 OG 메타(article:*) — render_head가 head에서 출력
+$GLOBALS['h2bArticleMeta'] = [
+    'published' => $publishedAt ? date('c', strtotime($publishedAt)) : '',
+    'section' => $section,
+    'author' => '하루방',
+];
 render_head($article['title'] . ' — HOM2BOX 뉴스', $desc, $image ?: '');
 ?>
 <script type="application/ld+json"><?php
