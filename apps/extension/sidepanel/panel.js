@@ -186,9 +186,14 @@ async function loadArticles() {
       if (currentArticle && currentArticle.id === article.id) row.classList.add("selected");
       const main = document.createElement("div");
       main.className = "item-main";
-      main.innerHTML = `<p></p><small><span class="cat"></span> ${article.qualityScore ?? "—"}점 · ${article.language} · ${article.status}</small>`;
+      // 이 글이 '이미 올라간 곳' 표시 — 목록엔 현재 플랫폼 미발행분만 있으므로, 다른 곳(WP·블로거·티스토리) 발행 여부가 한눈에.
+      const PUB = { NAVER_BLOG: "네이버", TISTORY: "티스토리", WORDPRESS: "WP", BLOGGER: "블로거", INSTAGRAM: "인스타" };
+      const where = (article.published || []).map((p) => PUB[p.platform] || p.platform);
+      const whereText = where.length ? `✅ ${where.join("·")} 발행됨` : "🆕 아직 어디에도 미발행";
+      main.innerHTML = `<p></p><small><span class="cat"></span> ${article.qualityScore ?? "—"}점 · <span class="pub"></span></small>`;
       main.querySelector("p").textContent = article.title;
       main.querySelector(".cat").textContent = article.category ? `📁 ${article.category}` : "";
+      main.querySelector(".pub").textContent = whereText;
       main.addEventListener("click", () => {
         // 선택 표시 지속 (호버가 아니라 선택된 글에 표시)
         document.querySelectorAll("#list .item.selected").forEach((el) => el.classList.remove("selected"));
