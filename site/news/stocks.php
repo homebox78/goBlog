@@ -186,21 +186,27 @@ render_nav('종목', [], true);
 
     <!-- 실시간 종목 토론 (커뮤니티 코멘트 추출) -->
     <?php if ($talk): ?>
-    <section class="mt-5 rounded-xl border border-zinc-200 bg-gradient-to-br from-blue-50/40 to-white p-4">
-      <div class="mb-2.5 flex items-center justify-between">
-        <h2 class="flex items-center gap-1.5 text-[15px] font-extrabold text-zinc-800">💬 실시간 종목 토론 <span class="rounded-full bg-[#d60000] px-1.5 py-0.5 text-[9px] font-bold text-white">LIVE</span></h2>
+    <section class="mt-5 rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="flex items-center gap-2 text-[16px] font-extrabold text-zinc-900">💬 실시간 종목 토론 <span class="rounded-full bg-[#d60000] px-1.5 py-0.5 text-[9px] font-bold text-white">LIVE</span></h2>
         <span class="text-[12px] text-zinc-400">투자자 코멘트</span>
       </div>
-      <div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-x-10 sm:grid-cols-2 lg:gap-x-16">
         <?php foreach ($talk as $t):
           $snm = $nameMap[$t['ticker']] ?? $t['ticker'];
-          $st = $t['stance'] === 'BUY' ? '<span class="flex-none text-[10px] font-bold text-[#d60000]">매수</span>' : ($t['stance'] === 'SELL' ? '<span class="flex-none text-[10px] font-bold text-[#1263e0]">매도</span>' : ($t['stance'] === 'HOLD' ? '<span class="flex-none text-[10px] font-bold text-zinc-400">보유</span>' : ''));
+          $st = $t['stance'] === 'BUY' ? '<span class="flex-none rounded px-1 text-[10px] font-bold text-[#d60000] bg-red-50">매수</span>' : ($t['stance'] === 'SELL' ? '<span class="flex-none rounded px-1 text-[10px] font-bold text-[#1263e0] bg-blue-50">매도</span>' : ($t['stance'] === 'HOLD' ? '<span class="flex-none rounded px-1 text-[10px] font-bold text-zinc-500 bg-zinc-100">보유</span>' : ''));
         ?>
-        <a href="/stock.php?code=<?= nh($t['ticker']) ?>" class="group flex items-center gap-2 border-b border-zinc-100 py-1.5 text-[13px]">
-          <span class="flex-none rounded bg-[#134a9c]/10 px-1.5 py-0.5 text-[11px] font-bold text-[#134a9c]"><?= nh($snm) ?></span>
-          <?= $st ?>
-          <span class="min-w-0 flex-1 truncate text-zinc-700 group-hover:text-[#134a9c]"><?= nh(mb_substr((string) $t['body'], 0, 40)) ?></span>
-          <span class="flex-none text-[11px] text-zinc-400"><?= nh($t['authorName']) ?></span>
+        <a href="/stock.php?code=<?= nh($t['ticker']) ?>" class="group block border-b border-zinc-100 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="flex-none rounded-md bg-[#134a9c]/10 px-2 py-0.5 text-[11.5px] font-bold text-[#134a9c]"><?= nh($snm) ?></span>
+            <?= $st ?>
+            <span class="min-w-0 flex-1 truncate text-[13.5px] text-zinc-800 group-hover:text-[#134a9c]"><?= nh(mb_substr((string) $t['body'], 0, 42)) ?></span>
+          </div>
+          <div class="mt-1 flex items-center gap-1.5 pl-0.5 text-[11.5px] text-zinc-400">
+            <span class="font-semibold text-zinc-500"><?= nh($t['authorName']) ?></span>
+            <span>·</span>
+            <span><?= nh(news_date($t['createdAt'])) ?></span>
+          </div>
         </a>
         <?php endforeach; ?>
       </div>

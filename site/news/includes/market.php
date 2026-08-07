@@ -222,30 +222,44 @@ function market_quotes(): array
 }
 
 /** 시세 스트립 렌더 — 시안: 흰 배경 필박스 + 등락 배지(상승 빨강/하락 파랑) */
-function render_market_strip(): void
+/** 스트립 아이템 HTML(라벨·값·등락 배지) — 렌더와 라이브 갱신 엔드포인트 공용. */
+function market_strip_items_html(): string
 {
     $q = [];
     try { $q = market_quotes(); } catch (Throwable) {}
-    if (!$q) return;
+    $h = '';
+    foreach ($q as $it) {
+        $badge = '';
+        if (($it['ratio'] ?? null) !== null) {
+            $cls = $it['up'] ? 'bg-red-50 text-[#e0392b]' : 'bg-blue-50 text-[#1d4ed8]';
+            $arrow = $it['up'] ? '▲' : '▼';
+            $badge = '<span class="rounded px-1.5 py-0.5 text-[10.5px] font-bold ' . $cls . '">' . $arrow . ' ' . number_format(abs((float) $it['ratio']), 2) . '%</span>';
+        }
+        $h .= '<span class="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-lg border border-zinc-200 bg-white px-2.5 py-1">'
+            . '<span class="text-[12px] font-bold text-zinc-600">' . nh($it['label']) . '</span>'
+            . '<span class="text-[12.5px] font-extrabold text-zinc-900">' . nh($it['value']) . '</span>' . $badge . '</span>';
+    }
+    return $h;
+}
+
+function render_market_strip(): void
+{
+    $items = market_strip_items_html();
+    if ($items === '') return;
     ?>
 <div class="border-b border-zinc-200 bg-white">
   <div class="mx-auto flex max-w-[1399px] items-center gap-2 overflow-x-auto px-4 sm:px-6 py-2">
-    <span class="mr-1 flex flex-none items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-zinc-400"><span class="inline-block h-1.5 w-1.5 rounded-full bg-[#e0392b]"></span>Market</span>
-    <?php foreach ($q as $it):
-        $up = $it['up'];
-        $badge = '';
-        if ($it['ratio'] !== null) {
-            $cls = $up ? 'bg-red-50 text-[#e0392b]' : 'bg-blue-50 text-[#1d4ed8]';
-            $arrow = $up ? '▲' : '▼';
-            $badge = '<span class="rounded px-1.5 py-0.5 text-[10.5px] font-bold ' . $cls . '">' . $arrow . ' ' . number_format(abs((float) $it['ratio']), 2) . '%</span>';
-        } ?>
-      <span class="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-lg border border-zinc-200 bg-white px-2.5 py-1">
-        <span class="text-[12px] font-bold text-zinc-600"><?= nh($it['label']) ?></span>
-        <span class="text-[12.5px] font-extrabold text-zinc-900"><?= nh($it['value']) ?></span>
-        <?= $badge ?>
-      </span>
-    <?php endforeach; ?>
+    <span class="mr-1 flex flex-none items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-zinc-400"><span class="inline-block h-1.5 w-1.5 rounded-full bg-[#e0392b] animate-pulse"></span>Market</span>
+    <span id="market-strip-items" class="flex items-center gap-2"><?= $items ?></span>
   </div>
 </div>
+<script>
+(function(){
+  var open=<?= (market_is_open() || market_is_open_us()) ? 'true' : 'false' ?>;
+  function tick(){ fetch('/market-data.php?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():'';}).then(function(h){ var el=document.getElementById('market-strip-items'); if(el && h) el.innerHTML=h; }).catch(function(){}); }
+  // 장중 20초 / 장외 2분 라이브 갱신(서버 60초 캐시라 부담 적음), 탭 숨기면 정지
+  setInterval(function(){ if(!document.hidden) tick(); }, open?20000:120000);
+})();
+</script>
     <?php
 }
