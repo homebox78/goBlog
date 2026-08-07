@@ -73,6 +73,20 @@ try {
     foreach ($dr as $d) $discuss[$d['ticker']] = (int) $d['c'];
 } catch (Throwable) { $discuss = []; }
 
+// 최근 종목 토론 피드 + 종목명 맵(등록+국내/해외 랭킹)
+$talk = [];
+try {
+    $talk = $db->query(
+        "SELECT p.ticker, p.body, p.stance, p.createdAt, u.name authorName
+         FROM community_posts p JOIN community_users u ON u.id=p.userId
+         WHERE p.hidden=0 ORDER BY p.id DESC LIMIT 10"
+    )->fetchAll();
+} catch (Throwable) { $talk = []; }
+$nameMap = [];
+foreach ($domItems as $it) $nameMap[$it['ticker']] = $it['name'];
+foreach ($ovItems as $it) $nameMap[$it['ticker']] = $it['name'];
+try { foreach ($db->query('SELECT ticker,name FROM stocks')->fetchAll() as $s) $nameMap[$s['ticker']] = $s['name']; } catch (Throwable) {}
+
 /* 랭킹 분할 */
 function rank_split(array $items): array {
     $byRate = $items;  usort($byRate, fn($a, $b) => $b['rate'] <=> $a['rate']);
@@ -121,7 +135,7 @@ function grid_html(array $list, array $discuss): string {
     $h = '';
     foreach ($list as $it) {
         $disc = !empty($discuss[$it['ticker']])
-            ? '<span class="flex-none text-[11px] text-zinc-400">💬' . (int) $discuss[$it['ticker']] . '</span>' : '';
+            ? '<span class="flex-none rounded-full bg-[#134a9c]/10 px-1.5 py-0.5 text-[10.5px] font-bold text-[#134a9c]">💬 ' . (int) $discuss[$it['ticker']] . '</span>' : '';
         $h .= '<a href="/stock.php?code=' . nh($it['ticker']) . '" class="group flex items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 hover:border-[#134a9c]/40 hover:shadow-sm">'
             . '<div class="min-w-0"><div class="flex items-center gap-1.5">'
             . '<span class="truncate text-[15px] font-bold text-zinc-900 group-hover:text-[#134a9c]">' . nh($it['name']) . '</span>'
@@ -170,8 +184,31 @@ render_nav('종목', [], true);
       </div>
     </div>
 
+    <!-- 실시간 종목 토론 (커뮤니티 코멘트 추출) -->
+    <?php if ($talk): ?>
+    <section class="mt-5 rounded-xl border border-zinc-200 bg-gradient-to-br from-blue-50/40 to-white p-4">
+      <div class="mb-2.5 flex items-center justify-between">
+        <h2 class="flex items-center gap-1.5 text-[15px] font-extrabold text-zinc-800">💬 실시간 종목 토론 <span class="rounded-full bg-[#d60000] px-1.5 py-0.5 text-[9px] font-bold text-white">LIVE</span></h2>
+        <span class="text-[12px] text-zinc-400">투자자 코멘트</span>
+      </div>
+      <div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+        <?php foreach ($talk as $t):
+          $snm = $nameMap[$t['ticker']] ?? $t['ticker'];
+          $st = $t['stance'] === 'BUY' ? '<span class="flex-none text-[10px] font-bold text-[#d60000]">매수</span>' : ($t['stance'] === 'SELL' ? '<span class="flex-none text-[10px] font-bold text-[#1263e0]">매도</span>' : ($t['stance'] === 'HOLD' ? '<span class="flex-none text-[10px] font-bold text-zinc-400">보유</span>' : ''));
+        ?>
+        <a href="/stock.php?code=<?= nh($t['ticker']) ?>" class="group flex items-center gap-2 border-b border-zinc-100 py-1.5 text-[13px]">
+          <span class="flex-none rounded bg-[#134a9c]/10 px-1.5 py-0.5 text-[11px] font-bold text-[#134a9c]"><?= nh($snm) ?></span>
+          <?= $st ?>
+          <span class="min-w-0 flex-1 truncate text-zinc-700 group-hover:text-[#134a9c]"><?= nh(mb_substr((string) $t['body'], 0, 40)) ?></span>
+          <span class="flex-none text-[11px] text-zinc-400"><?= nh($t['authorName']) ?></span>
+        </a>
+        <?php endforeach; ?>
+      </div>
+    </section>
+    <?php endif; ?>
+
     <!-- 국내/해외 탭 -->
-    <div class="mt-4 flex items-center gap-1.5" id="stock-tabs">
+    <div class="mt-5 flex items-center gap-1.5" id="stock-tabs">
       <button data-tab="dom" class="stab rounded-full px-5 py-2 text-[14px] font-bold">🇰🇷 국내</button>
       <button data-tab="ov" class="stab rounded-full px-5 py-2 text-[14px] font-bold">🇺🇸 해외</button>
     </div>
