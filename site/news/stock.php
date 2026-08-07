@@ -179,6 +179,14 @@ if (count($prices) >= 2) {
         <div class="mb-1 text-[12px] font-bold text-zinc-500">최근 <?= count($prices) ?>거래일 (종가)</div>
         <?= $chart ?>
       </div>
+    <?php elseif ($isUsd && $ovMv): ?>
+      <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-zinc-200 bg-white p-4 text-[13px]">
+        <div><span class="text-zinc-400">거래량</span> <b class="text-zinc-800"><?= number_format((int) $ovMv['volume']) ?></b></div>
+        <div><span class="text-zinc-400">거래대금</span> <b class="text-zinc-800"><?php $w = (float) $ovMv['amount']; echo $w >= 1e12 ? number_format($w / 1e12, 1) . '조' : ($w >= 1e8 ? number_format($w / 1e8, 0) . '억' : '—'); ?></b></div>
+        <div><span class="text-zinc-400">시장</span> <b class="text-zinc-800"><?= nh($ovMv['market']) ?></b></div>
+        <?php if (!empty($ovMv['reuters'])): ?><a href="https://m.stock.naver.com/worldstock/stock/<?= nh($ovMv['reuters']) ?>/total" target="_blank" rel="noopener" class="ml-auto font-bold text-[#134a9c] hover:underline">네이버에서 차트·상세 보기 →</a><?php endif; ?>
+      </div>
+      <p class="mt-2 text-[12px] text-zinc-400">해외 종목의 상세 차트·재무는 네이버 증권에서 확인하실 수 있습니다. (가격 USD·거래대금 원화 환산)</p>
     <?php else: ?>
       <div class="mt-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-[13px] text-zinc-400">시세 데이터를 불러오는 중입니다. 잠시 후 다시 확인해 주세요.</div>
     <?php endif; ?>

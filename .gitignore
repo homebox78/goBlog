@@ -19,8 +19,7 @@ storage/
 # Playwright MCP 작업 흔적 (페이지 스냅샷·콘솔 로그)
 .playwright-mcp/
 
-# 이미지 프롬프트 내보내기 결과 (작업물 — 소스가 아님)
-image-prompts/
+# image-prompts/ 는 이제 추적한다 (이미지 URL 등 수정 증적 필요 — 2026-08-07 사용자 요청)
 site/news/includes/senuri.key
 
 # TypeScript 증분 빌드 캐시 (빌드 산출물)
