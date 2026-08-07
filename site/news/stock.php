@@ -55,16 +55,17 @@ if ($code !== '') {
         } catch (Throwable) { $prices = []; }
 
         try {
+            // 종목 태그(article_stocks) 또는 제목에 종목명이 들어간 기사 = 관련 뉴스
             $st = $db->prepare(
-                "SELECT a.id, a.title, a.excerpt, a.publishAt, k.category kwCategory
-                 FROM article_stocks ast
-                 JOIN articles a ON a.id = ast.articleId
+                "SELECT DISTINCT a.id, a.title, a.excerpt, a.publishAt, k.category kwCategory
+                 FROM articles a
                  LEFT JOIN keywords k ON k.id = a.keywordId
-                 WHERE ast.ticker = ? AND a.contentHtml IS NOT NULL
+                 WHERE a.contentHtml IS NOT NULL
                    AND (a.publishAt IS NOT NULL AND a.status IN ('SCHEDULED','PUBLISHED'))
+                   AND (a.id IN (SELECT articleId FROM article_stocks WHERE ticker = ?) OR a.title LIKE ?)
                  ORDER BY a.publishAt DESC LIMIT 20"
             );
-            $st->execute([$code]);
+            $st->execute([$code, '%' . ($stock['name'] ?? '') . '%']);
             $articles = $st->fetchAll();
         } catch (Throwable) { $articles = []; }
 
@@ -73,7 +74,7 @@ if ($code !== '') {
             $st = $db->prepare(
                 'SELECT p.id, p.userId, p.body, p.stance, p.likes, p.comments, p.createdAt, (p.pw IS NOT NULL) hasPw, u.name authorName
                  FROM community_posts p JOIN community_users u ON u.id=p.userId
-                 WHERE p.ticker=? AND p.hidden=0 ORDER BY p.createdAt DESC LIMIT 50'
+                 WHERE p.ticker=? AND p.hidden=0 ORDER BY ' . ((($_GET['csort'] ?? '') === 'hot') ? 'p.likes DESC, p.id DESC' : 'p.createdAt DESC') . ' LIMIT 50'
             );
             $st->execute([$code]);
             $posts = $st->fetchAll();
@@ -191,14 +192,14 @@ if (count($prices) >= 2) {
       <div class="mt-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-[13px] text-zinc-400">시세 데이터를 불러오는 중입니다. 잠시 후 다시 확인해 주세요.</div>
     <?php endif; ?>
 
-    <!-- AI 분석글 -->
+    <!-- 관련 뉴스·분석 -->
     <div class="mt-8">
       <div class="mb-3 flex items-center gap-2.5 border-b-2 border-zinc-900 pb-2.5">
         <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
-        <h2 class="text-[18px] font-bold tracking-tight"><?= nh($stock['name']) ?> AI 분석</h2>
+        <h2 class="text-[18px] font-bold tracking-tight"><?= nh($stock['name']) ?> 관련 뉴스·분석 <span class="text-[13px] font-normal text-zinc-400"><?= count($articles) ?></span></h2>
       </div>
       <?php if (!$articles): ?>
-        <div class="py-10 text-center text-[13px] text-zinc-400">이 종목의 분석글이 아직 없습니다. 곧 채워집니다.</div>
+        <div class="py-10 text-center text-[13px] text-zinc-400">이 종목 관련 기사가 아직 없습니다. 곧 채워집니다.</div>
       <?php else: ?>
         <div class="divide-y divide-zinc-100">
           <?php foreach ($articles as $a): ?>
@@ -225,6 +226,11 @@ if (count($prices) >= 2) {
         <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
         <h2 class="text-[18px] font-bold tracking-tight">💬 종목 토론</h2>
         <span class="text-[13px] text-zinc-400"><?= count($posts) ?></span>
+        <?php $csort = (($_GET['csort'] ?? '') === 'hot') ? 'hot' : 'new'; ?>
+        <div class="ml-auto flex items-center gap-1 text-[12px]">
+          <a href="?code=<?= nh($code) ?>#board" class="rounded-full px-2.5 py-1 font-bold <?= $csort === 'new' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-700' ?>">최신순</a>
+          <a href="?code=<?= nh($code) ?>&csort=hot#board" class="rounded-full px-2.5 py-1 font-bold <?= $csort === 'hot' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-700' ?>">🔥 인기순</a>
+        </div>
       </div>
 
       <!-- 투자의견 게이지 -->
