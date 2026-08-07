@@ -37,6 +37,7 @@ export async function ensureCommunitySchema(): Promise<void> {
       userId    INT         NOT NULL,
       body      TEXT        NOT NULL,
       stance    VARCHAR(4)  NULL,
+      pw        VARCHAR(64) NULL,
       likes     INT         NOT NULL DEFAULT 0,
       comments  INT         NOT NULL DEFAULT 0,
       hidden    TINYINT     NOT NULL DEFAULT 0,

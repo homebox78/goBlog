@@ -71,7 +71,7 @@ if ($code !== '') {
         // 커뮤니티 토론 글 + 투자의견 집계 (테이블 없으면 빈 값)
         try {
             $st = $db->prepare(
-                'SELECT p.id, p.body, p.stance, p.likes, p.comments, p.createdAt, u.name authorName
+                'SELECT p.id, p.userId, p.body, p.stance, p.likes, p.comments, p.createdAt, (p.pw IS NOT NULL) hasPw, u.name authorName
                  FROM community_posts p JOIN community_users u ON u.id=p.userId
                  WHERE p.ticker=? AND p.hidden=0 ORDER BY p.createdAt DESC LIMIT 50'
             );
@@ -237,7 +237,7 @@ if (count($prices) >= 2) {
       <?php if ($me): ?>
         <div class="mb-4 rounded-lg border border-zinc-200 bg-white p-4">
           <textarea id="pb" rows="2" maxlength="2000" placeholder="이 종목에 대한 생각을 남겨보세요 (특정 매수·매도 권유·리딩은 제한됩니다)" class="w-full resize-none rounded-md border border-zinc-200 px-3 py-2 text-[14px] outline-none focus:border-[#134a9c]"></textarea>
-          <div class="mt-2 flex items-center justify-between">
+          <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-1.5 text-[12px]">
               <span class="text-zinc-400">투자의견</span>
               <button type="button" data-st="" class="stbtn rounded-full border border-zinc-200 px-2.5 py-1 font-bold text-zinc-500">없음</button>
@@ -245,8 +245,9 @@ if (count($prices) >= 2) {
               <button type="button" data-st="HOLD" class="stbtn rounded-full border border-zinc-200 px-2.5 py-1 font-bold text-zinc-600">보유</button>
               <button type="button" data-st="SELL" class="stbtn rounded-full border border-zinc-200 px-2.5 py-1 font-bold" style="color:#1263e0">매도</button>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-[12px] text-zinc-400"><?= nh($me['name']) ?></span>
+            <div class="flex items-center gap-1.5">
+              <input id="pname" value="<?= nh($me['name']) ?>" maxlength="20" placeholder="표시 이름" title="표시 이름(닉네임) — 직접 설정, 구글 이름 고정 아님" class="w-24 rounded-md border border-zinc-200 px-2 py-1 text-[12px] outline-none focus:border-[#134a9c]">
+              <input id="ppw" inputmode="numeric" pattern="\d*" maxlength="6" placeholder="비번6자리" title="수정·삭제에 쓸 6자리 숫자 비밀번호(선택)" class="w-[76px] rounded-md border border-zinc-200 px-2 py-1 text-[12px] outline-none focus:border-[#134a9c]">
               <button type="button" id="psend" class="rounded-md bg-[#134a9c] px-4 py-1.5 text-[13px] font-bold text-white hover:bg-[#0f3d82]">등록</button>
             </div>
           </div>
@@ -266,7 +267,7 @@ if (count($prices) >= 2) {
             $stColor = $p['stance'] === 'BUY' ? '#d60000' : ($p['stance'] === 'SELL' ? '#1263e0' : '#888');
             $stLabel = $p['stance'] === 'BUY' ? '매수' : ($p['stance'] === 'SELL' ? '매도' : ($p['stance'] === 'HOLD' ? '보유' : ''));
           ?>
-            <div class="rounded-lg border border-zinc-200 bg-white p-4" data-pid="<?= (int) $p['id'] ?>">
+            <div class="rounded-lg border border-zinc-200 bg-white p-4" data-pid="<?= (int) $p['id'] ?>" data-stance="<?= nh($p['stance'] ?? '') ?>">
               <div class="mb-1.5 flex items-center gap-2 text-[12px] text-zinc-400">
                 <span class="font-bold text-zinc-600"><?= nh($p['authorName']) ?></span>
                 <?php if ($stLabel): ?><span class="rounded px-1.5 py-0.5 text-[11px] font-bold" style="color:<?= $stColor ?>;background:<?= $stColor ?>1a"><?= $stLabel ?></span><?php endif; ?>
@@ -276,7 +277,13 @@ if (count($prices) >= 2) {
               <div class="mt-2 flex items-center gap-4 text-[12.5px] text-zinc-400">
                 <button type="button" class="likebtn hover:text-[#d60000]" data-pid="<?= (int) $p['id'] ?>">👍 <span class="lk"><?= (int) $p['likes'] ?></span></button>
                 <button type="button" class="cmtbtn hover:text-[#134a9c]" data-pid="<?= (int) $p['id'] ?>">💬 <span><?= (int) $p['comments'] ?></span></button>
-                <button type="button" class="reportbtn ml-auto hover:text-zinc-600" data-pid="<?= (int) $p['id'] ?>" title="신고">🚩</button>
+                <div class="ml-auto flex items-center gap-3">
+                  <?php if ($me && (int) $p['userId'] === (int) $me['id']): ?>
+                    <button type="button" class="editbtn hover:text-[#134a9c]" data-pid="<?= (int) $p['id'] ?>" data-haspw="<?= !empty($p['hasPw']) ? 1 : 0 ?>" title="수정">✏️ 수정</button>
+                    <button type="button" class="delbtn hover:text-[#d60000]" data-pid="<?= (int) $p['id'] ?>" data-haspw="<?= !empty($p['hasPw']) ? 1 : 0 ?>" title="삭제">🗑️ 삭제</button>
+                  <?php endif; ?>
+                  <button type="button" class="reportbtn hover:text-zinc-600" data-pid="<?= (int) $p['id'] ?>" title="신고">🚩</button>
+                </div>
               </div>
               <div class="cmts mt-3 hidden border-t border-zinc-100 pt-3"></div>
             </div>
@@ -294,7 +301,30 @@ if (count($prices) >= 2) {
       var stance='';
       document.querySelectorAll('.stbtn').forEach(function(b){ b.addEventListener('click',function(){ stance=b.dataset.st; document.querySelectorAll('.stbtn').forEach(function(x){x.classList.remove('border-[#134a9c]','bg-[#134a9c]/5');}); b.classList.add('border-[#134a9c]','bg-[#134a9c]/5'); }); });
       var send=document.getElementById('psend');
-      if(send) send.addEventListener('click',async function(){ if(need())return; var t=document.getElementById('pb').value.trim(); if(t.length<2){alert('내용을 입력하세요.');return;} send.disabled=true; try{ await post(API+'/stocks/'+CODE+'/posts',{body:t,stance:stance}); location.reload(); }catch(e){ alert(e.message); send.disabled=false; } });
+      if(send) send.addEventListener('click',async function(){
+        if(need())return;
+        var t=document.getElementById('pb').value.trim(); if(t.length<2){alert('내용을 입력하세요.');return;}
+        var nm=(document.getElementById('pname')||{}).value; nm=nm?nm.trim():'';
+        var pw=(document.getElementById('ppw')||{}).value; pw=pw?pw.trim():'';
+        if(pw && !/^\d{6}$/.test(pw)){alert('비밀번호는 6자리 숫자로 입력하세요.');return;}
+        send.disabled=true;
+        try{
+          if(nm.length>=2){ try{ await post(API+'/me/name',{name:nm}); }catch(e){ alert('표시 이름 저장 실패: '+e.message); send.disabled=false; return; } }
+          await post(API+'/stocks/'+CODE+'/posts',{body:t,stance:stance,pw:pw||undefined});
+          location.reload();
+        }catch(e){ alert(e.message); send.disabled=false; }
+      });
+      // 수정 (본인 글) — 새 내용 + (설정돼 있으면)6자리 비번
+      document.querySelectorAll('.editbtn').forEach(function(b){ b.addEventListener('click',async function(){ if(need())return;
+        var card=b.closest('[data-pid]'); var cur=(card.querySelector('.whitespace-pre-line')||{}).textContent||'';
+        var nb=prompt('코멘트 수정:', cur); if(nb===null)return; nb=nb.trim(); if(nb.length<2){alert('내용을 입력하세요.');return;}
+        var pw=''; if(b.dataset.haspw==='1'){ pw=prompt('작성 시 설정한 6자리 비밀번호:'); if(pw===null)return; pw=(pw||'').trim(); }
+        try{ await post(API+'/posts/'+b.dataset.pid+'/edit',{body:nb,stance:card.dataset.stance||'',pw:pw}); location.reload(); }catch(e){ alert(e.message); } }); });
+      // 삭제 (본인 글)
+      document.querySelectorAll('.delbtn').forEach(function(b){ b.addEventListener('click',async function(){ if(need())return;
+        var pw=''; if(b.dataset.haspw==='1'){ pw=prompt('삭제하려면 작성 시 설정한 6자리 비밀번호:'); if(pw===null)return; pw=(pw||'').trim(); }
+        else if(!confirm('이 코멘트를 삭제할까요?'))return;
+        try{ await post(API+'/posts/'+b.dataset.pid+'/delete',{pw:pw}); b.closest('[data-pid]').style.display='none'; }catch(e){ alert(e.message); } }); });
       // 좋아요
       document.querySelectorAll('.likebtn').forEach(function(b){ b.addEventListener('click',async function(){ if(need())return; try{ var d=await post(API+'/posts/'+b.dataset.pid+'/like'); var lk=b.querySelector('.lk'); lk.textContent=(parseInt(lk.textContent||'0')+(d.liked?1:-1)); }catch(e){ alert(e.message); } }); });
       // 신고

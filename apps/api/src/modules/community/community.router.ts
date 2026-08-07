@@ -1,8 +1,13 @@
 import { Router } from "express";
+import crypto from "node:crypto";
 import { asyncHandler, HttpError } from "../../common/http.js";
 import { env } from "../../common/env.js";
 import { getSettingValues } from "../settings/settings.service.js";
 import { prisma } from "../../common/prisma.js";
+
+// 코멘트 수정·삭제용 6자리 숫자 비밀번호 해시 (평문 저장 금지)
+const hashPw = (pw: string): string => crypto.createHash("sha256").update("goblog-cpw:" + pw).digest("hex");
+const isPw6 = (pw: unknown): pw is string => typeof pw === "string" && /^\d{6}$/.test(pw);
 import {
   ensureCommunitySchema,
   currentUser,
@@ -94,6 +99,25 @@ communityRouter.get(
   }),
 );
 
+// 표시 이름(닉네임) 변경 — 구글 이름 고정이 아니라 작성자가 직접 설정
+communityRouter.post(
+  "/me/name",
+  asyncHandler(async (req, res) => {
+    const u = await currentUser(req);
+    if (!u) throw new HttpError(401, "로그인이 필요합니다.");
+    if (u.banned) throw new HttpError(403, "이용이 제한된 계정입니다.");
+    const name = String(req.body?.name ?? "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 20);
+    if (name.length < 2) throw new HttpError(400, "이름은 2자 이상 입력해주세요.");
+    const m = moderate(name);
+    if (!m.ok) throw new HttpError(400, m.reason ?? "사용할 수 없는 이름입니다.");
+    await prisma.$executeRaw`UPDATE community_users SET name=${name} WHERE id=${u.id}`;
+    res.json({ ok: true, name });
+  }),
+);
+
 interface PostRow {
   id: number;
   ticker: string;
@@ -148,8 +172,55 @@ communityRouter.post(
     if (!m.ok) throw new HttpError(400, m.reason ?? "게시할 수 없습니다.");
     // 종목 코드 형식만 검증(등록 여부는 요구하지 않는다 — 국내 등록·동적·해외 종목 전부 허용)
     if (ticker.length < 1) throw new HttpError(400, "종목 코드가 올바르지 않습니다.");
+    // 6자리 숫자 비밀번호(수정·삭제용) — 있으면 해시 저장. 없으면 소유자만 수정·삭제.
+    const pw = isPw6(req.body?.pw) ? hashPw(req.body.pw) : null;
     await prisma.$executeRaw`
-      INSERT INTO community_posts (ticker, userId, body, stance) VALUES (${ticker}, ${u.id}, ${body.trim()}, ${stance})`;
+      INSERT INTO community_posts (ticker, userId, body, stance, pw) VALUES (${ticker}, ${u.id}, ${body.trim()}, ${stance}, ${pw})`;
+    res.json({ ok: true });
+  }),
+);
+
+// 코멘트 수정 — 본인 글 + (설정돼 있으면) 6자리 비밀번호 일치
+communityRouter.post(
+  "/posts/:id/edit",
+  asyncHandler(async (req, res) => {
+    const u = await currentUser(req);
+    if (!u) throw new HttpError(401, "로그인이 필요합니다.");
+    const id = Number(req.params.id) || 0;
+    const rows = (await prisma.$queryRaw`SELECT userId, pw FROM community_posts WHERE id=${id} AND hidden=0 LIMIT 1`) as Array<{
+      userId: number;
+      pw: string | null;
+    }>;
+    const post = rows[0];
+    if (!post) throw new HttpError(404, "글을 찾을 수 없습니다.");
+    if (post.userId !== u.id) throw new HttpError(403, "본인 글만 수정할 수 있습니다.");
+    if (post.pw && post.pw !== hashPw(String(req.body?.pw ?? ""))) throw new HttpError(403, "비밀번호가 일치하지 않습니다.");
+    const body = String(req.body?.body ?? "");
+    const m = moderate(body);
+    if (!m.ok) throw new HttpError(400, m.reason ?? "수정할 수 없습니다.");
+    const stanceRaw = String(req.body?.stance ?? "");
+    const stance = ["BUY", "HOLD", "SELL"].includes(stanceRaw) ? stanceRaw : null;
+    await prisma.$executeRaw`UPDATE community_posts SET body=${body.trim()}, stance=${stance} WHERE id=${id}`;
+    res.json({ ok: true });
+  }),
+);
+
+// 코멘트 삭제(숨김) — 본인 글 + (설정돼 있으면) 6자리 비밀번호 일치
+communityRouter.post(
+  "/posts/:id/delete",
+  asyncHandler(async (req, res) => {
+    const u = await currentUser(req);
+    if (!u) throw new HttpError(401, "로그인이 필요합니다.");
+    const id = Number(req.params.id) || 0;
+    const rows = (await prisma.$queryRaw`SELECT userId, pw FROM community_posts WHERE id=${id} AND hidden=0 LIMIT 1`) as Array<{
+      userId: number;
+      pw: string | null;
+    }>;
+    const post = rows[0];
+    if (!post) throw new HttpError(404, "글을 찾을 수 없습니다.");
+    if (post.userId !== u.id) throw new HttpError(403, "본인 글만 삭제할 수 있습니다.");
+    if (post.pw && post.pw !== hashPw(String(req.body?.pw ?? ""))) throw new HttpError(403, "비밀번호가 일치하지 않습니다.");
+    await prisma.$executeRaw`UPDATE community_posts SET hidden=1 WHERE id=${id}`;
     res.json({ ok: true });
   }),
 );
