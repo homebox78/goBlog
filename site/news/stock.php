@@ -30,6 +30,14 @@ if ($code !== '') {
         $stock = $st->fetch() ?: null;
     } catch (Throwable) { $stock = null; }
 
+    // 미등록 종목(종목 목록에서 랭킹으로 동적 발굴된 코드)도 실시간 시세로 최소 표시 — '종목 없음' 방지
+    if (!$stock) {
+        try {
+            $mv = stock_movers();
+            if (isset($mv[$code])) $stock = ['name' => $mv[$code]['name'], 'market' => $mv[$code]['market'], 'sector' => null];
+        } catch (Throwable) {}
+    }
+
     if ($stock) {
         try {
             $st = $db->prepare('SELECT date, open, high, low, close, volume FROM stock_prices WHERE ticker = ? ORDER BY date DESC LIMIT 60');

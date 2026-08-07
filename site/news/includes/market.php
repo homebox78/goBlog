@@ -45,11 +45,61 @@ function stock_realtime(array $tickers): array
                 'close' => (float) str_replace(',', '', (string) $d['closePrice']),
                 'ratio' => isset($d['fluctuationsRatio']) ? (float) $d['fluctuationsRatio'] : null,
                 'diff'  => isset($d['compareToPreviousClosePrice']) ? (float) str_replace(',', '', (string) $d['compareToPreviousClosePrice']) : null,
+                'volume' => isset($d['accumulatedTradingVolume']) ? (int) str_replace(',', '', (string) $d['accumulatedTradingVolume']) : 0,
             ];
         }
     }
     if ($out) @file_put_contents($cacheFile, json_encode($out), LOCK_EX);
     return $out;
+}
+
+/**
+ * 네이버 랭킹 풀 — 급등/급락/시총상위(KOSPI+KOSDAQ)을 병합한 실시간 시세맵.
+ * 종목 목록을 등록 없이 동적 구성 + 거래량·거래대금 실측(랭킹 API가 함께 내려준다). 60초 캐시.
+ * @return array ticker => ['ticker','name','market','close','ratio','diff','volume','amount'(원),'amountText']
+ */
+function stock_movers(): array
+{
+    $cacheFile = sys_get_temp_dir() . '/goblog_movers.json';
+    if (is_file($cacheFile) && time() - filemtime($cacheFile) < 60) {
+        $c = json_decode((string) file_get_contents($cacheFile), true);
+        if (is_array($c) && $c) return $c;
+    }
+    $out = [];
+    foreach (['KOSPI' => '코스피', 'KOSDAQ' => '코스닥'] as $mk => $label) {
+        // up=급등, down=급락, marketValue=시총상위(거래대금 상위 후보 풀). 값은 이미 부호 포함.
+        foreach (['up' => 30, 'down' => 30, 'marketValue' => 60] as $cat => $size) {
+            $j = mkt_fetch("https://m.stock.naver.com/api/stocks/$cat/$mk?page=1&pageSize=$size");
+            foreach (($j['stocks'] ?? []) as $d) {
+                $code = (string) ($d['itemCode'] ?? '');
+                if ($code === '' || empty($d['closePrice']) || isset($out[$code])) continue;
+                $num = fn(string $k): float => isset($d[$k]) ? (float) str_replace(',', '', (string) $d[$k]) : 0.0;
+                $out[$code] = [
+                    'ticker' => $code,
+                    'name' => (string) ($d['stockName'] ?? $code),
+                    'market' => $label,
+                    'close' => $num('closePrice'),
+                    'ratio' => isset($d['fluctuationsRatio']) ? (float) $d['fluctuationsRatio'] : 0.0,
+                    'diff' => $num('compareToPreviousClosePrice'),
+                    'volume' => (int) $num('accumulatedTradingVolume'),
+                    'amount' => $num('accumulatedTradingValue') * 1000000.0, // 백만원 → 원
+                    'amountText' => (string) ($d['accumulatedTradingValueKrwHangeul'] ?? ''),
+                ];
+            }
+        }
+    }
+    if ($out) @file_put_contents($cacheFile, json_encode($out), LOCK_EX);
+    return $out;
+}
+
+/** 국내 정규장 개장 여부(KST 평일 09:00~15:35) — 자동 갱신 주기 판단용. */
+function market_is_open(): bool
+{
+    $now = new DateTime('now', new DateTimeZone('Asia/Seoul'));
+    $dow = (int) $now->format('N'); // 1=월 … 7=일
+    if ($dow >= 6) return false;
+    $hm = (int) $now->format('Hi');
+    return $hm >= 900 && $hm <= 1535;
 }
 
 /** 시세 목록 — [['label','value','ratio'(float|null),'up'(bool|null)], ...] */
