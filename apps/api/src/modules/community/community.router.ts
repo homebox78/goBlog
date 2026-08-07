@@ -112,7 +112,8 @@ communityRouter.get(
   "/stocks/:ticker/posts",
   asyncHandler(async (req, res) => {
     await ensureCommunitySchema();
-    const ticker = String(req.params.ticker).replace(/[^0-9]/g, "");
+    // 국내(숫자)·해외(알파벳 심볼) 모두 허용
+    const ticker = String(req.params.ticker).replace(/[^0-9A-Za-z.]/g, "").slice(0, 12);
     const posts = (await prisma.$queryRaw`
       SELECT p.id, p.ticker, p.userId, p.body, p.stance, p.likes, p.comments, p.createdAt,
              u.name authorName, u.avatar authorAvatar
@@ -138,15 +139,15 @@ communityRouter.post(
     const u = await currentUser(req);
     if (!u) throw new HttpError(401, "로그인이 필요합니다.");
     if (u.banned) throw new HttpError(403, "이용이 제한된 계정입니다.");
-    const ticker = String(req.params.ticker).replace(/[^0-9]/g, "");
+    // 국내(숫자)·해외(알파벳 심볼) 모두 허용 — 랭킹으로 동적 발굴된 종목·미국 종목에도 코멘트 가능
+    const ticker = String(req.params.ticker).replace(/[^0-9A-Za-z.]/g, "").slice(0, 12);
     const body = String(req.body?.body ?? "");
     const stanceRaw = String(req.body?.stance ?? "");
     const stance = ["BUY", "HOLD", "SELL"].includes(stanceRaw) ? stanceRaw : null;
     const m = moderate(body);
     if (!m.ok) throw new HttpError(400, m.reason ?? "게시할 수 없습니다.");
-    // 종목 존재 확인
-    const st = (await prisma.$queryRaw`SELECT ticker FROM stocks WHERE ticker=${ticker} LIMIT 1`) as unknown[];
-    if (st.length === 0) throw new HttpError(404, "존재하지 않는 종목입니다.");
+    // 종목 코드 형식만 검증(등록 여부는 요구하지 않는다 — 국내 등록·동적·해외 종목 전부 허용)
+    if (ticker.length < 1) throw new HttpError(400, "종목 코드가 올바르지 않습니다.");
     await prisma.$executeRaw`
       INSERT INTO community_posts (ticker, userId, body, stance) VALUES (${ticker}, ${u.id}, ${body.trim()}, ${stance})`;
     res.json({ ok: true });
