@@ -166,6 +166,18 @@ if (preg_match('/<p\b[^>]*>((?:\s|&nbsp;|#[^\s<#]+)+)<\/p>\s*$/u', $html, $hm)) 
     }
 }
 
+// 이 기사가 언급한 종목(태그 또는 제목에 종목명) → 종목 시세·토론 유도
+$relStocks = [];
+try {
+    $st = goblog_db()->prepare(
+        "SELECT DISTINCT s.ticker, s.name FROM stocks s
+         WHERE s.active=1 AND (s.ticker IN (SELECT ticker FROM article_stocks WHERE articleId=?) OR ? LIKE CONCAT('%', s.name, '%'))
+         LIMIT 3"
+    );
+    $st->execute([$id, $article['title']]);
+    $relStocks = $st->fetchAll();
+} catch (Throwable) { $relStocks = []; }
+
 // 관련 기사 — 같은 섹션 최신 6 (자기 제외)
 $related = [];
 try {
@@ -327,6 +339,17 @@ html { scroll-behavior:smooth; }
         <?php foreach ($hashtags as $tg): ?>
           <a href="/search.php?q=<?= urlencode($tg) ?>" class="inline-flex items-center rounded-full bg-[<?= NEWS_PRIMARY ?>]/10 px-3 py-1 text-xs font-medium text-[<?= NEWS_PRIMARY ?>] hover:bg-[<?= NEWS_PRIMARY ?>]/20">#<?= nh($tg) ?></a>
         <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+
+      <?php if ($relStocks): ?>
+      <div class="my-7 rounded-xl border border-[#134a9c]/30 bg-[#134a9c]/5 p-4">
+        <div class="mb-2 text-[13px] font-bold text-[#134a9c]">📈 이 기사 관련 종목 — 실시간 시세·투자자 토론</div>
+        <div class="flex flex-wrap gap-2">
+          <?php foreach ($relStocks as $rs): ?>
+            <a href="/stock.php?code=<?= nh($rs['ticker']) ?>#board" class="inline-flex items-center gap-1 rounded-full border border-[#134a9c]/40 bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#134a9c] transition-colors hover:bg-[#134a9c] hover:text-white"><?= nh($rs['name']) ?> 시세·토론 →</a>
+          <?php endforeach; ?>
+        </div>
       </div>
       <?php endif; ?>
 
