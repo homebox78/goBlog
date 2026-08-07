@@ -129,6 +129,15 @@ try {
     )->fetchAll();
 } catch (Throwable) { $stockTalk = []; }
 
+// 최근 7일 많이 본 기사 (article_views) — 발행된 기사만(news_articles로 제목 해석)
+$popular = [];
+try {
+    $amap = [];
+    foreach ($articles as $a) $amap[(int) $a['id']] = $a;
+    $pr = goblog_db()->query('SELECT articleId, COUNT(*) v FROM article_views WHERE viewedAt>=NOW()-INTERVAL 7 DAY GROUP BY articleId ORDER BY v DESC LIMIT 15')->fetchAll();
+    foreach ($pr as $r) { if (count($popular) >= 6) break; $aid = (int) $r['articleId']; if (isset($amap[$aid])) $popular[] = $amap[$aid]; }
+} catch (Throwable) { $popular = []; }
+
 $P = '#134a9c';
 render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스와 가이드. HOM2BOX 편집국 자체 기사.');
 ?>
@@ -533,6 +542,23 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
 
       <!-- 사이드바 -->
       <div class="flex flex-col gap-5 self-start lg:sticky lg:top-16">
+        <?php if ($popular): ?>
+        <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
+          <div class="flex items-center gap-2 px-4 pt-3.5 pb-2.5 border-b border-zinc-100">
+            <span class="h-[15px] w-[3px] rounded-full bg-[#e0392b]"></span>
+            <span class="text-[15.5px] font-extrabold">🔥 많이 본 기사</span>
+            <span class="ml-auto text-[10.5px] font-medium text-zinc-400">최근 7일</span>
+          </div>
+          <div class="px-4 py-1">
+            <?php $i = 1; foreach ($popular as $a): ?>
+            <a href="/article.php?id=<?= (int) $a['id'] ?>" class="flex items-start gap-2.5 border-b border-zinc-100 py-2.5 last:border-0 group">
+              <span class="flex-none text-[15px] font-extrabold <?= $i <= 3 ? 'text-[#e0392b]' : 'text-zinc-300' ?>"><?= $i++ ?></span>
+              <span class="line-clamp-2 text-[13.5px] font-semibold leading-snug text-zinc-800 group-hover:text-[#134a9c]"><?= nh($a['title']) ?></span>
+            </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
         <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
           <div class="flex items-center gap-2 px-4 pt-3.5 pb-2.5 border-b border-zinc-100">
             <span class="h-[15px] w-[3px] rounded-full bg-[#b3925c]"></span>
