@@ -243,10 +243,14 @@ function record_page_view(?string $type = null, ?string $key = null, ?string $ti
 {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') return;
     $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
-    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|monitor|curl|wget|python-requests|headless|lighthouse|Googlebot|AdsBot|PetalBot|YandexBot|Bytespider/i', $ua)) return;
+    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|monitor|curl|wget|python-requests|headless|lighthouse|Googlebot|AdsBot|PetalBot|YandexBot|Bytespider|libredtail|go-http|scan|masscan|zgrab|nmap/i', $ua)) return;
+    // 해킹 스캐너 경로(.env·.git·wp-login·wp-admin 등)는 정상 브라우저 UA로 위장해 들어와도 통계에 안 남긴다.
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+    if (preg_match('#(^|/)\.(env|git|aws)|wp-(login|admin|content|includes)|/SDK/|\.well-known|/vendor/|/laravel/|/backend/|phpunit|/cgi-bin/|\.php\.|/\.\w#i', $uri)) return;
     if ($type === null) {
         [$type, $key] = pageview_identify();
     }
+    if ($type === '404') return; // 404(대부분 봇 스캔)는 통계 오염원이라 기록하지 않는다
     try {
         $st = goblog_db()->prepare(
             'INSERT INTO page_views (type, pkey, title, ip, userAgent, referer, path) VALUES (?, ?, ?, ?, ?, ?, ?)',

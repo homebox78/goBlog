@@ -65,6 +65,7 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%23134a9c'/%3E%3Ctext%20x='16'%20y='23'%20font-size='18'%20font-weight='800'%20fill='white'%20text-anchor='middle'%20font-family='Arial,sans-serif'%3EH%3C/text%3E%3C/svg%3E">
 <title><?= nh($title) ?></title>
 <meta name="description" content="<?= nh($desc !== '' ? $desc : $title) ?>">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
