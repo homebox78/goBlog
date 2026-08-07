@@ -72,6 +72,7 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <!-- 포털 검색 등록 소유확인 -->
 <meta name="naver-site-verification" content="9ecc3c8fb1e58fdffb9406529b6cb1f887b10208">
 <meta name="google-adsense-account" content="ca-pub-2061625131722900">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2061625131722900" crossorigin="anonymous"></script>
 <link rel="canonical" href="<?= nh($canonical) ?>">
 <meta property="og:type" content="<?= $isArticle ? 'article' : 'website' ?>">
 <meta property="og:site_name" content="HOM2BOX 뉴스">
@@ -539,6 +540,48 @@ function render_util_hero(string $eyebrow, string $title, string $subtitle, arra
  * 광고 슬롯 렌더 — ad_slots 테이블에서 position을 읽어 활성 시 배너/애드센스를 출력한다.
  * 관리자에서 켜지 않았거나 내용이 없으면 아무것도 출력하지 않는다(빈 슬롯).
  */
+/** AdSense 인피드 광고(4548345559) — 기사 목록 카드 사이. */
+function adsense_infeed(): void
+{
+    ?>
+<div class="my-4">
+  <ins class="adsbygoogle" style="display:block" data-ad-format="fluid" data-ad-layout-key="-g5-1e+5c-9l+8q" data-ad-client="ca-pub-2061625131722900" data-ad-slot="4548345559"></ins>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<?php
+}
+
+/** AdSense 인아티클 광고(8111085965) — 기사 본문 문단 사이. */
+function adsense_inarticle(): void
+{
+    ?>
+<ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-2061625131722900" data-ad-slot="8111085965"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+<?php
+}
+
+/** AdSense 반응형 디스플레이 광고(2802918963) — 일반 배너 위치. */
+function adsense_display(): void
+{
+    ?>
+<div class="my-5">
+  <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2061625131722900" data-ad-slot="2802918963" data-ad-format="auto" data-full-width-responsive="true"></ins>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<?php
+}
+
+/** AdSense 멀티플렉스 광고(1922182217) — 콘텐츠 끝 추천형 네이티브 그리드. */
+function adsense_multiplex(): void
+{
+    ?>
+<div class="my-6">
+  <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed" data-ad-client="ca-pub-2061625131722900" data-ad-slot="1922182217"></ins>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<?php
+}
+
 function render_ad(string $position): void
 {
     static $cache = null;

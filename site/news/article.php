@@ -56,9 +56,9 @@ $image = $imgRow ? ($imgRow['webpUrl'] ?: $imgRow['originalUrl']) : null;
 
 $html = strip_external_images($article['contentHtml']);
 
-// 본문 중간 광고(3번째 문단 뒤) — 관리자에서 'article-mid' 슬롯 설정 시에만 삽입. 미설정이면 render_ad가 빈 출력이라 원문 유지.
+// 본문 중간 광고(3번째 문단 뒤) — AdSense 인아티클 유닛. 문단이 충분할 때만 삽입.
 ob_start();
-render_ad('article-mid');
+adsense_inarticle();
 $midAd = trim(ob_get_clean());
 if ($midAd !== '') {
     $parts = explode('</p>', $html);
@@ -426,6 +426,8 @@ html { scroll-behavior:smooth; }
         </div>
       </section>
       <?php endif; ?>
+
+      <?php adsense_multiplex(); /* 콘텐츠 끝 추천형 광고 그리드 */ ?>
     </div>
 
     <!-- 사이드바 -->

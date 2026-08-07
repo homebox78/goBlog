@@ -205,7 +205,7 @@ $viewOff = 'border-zinc-200 bg-white text-zinc-600';
           <div class="py-20 text-center text-zinc-400">아직 이 분야 기사가 없습니다.</div>
         <?php else: ?>
           <div id="h2b-artlist" class="h2b-view-list">
-            <?php foreach ($items as $c) category_row($c); ?>
+            <?php $ci = 0; foreach ($items as $c) { category_row($c); if (++$ci === 6) adsense_infeed(); } ?>
           </div>
           <div id="sentinel" class="h-10"></div>
           <div id="loadingMore" class="hidden py-6 text-center text-sm text-zinc-400">불러오는 중…</div>

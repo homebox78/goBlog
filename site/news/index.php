@@ -515,7 +515,8 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-9 pt-7 pb-2">
       <!-- 분야별 섹션 -->
       <div>
-        <?php foreach (NEWS_SECTIONS as $s): $list = $bySection[$s] ?? []; if (!$list) continue; ?>
+        <?php $secIdx = 0; foreach (NEWS_SECTIONS as $s): $list = $bySection[$s] ?? []; if (!$list) continue; $secIdx++; ?>
+          <?php if ($secIdx === 2) adsense_display(); /* 섹션 사이 배너 */ ?>
           <div id="sec-<?= nh(preg_replace('/[^0-9a-z가-힣]/u', '', $s)) ?>" class="mb-9">
             <div class="flex items-center gap-2.5 border-b border-zinc-200 pb-2.5 mb-5">
               <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
