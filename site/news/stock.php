@@ -4,8 +4,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
 require_once __DIR__ . '/includes/layout.php';
 
-$code = preg_replace('/[^0-9]/', '', (string) ($_GET['code'] ?? ''));
+// 국내=숫자 6자리, 해외=알파벳 심볼(NVDA 등) 모두 허용
+$code = preg_replace('/[^0-9A-Za-z.]/', '', (string) ($_GET['code'] ?? ''));
 $db = goblog_db();
+$ovMv = null; // 해외 종목이면 랭킹 풀에서 합성한 시세
 
 // 로그인 사용자 (커뮤니티 세션 쿠키 — 테이블 없으면 null)
 $me = null;
@@ -30,11 +32,18 @@ if ($code !== '') {
         $stock = $st->fetch() ?: null;
     } catch (Throwable) { $stock = null; }
 
-    // 미등록 종목(종목 목록에서 랭킹으로 동적 발굴된 코드)도 실시간 시세로 최소 표시 — '종목 없음' 방지
+    // 미등록 국내 종목(랭킹으로 동적 발굴)도 실시간 시세로 최소 표시 — '종목 없음' 방지
     if (!$stock) {
         try {
             $mv = stock_movers();
             if (isset($mv[$code])) $stock = ['name' => $mv[$code]['name'], 'market' => $mv[$code]['market'], 'sector' => null];
+        } catch (Throwable) {}
+    }
+    // 해외 종목(알파벳 심볼) — 미국 랭킹 풀에서 합성(USD 시세)
+    if (!$stock) {
+        try {
+            $mvo = stock_movers_overseas();
+            if (isset($mvo[$code])) { $ovMv = $mvo[$code]; $stock = ['name' => $ovMv['name'], 'market' => $ovMv['market'], 'sector' => null]; }
         } catch (Throwable) {}
     }
 
@@ -98,6 +107,14 @@ if ($code !== '') {
         }
     } catch (Throwable) {}
 }
+// 해외 종목이면 USD 시세로 덮어씀(국내 realtime은 숫자 코드 전용이라 위에서 못 잡음)
+$isUsd = $ovMv !== null;
+if ($isUsd && $ovMv) {
+    $isLive = true;
+    $close = $ovMv['close']; // USD float
+    $rate = (float) $ovMv['ratio'];
+    $diff = $ovMv['diff'];
+}
 // 한국식: 상승=빨강, 하락=파랑
 $upColor = '#d60000';
 $downColor = '#1263e0';
@@ -148,8 +165,8 @@ if (count($prices) >= 2) {
           <span class="rounded bg-zinc-100 px-2 py-0.5 text-[12px] font-bold text-zinc-500"><?= nh($stock['market']) ?> · <?= nh($code) ?></span>
         </div>
         <div class="mt-2 flex items-baseline gap-3">
-          <span class="text-[30px] font-extrabold" style="color:<?= $sign ?>"><?= number_format($close) ?></span>
-          <span class="text-[16px] font-bold" style="color:<?= $sign ?>"><?= $arrow ?> <?= number_format(abs($diff)) ?> (<?= number_format($rate, 2) ?>%)</span>
+          <span class="text-[30px] font-extrabold" style="color:<?= $sign ?>"><?= $isUsd ? '$' . number_format((float) $close, 2) : number_format($close) ?></span>
+          <span class="text-[16px] font-bold" style="color:<?= $sign ?>"><?= $arrow ?> <?= $isUsd ? '$' . number_format(abs((float) $diff), 2) : number_format(abs($diff)) ?> (<?= number_format($rate, 2) ?>%)</span>
         </div>
         <div class="mt-1 text-[12px] text-zinc-400"><?= $isLive ? '네이버 실시간 (장중 현재가·장마감 후 종가)' : ($last ? nh($last['date']) . ' 종가 기준 (지연 시세)' : '시세 준비 중') ?></div>
       </div>

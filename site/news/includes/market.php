@@ -92,6 +92,67 @@ function stock_movers(): array
     return $out;
 }
 
+/** 한글 금액 문자열("1,887억원"·"1.33조원"·"5,120만원") → 원(float). 정렬·표시용. */
+function parse_krw_hangeul(string $s): float
+{
+    $s = str_replace([',', ' ', '원'], '', $s);
+    $won = 0.0;
+    if (preg_match('/([0-9.]+)조/u', $s, $m)) $won += (float) $m[1] * 1e12;
+    if (preg_match('/([0-9.]+)억/u', $s, $m)) $won += (float) $m[1] * 1e8;
+    if (preg_match('/([0-9.]+)만/u', $s, $m)) $won += (float) $m[1] * 1e4;
+    if ($won == 0.0 && is_numeric($s)) $won = (float) $s;
+    return $won;
+}
+
+/**
+ * 해외(미국) 랭킹 풀 — 나스닥·뉴욕 급등/급락/시총상위 병합. 60초 캐시.
+ * 가격은 USD, 거래대금은 원화 환산(accumulatedTradingValueKrwHangeul). ticker=symbolCode.
+ * @return array ticker => ['ticker','name','market','close'(USD),'ratio','diff','volume','amount'(원),'reuters','usd'=>true]
+ */
+function stock_movers_overseas(): array
+{
+    $cacheFile = sys_get_temp_dir() . '/goblog_movers_ov.json';
+    if (is_file($cacheFile) && time() - filemtime($cacheFile) < 60) {
+        $c = json_decode((string) file_get_contents($cacheFile), true);
+        if (is_array($c) && $c) return $c;
+    }
+    $out = [];
+    foreach (['NASDAQ' => '나스닥', 'NYSE' => '뉴욕'] as $ex => $label) {
+        foreach (['up' => 30, 'down' => 30, 'marketValue' => 40] as $cat => $size) {
+            $j = mkt_fetch("https://api.stock.naver.com/stock/exchange/$ex/$cat?page=1&pageSize=$size");
+            foreach (($j['stocks'] ?? []) as $d) {
+                $code = (string) ($d['symbolCode'] ?? '');
+                if ($code === '' || empty($d['closePrice']) || isset($out[$code])) continue;
+                $num = fn(string $k): float => isset($d[$k]) ? (float) str_replace(',', '', (string) $d[$k]) : 0.0;
+                $out[$code] = [
+                    'ticker' => $code,
+                    'name' => (string) ($d['stockName'] ?? $code),
+                    'market' => $label,
+                    'close' => $num('closePrice'),
+                    'ratio' => isset($d['fluctuationsRatio']) ? (float) $d['fluctuationsRatio'] : 0.0,
+                    'diff' => $num('compareToPreviousClosePrice'),
+                    'volume' => (int) $num('accumulatedTradingVolume'),
+                    'amount' => parse_krw_hangeul((string) ($d['accumulatedTradingValueKrwHangeul'] ?? '')),
+                    'reuters' => (string) ($d['reutersCode'] ?? ''),
+                    'usd' => true,
+                ];
+            }
+        }
+    }
+    if ($out) @file_put_contents($cacheFile, json_encode($out), LOCK_EX);
+    return $out;
+}
+
+/** 미국 정규장 개장 여부(대략, ET 09:30~16:00 = KST 22:30~05:00). 자동 갱신 주기용. */
+function market_is_open_us(): bool
+{
+    $now = new DateTime('now', new DateTimeZone('America/New_York'));
+    $dow = (int) $now->format('N');
+    if ($dow >= 6) return false;
+    $hm = (int) $now->format('Hi');
+    return $hm >= 930 && $hm <= 1600;
+}
+
 /** 국내 정규장 개장 여부(KST 평일 09:00~15:35) — 자동 갱신 주기 판단용. */
 function market_is_open(): bool
 {
