@@ -189,14 +189,39 @@ try {
     $relStocks = $st->fetchAll();
 } catch (Throwable) { $relStocks = []; }
 
-// 관련 기사 — 같은 섹션 최신 6 (자기 제외)
+// 관련 기사 — 제목 토큰 겹침으로 관련도 점수화(같은 섹션 가산), 상위 6.
+// 관련도가 낮으면 같은 섹션 최신으로 보충해 블록이 절대 줄지 않게 함.
 $related = [];
 try {
-    foreach (news_articles() as $a) {
-        if ($a['id'] !== $id && $a['section'] === $section) $related[] = $a;
+    preg_match_all('/[0-9a-z가-힣]{2,}/u', mb_strtolower((string) ($article['title'] ?? '')), $mm);
+    $stop = ['그리고', '하지만', '에서', '으로', '합니다', '했다', '있다', '대한', '위한', '통해', '최신', '속보', '오늘', '정리', '방법'];
+    $curTok = array_values(array_diff(array_unique($mm[0]), $stop));
+
+    $scored = [];
+    $all = news_articles();
+    foreach ($all as $a) {
+        if ($a['id'] === $id) continue;
+        $t = mb_strtolower((string) ($a['title'] ?? '') . ' ' . (string) ($a['kwText'] ?? ''));
+        $overlap = 0;
+        foreach ($curTok as $tok) if ($tok !== '' && mb_strpos($t, $tok) !== false) $overlap++;
+        $score = $overlap * 10 + ($a['section'] === $section ? 3 : 0);
+        if ($score > 0) $scored[] = ['a' => $a, 's' => $score];
+    }
+    usort($scored, fn($x, $y) => $y['s'] <=> $x['s']); // PHP 8 usort는 안정정렬 → 동점은 최신순 유지
+    foreach ($scored as $row) {
+        $related[] = $row['a'];
         if (count($related) >= 6) break;
     }
+    if (count($related) < 6) { // 같은 섹션 최신으로 보충
+        $have = array_flip(array_map(fn($r) => $r['id'], $related));
+        foreach ($all as $a) {
+            if ($a['id'] === $id || isset($have[$a['id']]) || $a['section'] !== $section) continue;
+            $related[] = $a;
+            if (count($related) >= 6) break;
+        }
+    }
 } catch (Throwable) {
+    $related = [];
 }
 
 $desc = $article['metaDescription'] ?: ($article['excerpt'] ?: mb_substr(strip_tags($html), 0, 120));
