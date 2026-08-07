@@ -9,4 +9,5 @@ Disallow: /*?*ajax=
 Disallow: /*?*offset=
 
 Sitemap: https://hom2box.com/sitemap.xml
+Sitemap: https://hom2box.com/sitemap-news.xml
 Sitemap: https://hom2box.com/wordpress/wp-sitemap.xml
