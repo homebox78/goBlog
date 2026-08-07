@@ -106,6 +106,29 @@ if (!$mainHeads) {
 $seniorJobs = [];
 try { $seniorJobs = array_slice(senuri_jobs_cached(), 0, 5); } catch (Throwable) {}
 
+// 종목 이슈 위젯(급등·급락·거래대금 국내) + 종목 커뮤니티 추출 (stock_movers는 60초 캐시)
+$stockRanks = null;
+$stockNames = [];
+try {
+    $mv = stock_movers();
+    $sit = [];
+    foreach ($mv as $tk => $m) { if (($m['close'] ?? 0) > 0) { $sit[] = $m; $stockNames[$tk] = $m['name']; } }
+    try { foreach (goblog_db()->query('SELECT ticker,name FROM stocks')->fetchAll() as $s) $stockNames[$s['ticker']] = $s['name']; } catch (Throwable) {}
+    if ($sit) {
+        $byR = $sit; usort($byR, fn($a, $b) => $b['ratio'] <=> $a['ratio']);
+        $byV = $sit; usort($byV, fn($a, $b) => $b['amount'] <=> $a['amount']);
+        $stockRanks = ['up' => array_slice($byR, 0, 4), 'down' => array_slice(array_reverse($byR), 0, 4), 'active' => array_slice($byV, 0, 4)];
+    }
+} catch (Throwable) {}
+$stockTalk = [];
+try {
+    $stockTalk = goblog_db()->query(
+        'SELECT p.ticker, p.body, p.stance, u.name authorName
+         FROM community_posts p JOIN community_users u ON u.id=p.userId
+         WHERE p.hidden=0 ORDER BY p.id DESC LIMIT 5'
+    )->fetchAll();
+} catch (Throwable) { $stockTalk = []; }
+
 $P = '#134a9c';
 render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스와 가이드. HOM2BOX 편집국 자체 기사.');
 ?>
@@ -228,6 +251,64 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
         <?php endif; ?>
       </div>
     </div>
+
+    <!-- 종목 이슈(급등·급락·거래대금) + 종목 커뮤니티 추출 -->
+    <?php if ($stockRanks): ?>
+    <section class="mt-8">
+      <div class="mb-3 flex items-center justify-between border-b-2 border-zinc-900 pb-2.5">
+        <h2 class="flex items-center gap-2 text-[20px] font-extrabold tracking-tight sm:text-[23px]"><span class="material-symbols-outlined text-[24px] text-[#d60000]">trending_up</span>실시간 종목 이슈</h2>
+        <a href="/stocks.php" class="inline-flex items-center text-[13px] text-zinc-400 hover:text-[#134a9c]">종목 전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
+      </div>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <?php
+        function home_rank(string $title, string $emoji, array $list, bool $money = false): void {
+          $up = fn($r) => $r > 0 ? '#d60000' : ($r < 0 ? '#1263e0' : '#666');
+          $ar = fn($r) => $r > 0 ? '▲' : ($r < 0 ? '▼' : '−');
+          $short = function ($w) { if ($w >= 1e12) return number_format($w / 1e12, 1) . '조'; if ($w >= 1e8) return number_format($w / 1e8, 0) . '억'; return $w > 0 ? number_format($w / 1e4, 0) . '만' : '—'; };
+          ?>
+          <div class="rounded-lg border border-zinc-200 bg-white p-3.5">
+            <div class="mb-1.5 text-[13.5px] font-bold text-zinc-800"><?= $emoji ?> <?= nh($title) ?></div>
+            <div class="divide-y divide-zinc-100">
+              <?php $i = 1; foreach ($list as $it): ?>
+              <a href="/stock.php?code=<?= nh($it['ticker']) ?>" class="flex items-center gap-2 py-1.5 group">
+                <span class="w-3.5 flex-none text-[11px] font-bold text-zinc-400"><?= $i++ ?></span>
+                <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-zinc-800 group-hover:text-[#134a9c]"><?= nh($it['name']) ?></span>
+                <?php if ($money): ?>
+                  <span class="flex-none text-[12px] font-bold text-zinc-600"><?= nh($short($it['amount'])) ?></span>
+                <?php else: ?>
+                  <span class="flex-none text-[12px] font-bold" style="color:<?= $up($it['ratio']) ?>"><?= $ar($it['ratio']) ?> <?= number_format($it['ratio'], 2) ?>%</span>
+                <?php endif; ?>
+              </a>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php }
+        home_rank('급등', '🔺', $stockRanks['up']);
+        home_rank('급락', '🔻', $stockRanks['down']);
+        home_rank('거래대금', '💰', $stockRanks['active'], true);
+        ?>
+      </div>
+      <div class="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+        <div class="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-zinc-700">💬 종목 토론 <span class="font-normal text-zinc-400">· 투자자 코멘트</span></div>
+        <?php if ($stockTalk): ?>
+          <div class="flex flex-col gap-1.5">
+            <?php foreach ($stockTalk as $t):
+              $snm = $stockNames[$t['ticker']] ?? $t['ticker'];
+              $stanceLbl = $t['stance'] === 'BUY' ? '<span style="color:#d60000">매수</span> ' : ($t['stance'] === 'SELL' ? '<span style="color:#1263e0">매도</span> ' : '');
+            ?>
+            <a href="/stock.php?code=<?= nh($t['ticker']) ?>" class="flex items-baseline gap-2 text-[13px] hover:text-[#134a9c]">
+              <span class="flex-none font-bold text-zinc-700"><?= nh($snm) ?></span>
+              <span class="min-w-0 flex-1 truncate text-zinc-500"><?= $stanceLbl ?><?= nh(mb_substr((string) $t['body'], 0, 40)) ?></span>
+              <span class="flex-none text-[11px] text-zinc-400"><?= nh($t['authorName']) ?></span>
+            </a>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <p class="text-[13px] text-zinc-400">아직 코멘트가 없어요. <a href="/stocks.php" class="text-[#134a9c] underline">종목</a>에서 첫 의견을 남겨보세요.</p>
+        <?php endif; ?>
+      </div>
+    </section>
+    <?php endif; ?>
 
     <!-- 문서도구·계산기 바로가기 (서식/계산기 선택 → 바로 이동) -->
     <?php

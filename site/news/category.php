@@ -24,6 +24,26 @@ try {
 } catch (Throwable) {
 }
 $all = array_values(array_filter($everything, fn($a) => $a['section'] === $cat));
+
+// 카테고리 내 통합검색 — 제목·요약·키워드(메모리) + 본문(DB contentMarkdown). 최신순 유지.
+$q = trim((string) ($_GET['q'] ?? ''));
+if ($q !== '' && $all) {
+    $hit = [];
+    foreach ($all as $a) {
+        $hay = $a['title'] . ' ' . ($a['excerpt'] ?? '') . ' ' . ($a['kwText'] ?? '');
+        if (mb_stripos($hay, $q) !== false) $hit[(int) $a['id']] = true;
+    }
+    try { // 본문까지 검색 — 이 카테고리 기사 중 contentMarkdown LIKE
+        $ids = array_map(fn($a) => (int) $a['id'], $all);
+        $in = implode(',', $ids);
+        $st = goblog_db()->prepare("SELECT id FROM articles WHERE id IN ($in) AND (title LIKE ? OR excerpt LIKE ? OR contentMarkdown LIKE ?)");
+        $like = '%' . $q . '%';
+        $st->execute([$like, $like, $like]);
+        foreach ($st->fetchAll() as $r) $hit[(int) $r['id']] = true;
+    } catch (Throwable) {}
+    $all = array_values(array_filter($all, fn($a) => isset($hit[(int) $a['id']])));
+}
+
 if ($sort === 'name') {
     usort($all, fn($a, $b) => strcmp($a['title'], $b['title'])); // UTF-8 코드포인트 정렬 = 가나다순
 }
@@ -103,7 +123,8 @@ if (count($popular) < 5) {
 }
 
 $catDesc = CAT_DESCS[$cat] ?? '';
-$base = '/category.php?cat=' . urlencode($cat);
+$baseCat = '/category.php?cat=' . urlencode($cat);           // 검색 없는 기본(검색 지우기·폼 action)
+$base = $baseCat . ($q !== '' ? '&q=' . urlencode($q) : ''); // 정렬 링크는 검색어 유지
 
 render_head("$cat 기사 — HOM2BOX 뉴스", "$cat 분야 최신 기사 모음 — HOM2BOX 편집국 자체 기사.");
 news_breadcrumb_ld([
@@ -157,10 +178,17 @@ $viewOff = 'border-zinc-200 bg-white text-zinc-600';
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6">
     <div class="flex flex-col gap-3 border-b border-zinc-200 pt-8 pb-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h2 class="m-0 text-[17px] font-extrabold tracking-tight text-zinc-900 sm:text-[19px]">전체 기사</h2>
-        <div class="mt-1 text-[13px] text-zinc-400"><?= nh($catDesc) ?> · <?= count($all) ?>건</div>
+        <h2 class="m-0 text-[17px] font-extrabold tracking-tight text-zinc-900 sm:text-[19px]"><?= $q !== '' ? '‘' . nh($q) . '’ 검색 결과' : '전체 기사' ?></h2>
+        <div class="mt-1 text-[13px] text-zinc-400"><?= nh($catDesc) ?> · <?= count($all) ?>건<?php if ($q !== ''): ?> · <a href="<?= nh($baseCat) ?>" class="text-[#134a9c] hover:underline">검색 지우기</a><?php endif; ?></div>
       </div>
       <div class="flex flex-wrap items-center gap-2 pb-1">
+        <form method="get" action="/category.php" class="flex items-center">
+          <input type="hidden" name="cat" value="<?= nh($cat) ?>">
+          <div class="flex items-center rounded-full border border-zinc-300 bg-white pl-3 pr-1 focus-within:border-[#134a9c]">
+            <span class="material-symbols-outlined text-[18px] text-zinc-400">search</span>
+            <input type="search" name="q" value="<?= nh($q) ?>" placeholder="<?= nh($cat) ?> 내 검색" class="w-[150px] bg-transparent px-2 py-1.5 text-[13px] outline-none">
+          </div>
+        </form>
         <a href="<?= nh($base) ?>" class="<?= $sort === 'latest' ? $sortOn : $sortOff ?>">최신순</a>
         <a href="<?= nh($base . '&sort=name') ?>" class="<?= $sort === 'name' ? $sortOn : $sortOff ?>">가나다순</a>
         <div id="h2b-viewtoggle" class="flex gap-2 ml-1">
@@ -186,6 +214,7 @@ $viewOff = 'border-zinc-200 bg-white text-zinc-600';
             var offset = <?= json_encode($nextOffset) ?>;
             var cat = <?= json_encode($cat) ?>;
             var sort = <?= json_encode($sort) ?>;
+            var q = <?= json_encode($q) ?>;
             var loading = false;
             var list = document.getElementById('h2b-artlist');
             var sentinel = document.getElementById('sentinel');
@@ -193,7 +222,7 @@ $viewOff = 'border-zinc-200 bg-white text-zinc-600';
             function load(){
               if(loading || offset===null) return;
               loading = true; spinner.classList.remove('hidden');
-              fetch('/category.php?ajax=1&cat='+encodeURIComponent(cat)+'&sort='+encodeURIComponent(sort)+'&offset='+offset)
+              fetch('/category.php?ajax=1&cat='+encodeURIComponent(cat)+'&sort='+encodeURIComponent(sort)+'&q='+encodeURIComponent(q)+'&offset='+offset)
                 .then(function(r){return r.json();})
                 .then(function(d){
                   list.insertAdjacentHTML('beforeend', d.html);
