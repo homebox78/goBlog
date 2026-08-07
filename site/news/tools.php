@@ -82,6 +82,7 @@ render_nav('계산기', [], true);
     </a>
 
     <?php render_ad('home-infeed'); ?>
+    <?php adsense_display(); ?>
   </div>
   <?php render_footer(); ?>
 </div>

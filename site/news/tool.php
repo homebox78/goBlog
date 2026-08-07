@@ -935,6 +935,7 @@ render_nav('계산기', [], true);
       <?php endif; ?>
 
       <?php render_ad("tool-bottom"); ?>
+      <?php adsense_display(); /* 활용팁 아래 광고 */ ?>
 
       <p class="mt-6 text-xs text-zinc-400">⚠️ 본 계산기는 참고용 예상치입니다. 실제 금액은 개인 상황·법령·기관 기준에 따라 달라질 수 있습니다.</p>
     </div>

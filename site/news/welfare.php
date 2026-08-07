@@ -226,6 +226,7 @@ render_nav('지원금', [], true);
       <a href="/tools.php" class="group flex items-center gap-3.5 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md hover:border-[#134a9c]/40"><div class="flex h-12 w-12 flex-none items-center justify-center rounded-lg bg-[#134a9c]/10 text-[#134a9c]"><span class="material-symbols-outlined text-[26px]">calculate</span></div><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5 text-[15px] font-extrabold group-hover:text-[#134a9c]">계산기<span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10.5px] font-bold text-zinc-500">27종</span></div><div class="mt-0.5 truncate text-[12.5px] leading-snug text-zinc-500">연봉·세금·대출 등 27종 바로 계산</div></div><span class="material-symbols-outlined flex-none text-[20px] text-zinc-300 transition-colors group-hover:text-[#134a9c]">arrow_forward</span></a>
     </div>
     <?php render_ad('home-infeed'); ?>
+    <?php adsense_display(); ?>
   </div>
   <?php render_footer(); ?>
 </div>

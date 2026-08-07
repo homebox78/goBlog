@@ -120,6 +120,7 @@ render_nav('문서도구', [], true);
       <span>본 도구로 생성한 문서는 참고용이며 법적 효력을 보장하지 않습니다. 중요한 계약·문서는 반드시 법률 전문가의 검토를 받으시기 바랍니다.</span>
     </div>
     <?php render_ad("home-infeed"); ?>
+    <?php adsense_display(); ?>
   </div>
   <script src="/assets/js/docs-engine.js?v=<?= TW_CSS_VER ?>"></script>
   <script>
