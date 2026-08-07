@@ -15,6 +15,7 @@ let reportJob: Cron | null = null;
 let welfareJob: Cron | null = null;
 let stockJob: Cron | null = null;
 let geoJob: Cron | null = null;
+let issuefeedJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -683,6 +684,19 @@ export async function scheduleFromSettings(): Promise<void> {
       }
     });
     console.log("[scheduler] 종목 시세 갱신 평일 18:30 KST");
+
+    // 디시이슈 피드 연예·이슈 기사 — 하루 2건(08:00·20:00 각 1건) 커스텀 리라이트 발행.
+    issuefeedJob?.stop();
+    issuefeedJob = new Cron("0 8,20 * * *", { timezone: "Asia/Seoul", protect: true }, async () => {
+      try {
+        const { publishIssuefeed } = await import("../issuefeed/issuefeed.js");
+        const r = await publishIssuefeed(1);
+        console.log(`[scheduler] 이슈피드 발행: ${r.created}건 (스킵 ${r.skipped})`);
+      } catch (error) {
+        console.error("[scheduler] 이슈피드 발행 실패:", (error as Error).message);
+      }
+    });
+    console.log("[scheduler] 이슈피드 발행 08:00·20:00 KST");
 
     // 통계 테이블(page_views/ip_geo)을 부팅 시 즉시 보장 — PHP가 배포 직후 바로 기록할 수 있게.
     try {

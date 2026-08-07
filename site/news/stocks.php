@@ -79,7 +79,7 @@ try {
     $talk = $db->query(
         "SELECT p.ticker, p.body, p.stance, p.createdAt, u.name authorName
          FROM community_posts p JOIN community_users u ON u.id=p.userId
-         WHERE p.hidden=0 ORDER BY p.id DESC LIMIT 10"
+         WHERE p.hidden=0 ORDER BY p.id DESC LIMIT 12"
     )->fetchAll();
 } catch (Throwable) { $talk = []; }
 $nameMap = [];
@@ -191,7 +191,7 @@ render_nav('종목', [], true);
         <h2 class="flex items-center gap-2 text-[16px] font-extrabold text-zinc-900">💬 실시간 종목 토론 <span class="rounded-full bg-[#d60000] px-1.5 py-0.5 text-[9px] font-bold text-white">LIVE</span></h2>
         <span class="text-[12px] text-zinc-400">투자자 코멘트</span>
       </div>
-      <div class="grid grid-cols-1 gap-x-10 sm:grid-cols-2 lg:gap-x-16">
+      <div class="grid grid-cols-1 gap-x-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-10">
         <?php foreach ($talk as $t):
           $snm = $nameMap[$t['ticker']] ?? $t['ticker'];
           $st = $t['stance'] === 'BUY' ? '<span class="flex-none rounded px-1 text-[10px] font-bold text-[#d60000] bg-red-50">매수</span>' : ($t['stance'] === 'SELL' ? '<span class="flex-none rounded px-1 text-[10px] font-bold text-[#1263e0] bg-blue-50">매도</span>' : ($t['stance'] === 'HOLD' ? '<span class="flex-none rounded px-1 text-[10px] font-bold text-zinc-500 bg-zinc-100">보유</span>' : ''));

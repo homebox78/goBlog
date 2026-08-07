@@ -69,7 +69,7 @@ $serverEnv = @(
     "SF_GOOGLE_CLIENT_ID=$(Get-EnvValue $rootEnv 'SF_GOOGLE_CLIENT_ID')",
     "SF_GOOGLE_CLIENT_SECRET=$(Get-EnvValue $rootEnv 'SF_GOOGLE_CLIENT_SECRET')",
     "MEDIA_DIR=/var/www/html/goBlog/media",
-    "MEDIA_PUBLIC_URL=https://hom2box.com/goBlog/media"
+    "MEDIA_PUBLIC_URL=https://hom2box.com/media"
 ) -join "`n"
 [IO.File]::WriteAllText("$stage\server.env", $serverEnv + "`n", [Text.UTF8Encoding]::new($false))
 
@@ -101,6 +101,7 @@ cd ~/goblog-api && /opt/node22/bin/npm install --no-audit --no-fund 2>&1 | tail 
 /opt/node22/bin/node -e "require('sharp')" 2>/dev/null || /opt/node22/bin/npm install --no-save @img/sharp-linux-x64 2>&1 | tail -1
 
 mkdir -p /var/www/html/goBlog /var/www/html/goBlog/media
+ln -sfn /var/www/html/goBlog/media /var/www/html/media  # 이미지 URL에 'blog' 안 들어가게 /media 로 서빙
 rm -rf /var/www/html/goBlog/assets
 tar xzf /tmp/web.tar.gz -C /var/www/html/goBlog
 mv /tmp/htaccess /var/www/html/goBlog/.htaccess

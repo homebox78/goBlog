@@ -18,6 +18,7 @@ import { mediaDir } from "./modules/images/image-service.js";
 import { extensionRouter } from "./modules/extension/extension.router.js";
 import { sfRouter } from "./modules/sf/sf.router.js";
 import { communityRouter } from "./modules/community/community.router.js";
+import { issuefeedRouter } from "./modules/issuefeed/issuefeed.router.js";
 import { charactersRouter } from "./modules/characters/characters.router.js";
 import { threadsBotRouter } from "./modules/threads/threads-bot.router.js";
 import { subscribersRouter, statsRouter } from "./modules/stats/stats.router.js";
@@ -72,6 +73,7 @@ export function createApp() {
   app.use("/api/settings", threadsOAuthRouter);
   // 주식 커뮤니티 — 공개(로그인·조회) + 인증(쓰기는 세션 쿠키). requireAuth 없음.
   app.use("/api/community", communityRouter);
+  app.use("/api/issuefeed", issuefeedRouter);
   app.use("/api/settings", settingsRouter);
   app.use("/api/analytics", dashboardRouter);
   app.use("/api/keywords", keywordsRouter);
