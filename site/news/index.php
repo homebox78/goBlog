@@ -259,7 +259,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
         <h2 class="flex items-center gap-2 text-[20px] font-extrabold tracking-tight sm:text-[23px]"><span class="material-symbols-outlined text-[24px] text-[#d60000]">trending_up</span>실시간 종목 이슈</h2>
         <a href="/stocks.php" class="inline-flex items-center text-[13px] text-zinc-400 hover:text-[#134a9c]">종목 전체보기<span class="material-symbols-outlined text-[14px]">chevron_right</span></a>
       </div>
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <?php
         function home_rank(string $title, string $emoji, array $list, bool $money = false): void {
           $up = fn($r) => $r > 0 ? '#d60000' : ($r < 0 ? '#1263e0' : '#666');
@@ -287,25 +287,27 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
         home_rank('급락', '🔻', $stockRanks['down']);
         home_rank('거래대금', '💰', $stockRanks['active'], true);
         ?>
-      </div>
-      <div class="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-        <div class="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-zinc-700">💬 종목 토론 <span class="font-normal text-zinc-400">· 투자자 코멘트</span></div>
-        <?php if ($stockTalk): ?>
-          <div class="flex flex-col gap-1.5">
-            <?php foreach ($stockTalk as $t):
-              $snm = $stockNames[$t['ticker']] ?? $t['ticker'];
-              $stanceLbl = $t['stance'] === 'BUY' ? '<span style="color:#d60000">매수</span> ' : ($t['stance'] === 'SELL' ? '<span style="color:#1263e0">매도</span> ' : '');
-            ?>
-            <a href="/stock.php?code=<?= nh($t['ticker']) ?>" class="flex items-baseline gap-2 text-[13px] hover:text-[#134a9c]">
-              <span class="flex-none font-bold text-zinc-700"><?= nh($snm) ?></span>
-              <span class="min-w-0 flex-1 truncate text-zinc-500"><?= $stanceLbl ?><?= nh(mb_substr((string) $t['body'], 0, 40)) ?></span>
-              <span class="flex-none text-[11px] text-zinc-400"><?= nh($t['authorName']) ?></span>
-            </a>
-            <?php endforeach; ?>
-          </div>
-        <?php else: ?>
-          <p class="text-[13px] text-zinc-400">아직 코멘트가 없어요. <a href="/stocks.php" class="text-[#134a9c] underline">종목</a>에서 첫 의견을 남겨보세요.</p>
-        <?php endif; ?>
+        <!-- 4번째 열: 종목 토론 -->
+        <div class="rounded-lg border border-zinc-200 bg-white p-3.5">
+          <div class="mb-1.5 text-[13.5px] font-bold text-zinc-800">💬 종목 토론</div>
+          <?php if ($stockTalk): ?>
+            <div class="divide-y divide-zinc-100">
+              <?php foreach (array_slice($stockTalk, 0, 4) as $t):
+                $snm = $stockNames[$t['ticker']] ?? $t['ticker'];
+                $stanceLbl = $t['stance'] === 'BUY' ? '<span class="font-bold text-[#d60000]">매수</span> ' : ($t['stance'] === 'SELL' ? '<span class="font-bold text-[#1263e0]">매도</span> ' : '');
+              ?>
+              <a href="/stock.php?code=<?= nh($t['ticker']) ?>" class="block py-1.5 group">
+                <div class="flex items-center gap-1.5">
+                  <span class="flex-none rounded bg-[#134a9c]/10 px-1 text-[10.5px] font-bold text-[#134a9c]"><?= nh($snm) ?></span>
+                  <span class="min-w-0 flex-1 truncate text-[12.5px] text-zinc-700 group-hover:text-[#134a9c]"><?= $stanceLbl ?><?= nh(mb_substr((string) $t['body'], 0, 20)) ?></span>
+                </div>
+              </a>
+              <?php endforeach; ?>
+            </div>
+          <?php else: ?>
+            <p class="py-1.5 text-[12.5px] text-zinc-400"><a href="/stocks.php" class="text-[#134a9c] underline">종목</a>에서 첫 의견을 남겨보세요.</p>
+          <?php endif; ?>
+        </div>
       </div>
     </section>
     <?php endif; ?>
