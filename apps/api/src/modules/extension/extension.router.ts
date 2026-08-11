@@ -52,6 +52,8 @@ extensionRouter.get(
     const rows = await prisma.article.findMany({
       where: {
         status: { in: [...PUBLISHABLE_STATUSES] },
+        // 디시이슈(issuefeed)에서 가져온 자체발행 기사는 수동 발행 대상이 아니라 목록에서 제외
+        sources: { none: { url: { contains: "issuefeed" } } },
         ...(isExtPlatform
           ? {
               AND: [

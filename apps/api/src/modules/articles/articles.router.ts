@@ -18,8 +18,11 @@ articlesRouter.get(
   asyncHandler(async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 15, 5), 400);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
-    const total = await prisma.article.count();
+    // 디시이슈(issuefeed)에서 가져온 자체발행 기사는 글관리 목록에서 제외
+    const listWhere = { sources: { none: { url: { contains: "issuefeed" } } } };
+    const total = await prisma.article.count({ where: listWhere });
     const articles = await prisma.article.findMany({
+      where: listWhere,
       orderBy: { updatedAt: "desc" },
       take: limit,
       skip: offset,
