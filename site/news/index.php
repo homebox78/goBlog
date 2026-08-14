@@ -667,11 +667,6 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
           </div>
         </div>
 
-        <a href="/subscribe.php" class="block rounded-lg border border-[<?= $P ?>] bg-[<?= $P ?>] p-4 text-white transition-colors hover:bg-[#0f3d82]">
-          <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">mail</span>무료 뉴스레터 구독</div>
-          <div class="mt-1.5 text-[12px] leading-relaxed text-white/80 line-clamp-1">매일 아침·저녁, 핵심 기사를 메일로 받아보세요.</div>
-          <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[<?= $P ?>]">구독하기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
-        </a>
       </div>
     </div>
     <?php endif; ?>
