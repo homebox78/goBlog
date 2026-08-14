@@ -431,8 +431,8 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
       </div>
     </div>
 
-    <!-- 정부 지원금·복지 최근 소식 (per-view 캐러셀: lg 4 / sm 3 / mobile 1) -->
-    <?php $welfare = welfare_recent(12); if ($welfare): ?>
+    <!-- 정부 지원금·복지 소식 제거(엔터 중심 개편) -->
+    <?php $welfare = []; if (false): ?>
     <div class="mt-6">
       <div class="flex items-center gap-2 mb-3">
         <span class="h-[17px] w-[3px] rounded-full bg-[#e0392b]"></span>
@@ -564,7 +564,7 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
           <div class="flex items-center gap-2 px-4 pt-3.5 pb-2.5 border-b border-zinc-100">
             <span class="h-[15px] w-[3px] rounded-full bg-[#b3925c]"></span>
             <span class="text-[15.5px] font-extrabold">주요 기사</span>
-            <span class="ml-auto inline-flex items-center gap-0.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#b3925c]"><span class="material-symbols-outlined text-[13px]">show_chart</span>증권</span>
+            <span class="ml-auto inline-flex items-center gap-0.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#e0392b]"><span class="material-symbols-outlined text-[13px]">local_fire_department</span>연예</span>
           </div>
           <div class="px-4 py-1.5">
             <?php foreach ($mainHeads as $r): ?>
@@ -575,8 +575,8 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
           </div>
         </div>
 
-        <?php // ── 원클릭 노인일자리 위젯 (접수중 구인정보) ── ?>
-        <?php if ($seniorJobs): ?>
+        <?php // ── 원클릭 노인일자리 위젯 제거(엔터 중심 개편) ── ?>
+        <?php if (false): ?>
         <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
           <a href="/jobs.php" class="flex items-center gap-2 px-4 pt-3.5 pb-2.5 border-b border-zinc-100 group">
             <span class="h-[15px] w-[3px] rounded-full bg-[#03c75a]"></span>
@@ -616,12 +616,6 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
 
         <?php render_ad("home-sidebar"); ?>
 
-        <a href="/welfare.php" class="block rounded-lg border border-[#134a9c] bg-[#134a9c] p-4 text-white transition-colors hover:bg-[#0f3d82]">
-          <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">payments</span>정부 지원금 찾기</div>
-          <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85 line-clamp-1">생애주기·지역별 지원금을 한 번에.</div>
-          <div class="mt-3 inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-[13px] font-bold text-[#134a9c]">지원금 보기 <span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
-        </a>
-
         <?php
         // 파트너스 추천 = 배너 관리 'home-partners' 슬롯으로 제어. 미설정이면 자동 매칭 상품(기존 동작),
         // 설정되면 on/off·편집 이미지·링크를 따른다.
@@ -651,10 +645,9 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
           </div>
           <div class="divide-y divide-zinc-50 px-1.5 py-1">
             <?php $homeFaq = [
-                ['기사는 얼마나 자주 발행되나요?', '매일 아침·저녁 2회, 편집국이 이슈·경제·IT·생활 분야 기사를 선별해 발행합니다.'],
-                ['뉴스레터는 무엇인가요?', '분야별 핵심 기사 5건씩을 매일 오전 7시·오후 6시에 메일로 보내드리는 무료 서비스입니다.'],
-                ['계산기·지원금 정보는 무료인가요?', '네. 계산기 ' . count(TOOLS) . '종과 정부 지원금 검색, 문서도구 모두 로그인 없이 무료로 사용할 수 있습니다.'],
-                ['제휴 링크는 무엇인가요?', '일부 기사에는 제휴 링크가 포함되며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다.'],
+                ['어떤 소식을 다루나요?', '연예가화제·방송·가요·영화·아이돌, 야구·축구 등 국내외 스포츠까지 지금 뜨는 엔터·스포츠 이슈를 실시간으로 정리합니다.'],
+                ['소식은 얼마나 자주 올라오나요?', '하루 종일 새 이슈가 올라옵니다. 원문 언론 보도를 요약·정리해 한눈에 보기 쉽게 제공합니다.'],
+                ['원문 기사는 어디서 보나요?', '각 소식 하단의 “원문 기사 전체 보기” 링크에서 해당 언론사의 전체 기사와 사진을 확인할 수 있습니다.'],
             ]; foreach ($homeFaq as $f): ?>
               <details class="group px-2.5">
                 <summary class="flex cursor-pointer list-none items-center gap-2 py-2.5 text-[13px] font-bold">

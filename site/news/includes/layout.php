@@ -658,8 +658,6 @@ function render_footer(): void
       <div>
         <div class="mb-2.5 text-[13px] font-extrabold">핫이슈</div>
         <a href="/" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">홈</a>
-        <a href="/press.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">언론사 헤드라인</a>
-        <a href="/opinion.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">오피니언</a>
         <a href="/search.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">뉴스 검색</a>
       </div>
       <div>
@@ -670,11 +668,8 @@ function render_footer(): void
       </div>
       <div>
         <div class="mb-2.5 text-[13px] font-extrabold">생활·유틸</div>
-        <a href="/welfare.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">정부 지원금</a>
-        <a href="/jobs.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">노인일자리</a>
         <a href="/tools.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">계산기</a>
         <a href="/docs.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">문서도구</a>
-        <a href="/shop.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">특가 쇼핑</a>
       </div>
       <div>
         <div class="mb-2.5 text-[13px] font-extrabold">채널</div>
@@ -690,7 +685,7 @@ function render_footer(): void
         <a href="/contact.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">문의하기</a>
       </div>
     </div>
-    <div class="mt-6 text-xs leading-relaxed text-zinc-400">일부 기사에는 제휴 링크가 포함되어 있으며, 이를 통해 구매 시 운영자가 일정 수수료를 제공받을 수 있습니다. 제휴 매체 헤드라인은 RSS로 제공되는 콘텐츠입니다.<br>© <?= date('Y') ?> HOM2BOX. All rights reserved.</div>
+    <div class="mt-6 text-xs leading-relaxed text-zinc-400">본 사이트의 소식은 각 언론사 보도를 요약·정리한 것이며, 원문 링크를 함께 제공합니다.<br>© <?= date('Y') ?> HOM2BOX. All rights reserved.</div>
   </div>
 </div>
     <?php
