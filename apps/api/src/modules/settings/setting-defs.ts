@@ -20,6 +20,8 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "anthropic.model", group: "claude", label: "Claude 모델", secret: false, defaultValue: "claude-sonnet-5" },
   // Claude(Anthropic) 사용 on/off — 꺼지면 모든 Claude API 호출이 차단된다(과금 방지). 기본 꺼짐.
   { key: "anthropic.enabled", group: "claude", label: "Claude(Anthropic) 사용", secret: false, defaultValue: "false" },
+  // 일일 AI 과금 상한(USD). 최근 24시간 추정 비용이 이 값 이상이면 Claude 호출을 차단한다(0=무제한). 과금 폭탄 방지.
+  { key: "llm.dailyCostCapUsd", group: "claude", label: "일일 AI 과금 상한 (USD, 0=무제한)", secret: false, defaultValue: "3" },
   { key: "anthropic.defaultLength", group: "claude", label: "기본 글 길이", secret: false, defaultValue: "2000" },
   { key: "anthropic.minQualityScore", group: "claude", label: "자동발행 최소 품질 점수", secret: false, defaultValue: "85" },
   // 하루 자동 생성·자체 사이트 릴리즈 상한 — 자체 뉴스 사이트에 하루 몇 개를 노출/생성할지. (대량 생성 스팸 방지)

@@ -20,7 +20,7 @@ export async function callClaudeJson<T>(options: {
   maxTokens?: number;
   articleId?: number;
 }): Promise<T> {
-  const values = await getSettingValues(["anthropic.apiKey", "anthropic.model", "anthropic.enabled"]);
+  const values = await getSettingValues(["anthropic.apiKey", "anthropic.model", "anthropic.enabled", "llm.dailyCostCapUsd"]);
   const apiKey = values["anthropic.apiKey"];
   const model = values["anthropic.model"] || "claude-sonnet-5";
 
@@ -30,6 +30,28 @@ export async function callClaudeJson<T>(options: {
   }
   if (!apiKey) {
     throw new HttpError(400, "Anthropic API Key가 설정되지 않았습니다. 설정 → Claude에서 입력해주세요.");
+  }
+
+  // 일일 과금 상한(circuit breaker) — 최근 24시간 추정 비용이 상한 이상이면 차단. 과금 폭탄 방지.
+  const capUsd = Number(values["llm.dailyCostCapUsd"] ?? "3");
+  if (capUsd > 0) {
+    const since = new Date(Date.now() - 24 * 3600 * 1000);
+    const logs = await prisma.modelUsageLog.findMany({
+      where: { createdAt: { gte: since } },
+      select: { model: true, inputTokens: true, outputTokens: true },
+    });
+    let spent = 0; // USD, 근사(모델별 백만토큰 단가)
+    for (const l of logs) {
+      const m = (l.model ?? "").toLowerCase();
+      const price = m.includes("opus") ? { i: 15, o: 75 } : m.includes("haiku") ? { i: 0.8, o: 4 } : { i: 3, o: 15 };
+      spent += ((l.inputTokens ?? 0) * price.i + (l.outputTokens ?? 0) * price.o) / 1_000_000;
+    }
+    if (spent >= capUsd) {
+      throw new HttpError(
+        429,
+        `일일 AI 과금 상한($${capUsd})을 초과했습니다 — 최근 24시간 추정 $${spent.toFixed(2)}. 설정에서 상한을 조정하거나 잠시 후 다시 시도하세요.`,
+      );
+    }
   }
 
   // 긴 글(3,000자)은 본문 생성 한 번에 4~6분이 걸린다. 3분에 끊으면 '길게'가 항상 실패한다.
