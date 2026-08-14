@@ -828,7 +828,7 @@ if (!empty($c['faqs'])) {
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
-render_head($t['name'] . ' — HOM2BOX 뉴스', $t['desc'] . ' 무료 온라인 계산기.');
+render_head($t['name'] . ' — HOM2BOX 핫이슈', $t['desc'] . ' 무료 온라인 계산기.');
 if ($faqLd) echo '<script type="application/ld+json">' . $faqLd . '</script>';
 news_breadcrumb_ld([
     ['name' => '홈', 'url' => 'https://hom2box.com/'],
@@ -845,7 +845,7 @@ news_jsonld([
     'inLanguage' => 'ko',
     'description' => $t['desc'],
     'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'KRW'],
-    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 핫이슈', 'url' => 'https://hom2box.com/'],
 ]);
 render_ticker($ticker);
 render_topbar();

@@ -60,4 +60,4 @@ $body = <<<HTML
 <p>운영 주체: HOM2BOX</p>
 HTML;
 
-render_legal_page('문의', $body, 'HOM2BOX 뉴스 문의 — 정정·제보, 제휴/광고, 저작권 문의를 받습니다.');
+render_legal_page('문의', $body, 'HOM2BOX 핫이슈 문의 — 정정·제보, 제휴/광고, 저작권 문의를 받습니다.');

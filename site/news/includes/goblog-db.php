@@ -29,15 +29,15 @@ function nh(?string $v): string
 function news_section(?string $category): string
 {
     $c = $category ?? '';
-    if (preg_match('/금융|재테크|투자|증시|경제|부동산|보험|유통|주식|소비/u', $c)) return '경제·금융';
-    if (preg_match('/IT|게임|테크|스마트폰|가전|웨어러블|미디어|크리에이터/iu', $c)) return 'IT·게임';
-    if (preg_match('/생활|날씨|정책|건강|식품|음식|의약|외식|직업/u', $c)) return '생활·건강';
-    if (preg_match('/연예|드라마|영화|예능|아이돌|K-?팝|가수|배우|방송|축구|야구|농구|골프|KBO|스포츠/iu', $c)) return '연예·스포츠';
-    if (preg_match('/여행|교통|취미|카메라|패션|문화|안전|자동차/u', $c)) return '여행·문화';
-    return '종합';
+    // 연예 속보(핫이슈·가십) 우선 판정 — '엔터/연예'보다 앞에 둔다
+    if (preg_match('/연예속보|핫이슈|열애|결별|논란|폭로|해명|목격|포착|가십/u', $c)) return '연예 속보';
+    if (preg_match('/엔터|연예|드라마|영화|예능|아이돌|K-?팝|가수|배우|방송|음악|문화|스포츠|축구|야구|농구|골프|KBO/iu', $c)) return '연예·스포츠';
+    if (preg_match('/머니|금융|재테크|투자|증시|경제|부동산|보험|유통|주식|소비|코인|금리|환율|자동차/u', $c)) return '경제·금융';
+    if (preg_match('/테크|IT|게임|스마트폰|가전|웨어러블|미디어|크리에이터|AI|인공지능|앱/iu', $c)) return 'IT·게임';
+    return '연예·스포츠'; // 기본 — 엔터 중심 사이트
 }
 
-const NEWS_SECTIONS = ['연예·스포츠', '경제·금융', 'IT·게임', '생활·건강', '여행·문화', '종합'];
+const NEWS_SECTIONS = ['연예·스포츠', '연예 속보', '경제·금융', 'IT·게임'];
 
 // 발행처 뱃지 표기 (원문 링크용)
 const NEWS_PLATFORMS = [
@@ -86,7 +86,8 @@ function news_articles(): array
                 'title' => $r['title'],
                 'excerpt' => $r['excerpt'],
                 'quality' => (int) ($r['qualityScore'] ?? 0),
-                'section' => ($r['articleType'] ?? '') === 'curation' ? '연예·스포츠' : news_section($r['kwCategory']),
+                'section' => news_section($r['kwCategory']),
+                'articleType' => $r['articleType'] ?? '',
                 'kwText' => $r['kwText'],
                 'publishedAt' => $r['finishedAt'] ?? $r['publishAt'],
                 'image' => null,

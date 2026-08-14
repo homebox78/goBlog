@@ -37,7 +37,7 @@ if ($id !== '') {
     $d = null;
     try { $d = senuri_job_detail($id); } catch (Throwable) {}
 
-    render_head('노인 일자리 상세 — HOM2BOX 뉴스', '한국노인인력개발원 100세누리 노인 구인정보 상세.');
+    render_head('노인 일자리 상세 — HOM2BOX 핫이슈', '한국노인인력개발원 100세누리 노인 구인정보 상세.');
     render_ticker($ticker);
     render_topbar();
     render_masthead();
@@ -129,7 +129,7 @@ if ($sido !== '') $notes[] = $sido;
 if ($q !== '') $notes[] = "'" . $q . "'";
 $filterNote = $notes ? (implode(' · ', $notes) . ' 필터 적용 중') : '접수중 일자리 표시 중';
 
-render_head('노인 일자리 찾기 — HOM2BOX 뉴스', '전국 노인 구인정보를 한 번에. 한국노인인력개발원 100세누리 공식 데이터 기반.');
+render_head('노인 일자리 찾기 — HOM2BOX 핫이슈', '전국 노인 구인정보를 한 번에. 한국노인인력개발원 100세누리 공식 데이터 기반.');
 render_ticker($ticker);
 render_topbar();
 render_masthead();

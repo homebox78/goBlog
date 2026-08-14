@@ -32,7 +32,7 @@ if ($isDetail) {
         'inLanguage' => 'ko',
         'description' => $d['desc'],
         'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'KRW'],
-        'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+        'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 핫이슈', 'url' => 'https://hom2box.com/'],
     ]);
 } else {
     render_head('무료 문서 서식 ' . count(DOC_DEFS) . '종 — 각서·차용증·근로계약서·NDA·급여명세서 | HOM2BOX 문서도구', '각서·위임장·차용증·합의서·NDA·내용증명·사직서·경위서·연차신청서·재직/경력/퇴직증명서·급여명세서·근로계약서·견적서·거래명세서·영수증. 정보만 입력하면 완성 문서가 바로 만들어지고, 빈 양식은 Word로 바로 다운로드. 무료·로그인 없이.');
@@ -58,7 +58,7 @@ if ($isDetail) {
         'description' => '각서·위임장·차용증·합의서·NDA·내용증명·사직서·연차신청서·재직/경력/퇴직증명서·급여명세서·근로계약서·견적서·거래명세서·영수증을 무료로 작성·다운로드.',
         'url' => 'https://hom2box.com/docs.php',
         'inLanguage' => 'ko',
-        'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+        'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 핫이슈', 'url' => 'https://hom2box.com/'],
         'mainEntity' => ['@type' => 'ItemList', 'numberOfItems' => count($doc_ld_items), 'itemListElement' => $doc_ld_items],
     ]);
 }

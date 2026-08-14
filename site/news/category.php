@@ -126,7 +126,7 @@ $catDesc = CAT_DESCS[$cat] ?? '';
 $baseCat = '/category.php?cat=' . urlencode($cat);           // 검색 없는 기본(검색 지우기·폼 action)
 $base = $baseCat . ($q !== '' ? '&q=' . urlencode($q) : ''); // 정렬 링크는 검색어 유지
 
-render_head("$cat 기사 — HOM2BOX 뉴스", "$cat 분야 최신 기사 모음 — HOM2BOX 편집국 자체 기사.");
+render_head("$cat 기사 — HOM2BOX 핫이슈", "$cat 분야 최신 기사 모음 — HOM2BOX 편집국 자체 기사.");
 news_breadcrumb_ld([
     ['name' => '홈', 'url' => 'https://hom2box.com/'],
     ['name' => $cat],
@@ -137,7 +137,7 @@ news_jsonld([
     'name' => "$cat 기사",
     'url' => 'https://hom2box.com/category.php?cat=' . urlencode($cat),
     'inLanguage' => 'ko',
-    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 핫이슈', 'url' => 'https://hom2box.com/'],
     'mainEntity' => [
         '@type' => 'ItemList',
         'numberOfItems' => count($items),

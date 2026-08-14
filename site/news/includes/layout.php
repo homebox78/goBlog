@@ -1,5 +1,5 @@
 <?php
-// HOM2BOX 뉴스 디자인 시스템 — 공용 헤더/티커/내비/푸터 (시안: Tailwind + S-CoreDream, primary #134a9c).
+// HOM2BOX 핫이슈 디자인 시스템 — 공용 헤더/티커/내비/푸터 (시안: Tailwind + S-CoreDream, primary #134a9c).
 declare(strict_types=1);
 
 if (!function_exists('nh')) {
@@ -75,7 +75,7 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2061625131722900" crossorigin="anonymous"></script>
 <link rel="canonical" href="<?= nh($canonical) ?>">
 <meta property="og:type" content="<?= $isArticle ? 'article' : 'website' ?>">
-<meta property="og:site_name" content="HOM2BOX 뉴스">
+<meta property="og:site_name" content="HOM2BOX 핫이슈">
 <meta property="og:locale" content="ko_KR">
 <meta property="og:url" content="<?= nh($canonical) ?>">
 <meta property="og:title" content="<?= nh($title) ?>">
@@ -93,7 +93,7 @@ function render_head(string $title, string $desc = '', string $ogImage = '', str
 <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32.png">
 <link rel="apple-touch-icon" href="/favicon/apple-touch-icon-180.png">
-<link rel="alternate" type="application/rss+xml" title="HOM2BOX 뉴스 RSS" href="/rss.xml">
+<link rel="alternate" type="application/rss+xml" title="HOM2BOX 핫이슈 RSS" href="/rss.xml">
 <!-- 폰트 전량 자체호스팅(외부 CDN 호출 없음). MS 기본 클래스는 tailwind.css 앞에 둬 text-[Npx]가 뒤에서 크기를 이기게 함 -->
 <link rel="preload" href="/assets/fonts/S-CoreDream-4Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/MaterialSymbolsOutlined.woff2" as="font" type="font/woff2" crossorigin>
@@ -167,7 +167,6 @@ function render_foot(): void
     <?php
       $item('/docs.php', '문서도구', 'draft', $act(['docs.php']), 'right');
       $item('/search.php', '검색', 'search', $act(['search.php']), 'right');
-      $item('/subscribe.php', '구독', 'bookmark', $act(['subscribe.php']), 'right');
     ?>
     <button type="button" title="문의하기" class="h2b-open-inq group relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900">
       <span class="material-symbols-outlined text-[22px]">support_agent</span>
@@ -360,15 +359,12 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
 {
     // 좌측 = 기사 관련(홈·카테고리·언론사·오피니언), 우측 = 유틸(지원금·일자리·계산기·문서도구).
     // 데스크톱에선 유틸 그룹을 우측 정렬 + '|'로 분기, 모바일에선 가로 스크롤로 자연스럽게 이어진다.
-    $newsTabs = [['홈', '/'], ['종목', '/stocks.php']];
+    $newsTabs = [['홈', '/']];
     foreach (NEWS_SECTIONS as $s) {
         $newsTabs[] = [$s, '/category.php?cat=' . urlencode($s)];
     }
-    $newsTabs[] = ['언론사', '/press.php'];
-    $newsTabs[] = ['오피니언', '/opinion.php'];
+    // 유틸(계산기·문서도구)만 유지 — 종목·언론사·오피니언·지원금·노인일자리 메뉴 제거
     $utilTabs = [
-        ['지원금', '/welfare.php'],
-        ['노인일자리', '/jobs.php'],
         ['계산기', '/tools.php'],
         ['문서도구', '/docs.php'],
     ];
@@ -389,7 +385,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
 <label for="h2bnav" aria-label="메뉴 닫기" class="fixed inset-0 z-[80] hidden bg-black/50 backdrop-blur-sm peer-checked:block lg:!hidden"></label>
 <aside class="fixed left-0 top-0 z-[90] flex h-full w-[284px] max-w-[82%] -translate-x-full flex-col overflow-y-auto bg-white shadow-2xl transition-transform duration-300 ease-out peer-checked:translate-x-0 lg:hidden">
   <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3.5">
-    <a href="/" class="flex items-center gap-1.5"><svg width="22" height="22" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg><span class="text-[17px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[12px] font-bold text-zinc-500">뉴스</span></a>
+    <a href="/" class="flex items-center gap-1.5"><svg width="22" height="22" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg><span class="text-[17px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[12px] font-bold text-zinc-500">핫이슈</span></a>
     <label for="h2bnav" aria-label="닫기" class="flex h-9 w-9 cursor-pointer items-center justify-center text-zinc-500"><span class="material-symbols-outlined text-[24px]">close</span></label>
   </div>
   <nav class="flex flex-col p-2">
@@ -405,7 +401,7 @@ function render_nav(string $active, array $bySection = [], bool $hasPress = fals
     <label for="h2bnav" aria-label="메뉴 열기" class="order-2 flex h-10 w-10 flex-none cursor-pointer items-center justify-center text-zinc-700 lg:hidden"><span class="material-symbols-outlined text-[26px]">menu</span></label>
     <a href="/" class="order-1 mr-auto flex flex-none items-center gap-1.5 py-2.5 lg:mr-0">
       <svg width="26" height="26" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8 H40 V33 L31 42 H8 Z" fill="#16181d"/><path d="M40 33 L31 33 V42 Z" fill="#4a4e57"/><rect x="14" y="15" width="16" height="5" rx="1" fill="#fff"/><rect x="14" y="24" width="20" height="3.6" rx="1" fill="#fff"/><rect x="14" y="31.5" width="13" height="3.6" rx="1" fill="#fff"/></svg>
-      <span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">뉴스</span>
+      <span class="text-[21px] font-extrabold tracking-tight text-[#16181d]">HOM2BOX</span><span class="text-[14px] font-bold text-zinc-500">핫이슈</span>
     </a>
     <nav class="order-3 hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:ml-16 lg:flex">
       <?php foreach ($newsTabs as [$name, $href]): ?>
@@ -480,7 +476,6 @@ function render_section_subscribe(string $section): void
   <div class="mx-auto max-w-[1399px] px-4 py-7 sm:px-6 sm:py-[45px]">
     <div class="flex flex-wrap items-center gap-2.5">
       <h2 class="text-[19px] font-extrabold tracking-tight sm:text-[22px]"><?= nh($section) ?> 돋보기</h2>
-      <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-[#45c4de] bg-[#45c4de] px-2.5 py-1 text-[12.5px] font-bold text-white transition-colors hover:border-[#3bb4ce] hover:bg-[#3bb4ce]"><span class="material-symbols-outlined text-[15px]">add</span>구독</a>
     </div>
     <?php if ($tags): ?>
       <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] font-medium text-white/50">
@@ -516,7 +511,6 @@ function render_util_hero(string $eyebrow, string $title, string $subtitle, arra
       <div class="text-[12px] font-bold uppercase tracking-wider text-[#45c4de]"><?= nh($eyebrow) ?></div>
       <div class="mt-1.5 flex flex-wrap items-center gap-2.5">
         <h1 class="text-[26px] font-extrabold tracking-tight sm:text-[32px]"><?= nh($title) ?></h1>
-        <a href="/subscribe.php" class="inline-flex flex-none items-center gap-1 rounded-md border border-[#45c4de] bg-[#45c4de] px-2.5 py-1 text-[13px] font-bold text-white transition-colors hover:border-[#3bb4ce] hover:bg-[#3bb4ce]"><span class="material-symbols-outlined text-[16px]">add</span>구독</a>
       </div>
       <?php if ($subtitle !== ''): ?><p class="mt-2 text-[14px] leading-relaxed text-white/70"><?= nh($subtitle) ?></p><?php endif; ?>
       <?php if ($metaTags): ?>
@@ -658,16 +652,15 @@ function render_footer(): void
   <div class="mx-auto max-w-[1399px] px-6 py-10">
     <div class="grid grid-cols-2 gap-8 border-b border-zinc-200 pb-8 sm:grid-cols-[1.4fr_repeat(5,1fr)]">
       <div class="col-span-2 sm:col-span-1">
-        <div class="text-[19px] font-extrabold">HOM2BOX <span class="text-[<?= NEWS_PRIMARY ?>]">뉴스</span></div>
+        <div class="text-[19px] font-extrabold">HOM2BOX <span class="text-[<?= NEWS_PRIMARY ?>]">핫이슈</span></div>
         <div class="mt-2 max-w-xs text-[12.5px] leading-relaxed text-zinc-500">매일 아침·저녁, 편집국이 선별한 이슈·경제·IT·생활 뉴스와 가이드를 발행합니다.</div>
       </div>
       <div>
-        <div class="mb-2.5 text-[13px] font-extrabold">뉴스</div>
+        <div class="mb-2.5 text-[13px] font-extrabold">핫이슈</div>
         <a href="/" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">홈</a>
         <a href="/press.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">언론사 헤드라인</a>
         <a href="/opinion.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">오피니언</a>
         <a href="/search.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">뉴스 검색</a>
-        <a href="/subscribe.php" class="block py-1 text-[13px] text-zinc-500 hover:text-[<?= NEWS_PRIMARY ?>]">뉴스레터 구독</a>
       </div>
       <div>
         <div class="mb-2.5 text-[13px] font-extrabold">카테고리</div>

@@ -82,7 +82,7 @@ foreach ($articles as $a) {
     if ($pubTs && $pubTs >= $newsCutoff) {
         $inner .= "    <news:news>\n"
             . "      <news:publication>\n"
-            . "        <news:name>HOM2BOX 뉴스</news:name>\n"
+            . "        <news:name>HOM2BOX 핫이슈</news:name>\n"
             . "        <news:language>ko</news:language>\n"
             . "      </news:publication>\n"
             . '      <news:publication_date>' . sm_x(sm_iso($pub)) . "</news:publication_date>\n"

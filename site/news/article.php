@@ -1,5 +1,5 @@
 <?php
-// HOM2BOX 뉴스 — 기사 본문. goBlog contentHtml을 그대로 렌더하고,
+// HOM2BOX 핫이슈 — 기사 본문. goBlog contentHtml을 그대로 렌더하고,
 // 광고가 없는 글에는 글 키워드에 매칭된 제휴 상품 배너를 자동 삽입한다.
 declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
@@ -247,7 +247,7 @@ $GLOBALS['h2bArticleMeta'] = [
     'section' => $section,
     'author' => '하루방',
 ];
-render_head($article['title'] . ' — HOM2BOX 뉴스', $desc, $image ?: '');
+render_head($article['title'] . ' — HOM2BOX 핫이슈', $desc, $image ?: '');
 ?>
 <script type="application/ld+json"><?php
 $ldImage = $image;
@@ -266,7 +266,7 @@ echo json_encode([
     'author' => ['@type' => 'Organization', 'name' => 'HOM2BOX 편집국', 'url' => 'https://hom2box.com/'],
     'publisher' => [
         '@type' => 'Organization',
-        'name' => 'HOM2BOX 뉴스',
+        'name' => 'HOM2BOX 핫이슈',
         'logo' => ['@type' => 'ImageObject', 'url' => 'https://hom2box.com/favicon/favicon-32.png'],
     ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

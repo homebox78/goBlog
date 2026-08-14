@@ -85,8 +85,8 @@ if (count($popular) < 5) {
 }
 
 render_head(
-    ($q !== '' ? "'$q' 검색" : '뉴스 검색') . ' — HOM2BOX 뉴스',
-    'HOM2BOX 뉴스 기사 검색 — 제목·요약·키워드로 전체 기사를 검색합니다.',
+    ($q !== '' ? "'$q' 검색" : '뉴스 검색') . ' — HOM2BOX 핫이슈',
+    'HOM2BOX 핫이슈 기사 검색 — 제목·요약·키워드로 전체 기사를 검색합니다.',
 );
 render_ticker(array_slice($all, 0, 6));
 render_topbar();

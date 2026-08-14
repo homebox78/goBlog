@@ -13,7 +13,7 @@ try {
 $ticker = [];
 try { $ticker = array_slice(news_articles(), 0, 6); } catch (Throwable) {}
 
-render_head('언론사 헤드라인 — HOM2BOX 뉴스', '연합뉴스·JTBC·SBS·증권 등 주요 언론사 헤드라인을 분야별로 모아봅니다. 제목을 누르면 각 언론사 원문으로 이동합니다.');
+render_head('언론사 헤드라인 — HOM2BOX 핫이슈', '연합뉴스·JTBC·SBS·증권 등 주요 언론사 헤드라인을 분야별로 모아봅니다. 제목을 누르면 각 언론사 원문으로 이동합니다.');
 render_ticker($ticker);
 render_topbar();
 render_masthead();

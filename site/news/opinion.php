@@ -38,7 +38,7 @@ try {
 }
 $hasPress = count($pressItems) > 0;
 
-render_head('오피니언 — HOM2BOX 뉴스', 'HOM2BOX 편집국 칼럼과 제휴 매체 오피니언을 함께 전합니다. 매일 아침·저녁 갱신.');
+render_head('오피니언 — HOM2BOX 핫이슈', 'HOM2BOX 편집국 칼럼과 제휴 매체 오피니언을 함께 전합니다. 매일 아침·저녁 갱신.');
 render_ticker(array_slice($all, 0, 6));
 render_topbar();
 render_masthead();

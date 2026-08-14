@@ -93,7 +93,7 @@ $faq = [
     ['q' => '구독 해지는 어떻게 하나요?', 'a' => "모든 메일 하단의 '구독 해지' 링크를 한 번 누르면 즉시 해지됩니다."],
 ];
 
-render_head('무료 뉴스레터 구독 — HOM2BOX 뉴스', '매일 아침·저녁, 편집국이 고른 분야별 핵심 기사를 메일함에서 받아보세요. 광고성 스팸 없이 뉴스만.');
+render_head('무료 뉴스레터 구독 — HOM2BOX 핫이슈', '매일 아침·저녁, 편집국이 고른 분야별 핵심 기사를 메일함에서 받아보세요. 광고성 스팸 없이 뉴스만.');
 render_ticker($ticker);
 render_topbar();
 render_masthead();
@@ -211,7 +211,7 @@ render_nav('');
       </div>
       <div class="rounded-xl border border-zinc-200 bg-zinc-50/60 p-5">
         <div class="mb-1 text-[26px] font-extrabold text-[#134a9c]"><?= number_format($subCount) ?><span class="text-[15px] text-zinc-500">명</span></div>
-        <div class="text-[13px] text-zinc-500">이미 HOM2BOX 뉴스레터를 구독 중입니다.</div>
+        <div class="text-[13px] text-zinc-500">이미 HOM2BOX 핫이슈레터를 구독 중입니다.</div>
       </div>
       <?php render_ad('home-sidebar'); ?>
     </div>

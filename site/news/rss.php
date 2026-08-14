@@ -15,7 +15,7 @@ try { $articles = array_slice(news_articles(), 0, 30); } catch (Throwable) {}
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 echo '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
 echo "<channel>\n";
-echo '  <title>HOM2BOX 뉴스</title>' . "\n";
+echo '  <title>HOM2BOX 핫이슈</title>' . "\n";
 echo '  <link>' . RSS_BASE . "/</link>\n";
 echo '  <description>매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스와 가이드 — HOM2BOX 편집국</description>' . "\n";
 echo "  <language>ko</language>\n";

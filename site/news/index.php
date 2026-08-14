@@ -1,5 +1,5 @@
 <?php
-// HOM2BOX 뉴스 — 자체 신문사 홈 (디자인 개편: Tailwind + 속보 티커 + 사이드바 + 언론사 헤드라인).
+// HOM2BOX 핫이슈 — 자체 신문사 홈 (디자인 개편: Tailwind + 속보 티커 + 사이드바 + 언론사 헤드라인).
 declare(strict_types=1);
 require_once __DIR__ . '/includes/goblog-db.php';
 require_once __DIR__ . '/includes/press-rss.php';
@@ -82,24 +82,19 @@ try {
 } catch (Throwable) {
 }
 
-// 사이드바 '주요 기사' = 언론사 헤드라인의 증권 섹션(여러 매체 교차)으로 채운다.
-// 증권 수집 실패 시 자체 기사 랭킹으로 폴백.
+// 사이드바 '주요 기사' = 연예·엔터 최신 기사(엔터 중심 개편)
 $mainHeads = [];
-if (!empty($press['stock']['boxes'])) {
-    $boxes = array_values($press['stock']['boxes']);
-    $maxLen = 0;
-    foreach ($boxes as $b) $maxLen = max($maxLen, count($b));
-    for ($r = 0; $r < $maxLen && count($mainHeads) < 8; $r++) {
-        foreach ($boxes as $b) {
-            if (isset($b[$r]) && !empty($b[$r]['title'])) {
-                $mainHeads[] = ['title' => $b[$r]['title'], 'href' => $b[$r]['link'], 'ext' => true];
-                if (count($mainHeads) >= 8) break;
-            }
-        }
+foreach ($articles as $a) {
+    if (in_array($a['section'] ?? '', ['연예·스포츠', '연예 속보'], true)) {
+        $mainHeads[] = ['title' => $a['title'], 'href' => '/article.php?id=' . (int) $a['id'], 'ext' => false];
+        if (count($mainHeads) >= 8) break;
     }
 }
 if (!$mainHeads) {
-    foreach ($ranked as $r) $mainHeads[] = ['title' => $r['title'], 'href' => '/article.php?id=' . (int) $r['id'], 'ext' => false];
+    foreach ($ranked as $r) {
+        $mainHeads[] = ['title' => $r['title'], 'href' => '/article.php?id=' . (int) $r['id'], 'ext' => false];
+        if (count($mainHeads) >= 8) break;
+    }
 }
 
 // 노인일자리 '원클릭' 위젯 — 접수중 구인정보(캐시만 읽음, 홈에서 네트워크 페치 금지). 최신 5건.
@@ -134,12 +129,17 @@ $popular = [];
 try {
     $amap = [];
     foreach ($articles as $a) $amap[(int) $a['id']] = $a;
-    $pr = goblog_db()->query('SELECT articleId, COUNT(*) v FROM article_views WHERE viewedAt>=NOW()-INTERVAL 7 DAY GROUP BY articleId ORDER BY v DESC LIMIT 15')->fetchAll();
-    foreach ($pr as $r) { if (count($popular) >= 6) break; $aid = (int) $r['articleId']; if (isset($amap[$aid])) $popular[] = $amap[$aid]; }
+    $isEnt = fn($a) => in_array($a['section'] ?? '', ['연예·스포츠', '연예 속보'], true);
+    $pr = goblog_db()->query('SELECT articleId, COUNT(*) v FROM article_views WHERE viewedAt>=NOW()-INTERVAL 7 DAY GROUP BY articleId ORDER BY v DESC LIMIT 40')->fetchAll();
+    foreach ($pr as $r) { if (count($popular) >= 6) break; $aid = (int) $r['articleId']; if (isset($amap[$aid]) && $isEnt($amap[$aid])) $popular[] = $amap[$aid]; }
+    if (count($popular) < 6) { // 연예 기사로 보충
+        $have = array_flip(array_map(fn($a) => (int) $a['id'], $popular));
+        foreach ($articles as $a) { if (count($popular) >= 6) break; if ($isEnt($a) && !isset($have[(int) $a['id']])) $popular[] = $a; }
+    }
 } catch (Throwable) { $popular = []; }
 
 $P = '#134a9c';
-render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스와 가이드. HOM2BOX 편집국 자체 기사.');
+render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시간 이슈', '연예·드라마·영화·예능·K팝·스포츠 실시간 핫이슈를 한눈에. 지금 가장 뜨거운 엔터 소식.');
 ?>
 <script type="application/ld+json"><?= json_encode([
     '@context' => 'https://schema.org',
@@ -147,7 +147,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
         [
             '@type' => 'NewsMediaOrganization',
             '@id' => 'https://hom2box.com/#org',
-            'name' => 'HOM2BOX 뉴스',
+            'name' => 'HOM2BOX 핫이슈',
             'url' => 'https://hom2box.com/',
             'logo' => ['@type' => 'ImageObject', 'url' => 'https://hom2box.com/favicon/favicon-32.png'],
         ],
@@ -155,7 +155,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
             '@type' => 'WebSite',
             '@id' => 'https://hom2box.com/#website',
             'url' => 'https://hom2box.com/',
-            'name' => 'HOM2BOX 뉴스',
+            'name' => 'HOM2BOX 핫이슈',
             'publisher' => ['@id' => 'https://hom2box.com/#org'],
             'inLanguage' => 'ko',
             'potentialAction' => [
@@ -173,7 +173,7 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
   <?php render_nav('홈', $bySection, !empty($press)); ?>
 
   <div class="mx-auto max-w-[1399px] px-6">
-    <h1 class="sr-only">HOM2BOX 뉴스 — 매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스</h1>
+    <h1 class="sr-only">HOM2BOX 핫이슈 — 매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스</h1>
 
     <?php render_ad("home-top"); ?>
 
@@ -261,8 +261,8 @@ render_head('HOM2BOX 뉴스 — 오늘의 이슈·경제·IT·생활', '매일 �
       </div>
     </div>
 
-    <!-- 종목 이슈(급등·급락·거래대금) + 종목 커뮤니티 추출 -->
-    <?php if ($stockRanks): ?>
+    <!-- 종목 이슈 위젯 제거(엔터 중심 개편) -->
+    <?php if (false): ?>
     <section class="mt-8">
       <div class="mb-3 flex items-center justify-between border-b-2 border-zinc-900 pb-2.5">
         <h2 class="flex items-center gap-2 text-[20px] font-extrabold tracking-tight sm:text-[23px]"><span class="material-symbols-outlined text-[24px] text-[#d60000]">trending_up</span>실시간 종목 이슈</h2>

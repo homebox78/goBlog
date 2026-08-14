@@ -20,7 +20,7 @@ uksort($groups, function ($a, $b) use ($catOrder) {
     return ($ia === false ? 99 : $ia) <=> ($ib === false ? 99 : $ib);
 });
 
-render_head('실용 계산기 모음 — HOM2BOX 뉴스', '연봉 실수령액·4대보험·퇴직금·대출·양도세·유튜브/애드센스 수익 등 자주 쓰는 계산기 ' . count(TOOLS) . '종을 무료로 제공합니다.');
+render_head('실용 계산기 모음 — HOM2BOX 핫이슈', '연봉 실수령액·4대보험·퇴직금·대출·양도세·유튜브/애드센스 수익 등 자주 쓰는 계산기 ' . count(TOOLS) . '종을 무료로 제공합니다.');
 news_breadcrumb_ld([
     ['name' => '홈', 'url' => 'https://hom2box.com/'],
     ['name' => '계산기'],
@@ -32,7 +32,7 @@ news_jsonld([
     'name' => '실용 계산기 모음',
     'url' => 'https://hom2box.com/tools.php',
     'inLanguage' => 'ko',
-    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 핫이슈', 'url' => 'https://hom2box.com/'],
     'mainEntity' => [
         '@type' => 'ItemList',
         'numberOfItems' => count($toolIds),

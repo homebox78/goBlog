@@ -9,7 +9,7 @@ $all = [];
 try { $all = news_articles(); } catch (Throwable) {}
 $popular = array_slice($all, 0, 5);
 
-render_head('요청하신 기사를 찾을 수 없습니다 (404) — HOM2BOX 뉴스', '주소가 바뀌었거나 삭제된 페이지일 수 있습니다. 검색으로 다시 찾아보세요.');
+render_head('요청하신 기사를 찾을 수 없습니다 (404) — HOM2BOX 핫이슈', '주소가 바뀌었거나 삭제된 페이지일 수 있습니다. 검색으로 다시 찾아보세요.');
 render_ticker(array_slice($all, 0, 6));
 render_topbar();
 render_masthead();

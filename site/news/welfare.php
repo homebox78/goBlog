@@ -75,7 +75,7 @@ $filterNote = $notes ? (implode(' · ', $notes) . ' 필터 적용 중') : '전�
 $ticker = [];
 try { $ticker = array_slice(news_articles(), 0, 6); } catch (Throwable) {}
 
-render_head('정부 지원금·복지서비스 찾기 — HOM2BOX 뉴스', '생애주기·지역별 신청 가능한 정부·지자체 지원금을 한 번에. 복지로 공식 데이터 기반.');
+render_head('정부 지원금·복지서비스 찾기 — HOM2BOX 핫이슈', '생애주기·지역별 신청 가능한 정부·지자체 지원금을 한 번에. 복지로 공식 데이터 기반.');
 
 // ── SEO 구조화 데이터 — 검색엔진이 '정부 복지서비스 디렉터리'로 인식하게 ──
 news_breadcrumb_ld([
@@ -108,7 +108,7 @@ news_jsonld([
     'description' => '생애주기·지역별 신청 가능한 정부·지자체 지원금을 한 번에. 복지로 공식 데이터 기반.',
     'url' => 'https://hom2box.com/welfare.php',
     'inLanguage' => 'ko',
-    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 뉴스', 'url' => 'https://hom2box.com/'],
+    'isPartOf' => ['@type' => 'WebSite', 'name' => 'HOM2BOX 핫이슈', 'url' => 'https://hom2box.com/'],
     'mainEntity' => ['@type' => 'ItemList', 'numberOfItems' => count($wf_ld_items), 'itemListElement' => $wf_ld_items],
 ]);
 

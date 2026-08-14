@@ -24,7 +24,7 @@ foreach ($articles as $a) {
     echo "  <url>\n";
     echo "    <loc>" . sn_x($loc) . "</loc>\n";
     echo "    <news:news>\n";
-    echo "      <news:publication><news:name>HOM2BOX 뉴스</news:name><news:language>ko</news:language></news:publication>\n";
+    echo "      <news:publication><news:name>HOM2BOX 핫이슈</news:name><news:language>ko</news:language></news:publication>\n";
     echo "      <news:publication_date>" . sn_x(date('c', $ts)) . "</news:publication_date>\n";
     echo "      <news:title>" . sn_x((string) $a['title']) . "</news:title>\n";
     echo "    </news:news>\n";

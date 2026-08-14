@@ -17,7 +17,7 @@ $toc = [
     's8' => '8. 개인정보 보호책임자',
 ];
 
-render_head('개인정보처리방침 — HOM2BOX 뉴스', 'HOM2BOX 개인정보처리방침 — 수집 항목, 쿠키·구글 애드센스 광고, 제휴 마케팅 고지, 이용자 권리 안내.');
+render_head('개인정보처리방침 — HOM2BOX 핫이슈', 'HOM2BOX 개인정보처리방침 — 수집 항목, 쿠키·구글 애드센스 광고, 제휴 마케팅 고지, 이용자 권리 안내.');
 render_topbar();
 render_masthead();
 render_nav('');

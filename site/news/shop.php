@@ -19,7 +19,7 @@ $ticker = [];
 try { $ticker = array_slice(news_articles(), 0, 6); } catch (Throwable) {}
 
 $P = NEWS_PRIMARY;
-render_head('특가 쇼핑 — 쿠팡·네이버 인기 상품 | HOM2BOX 뉴스', '쿠팡 파트너스·네이버 커넥트 인기 상품을 한 곳에. 최대 50% 할인 특가템을 골라 담으세요.');
+render_head('특가 쇼핑 — 쿠팡·네이버 인기 상품 | HOM2BOX 핫이슈', '쿠팡 파트너스·네이버 커넥트 인기 상품을 한 곳에. 최대 50% 할인 특가템을 골라 담으세요.');
 news_breadcrumb_ld([
     ['name' => '홈', 'url' => 'https://hom2box.com/'],
     ['name' => '특가 쇼핑'],

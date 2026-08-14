@@ -11,7 +11,7 @@ function le(?string $v): string
 /** $title: 제목, $bodyHtml: 본문 HTML(신뢰 콘텐츠), $desc: 메타 설명 */
 function render_legal_page(string $title, string $bodyHtml, string $desc = ''): void
 {
-    render_head($title . ' — HOM2BOX 뉴스', $desc);
+    render_head($title . ' — HOM2BOX 핫이슈', $desc);
     render_topbar();
     render_masthead();
     render_nav('', [], true);
