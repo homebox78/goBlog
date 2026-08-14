@@ -261,27 +261,45 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
       </div>
     </div>
 
+    <style>
+      .h2b-rk{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;}
+      .h2b-rk::-webkit-scrollbar{display:none;}
+      .h2b-rk-hd{display:flex;align-items:center;justify-content:space-between;margin:36px 0 14px;}
+      .h2b-rk-hd h2{display:flex;align-items:center;gap:7px;font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0;}
+      @media(min-width:640px){.h2b-rk-hd h2{font-size:22px;}}
+      .h2b-rk-more{font-size:13px;color:#a1a1aa;text-decoration:none;white-space:nowrap;}
+      .h2b-rk-more:hover{color:#134a9c;}
+      .h2b-rk-card{width:150px;flex:0 0 auto;text-decoration:none;color:inherit;}
+      @media(min-width:640px){.h2b-rk-card{width:172px;}}
+      .h2b-rk-poster{position:relative;width:100%;aspect-ratio:3/4;border-radius:13px;overflow:hidden;background:#e4e4e7 50%/cover no-repeat;box-shadow:0 1px 5px rgba(0,0,0,.13);}
+      .h2b-rk-poster::after{content:"";position:absolute;left:0;right:0;bottom:0;height:44%;background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,0));}
+      .h2b-rk-poster>img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease;}
+      .h2b-rk-card:hover .h2b-rk-poster>img{transform:scale(1.06);}
+      .h2b-rk-num{position:absolute;bottom:-4px;left:9px;z-index:2;font-size:56px;font-weight:900;font-style:italic;color:#fff;line-height:1;text-shadow:0 2px 7px rgba(0,0,0,.6);}
+      .h2b-rk-title{margin-top:9px;font-size:14.5px;font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+      .h2b-rk-card:hover .h2b-rk-title{color:#134a9c;}
+      .h2b-rk-meta{margin-top:5px;font-size:11.5px;color:#a1a1aa;}
+    </style>
     <?php
-    // ── 네이버 연예 스타일 순위 카드 (포스터형 랭킹) — 우리 큐레이션 기사 ──
-    $rankRow = function (string $title, string $emoji, string $section, array $items) use ($P) {
+    // ── 네이버 연예 스타일 순위 카드 (포스터형 랭킹) — 인라인 CSS로 Tailwind purge 독립 ──
+    $rankRow = function (string $title, string $emoji, string $section, array $items) {
         $items = array_slice(array_values(array_filter($items, fn($a) => !empty($a['image']))), 0, 12);
         if (count($items) < 3) return;
         ?>
-      <section class="mt-9">
-        <div class="mb-3.5 flex items-center justify-between">
-          <h2 class="flex items-center gap-1.5 text-[19px] font-extrabold tracking-tight sm:text-[22px]"><span class="text-[22px]"><?= $emoji ?></span> <?= nh($title) ?></h2>
-          <a href="/category.php?cat=<?= urlencode($section) ?>" class="inline-flex items-center text-[13px] text-zinc-400 hover:text-[<?= $P ?>]">전체보기<span class="material-symbols-outlined text-[15px]">chevron_right</span></a>
+      <section>
+        <div class="h2b-rk-hd">
+          <h2><span style="font-size:23px"><?= $emoji ?></span> <?= nh($title) ?></h2>
+          <a class="h2b-rk-more" href="/category.php?cat=<?= urlencode($section) ?>">전체보기 ›</a>
         </div>
-        <div class="flex gap-3.5 overflow-x-auto pb-2" style="scrollbar-width:none">
+        <div class="h2b-rk">
           <?php $i = 1; foreach ($items as $a): ?>
-          <a href="/article.php?id=<?= (int) $a['id'] ?>" class="group block w-[148px] flex-none sm:w-[168px]">
-            <div class="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-zinc-200 shadow-sm">
-              <div class="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105" style="background-image:url('<?= nh($a['image']) ?>')"></div>
-              <div class="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/85 to-transparent"></div>
-              <span class="absolute bottom-0 left-2.5 text-[52px] font-black italic leading-none text-white" style="text-shadow:0 2px 6px rgba(0,0,0,.55)"><?= $i++ ?></span>
+          <a class="h2b-rk-card" href="/article.php?id=<?= (int) $a['id'] ?>">
+            <div class="h2b-rk-poster">
+              <img src="<?= nh($a['image']) ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+              <span class="h2b-rk-num"><?= $i++ ?></span>
             </div>
-            <div class="mt-2 line-clamp-2 text-[14px] font-bold leading-snug group-hover:text-[<?= $P ?>]"><?= nh($a['title']) ?></div>
-            <div class="mt-1 text-[11.5px] text-zinc-400"><?= nh($a['section']) ?> · <?= nh(news_date($a['publishedAt'])) ?></div>
+            <div class="h2b-rk-title"><?= nh($a['title']) ?></div>
+            <div class="h2b-rk-meta"><?= nh($a['section']) ?> · <?= nh(news_date($a['publishedAt'])) ?></div>
           </a>
           <?php endforeach; ?>
         </div>
