@@ -81,7 +81,12 @@ export async function listGeminiImageModels(): Promise<{
 
 /** Anthropic: 모델 목록 조회로 API 키를 검증한다. */
 export async function testAnthropic(): Promise<TestResult> {
-  const { "anthropic.apiKey": apiKey } = await getSettingValues(["anthropic.apiKey"]);
+  const values = await getSettingValues(["anthropic.apiKey", "anthropic.enabled"]);
+  const apiKey = values["anthropic.apiKey"];
+  // 사용이 꺼져 있으면 API를 아예 호출하지 않는다(과금·혼동 방지).
+  if (values["anthropic.enabled"] !== "true") {
+    return { ok: false, message: "Claude 사용이 꺼져 있습니다 — API를 호출하지 않습니다(과금 없음). 설정에서 켜야 사용/테스트됩니다." };
+  }
   if (!apiKey) return { ok: false, message: "Anthropic API Key가 설정되지 않았습니다." };
 
   const res = await safeFetch("https://api.anthropic.com/v1/models?limit=5", {
@@ -107,7 +112,12 @@ export async function testAnthropic(): Promise<TestResult> {
 
 /** Gemini: 모델 목록 조회로 API 키를 검증한다. */
 export async function testGemini(): Promise<TestResult> {
-  const { "gemini.apiKey": apiKey } = await getSettingValues(["gemini.apiKey"]);
+  const values = await getSettingValues(["gemini.apiKey", "gemini.enabled"]);
+  const apiKey = values["gemini.apiKey"];
+  // 사용이 꺼져 있으면 API를 아예 호출하지 않는다(과금·혼동 방지).
+  if (values["gemini.enabled"] !== "true") {
+    return { ok: false, message: "Gemini 사용이 꺼져 있습니다 — API를 호출하지 않습니다(과금 없음). 설정에서 켜야 사용/테스트됩니다." };
+  }
   if (!apiKey) return { ok: false, message: "Gemini API Key가 설정되지 않았습니다." };
 
   const res = await safeFetch(
