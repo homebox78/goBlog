@@ -267,8 +267,6 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
         <?php
     };
     $rankRow('지금 뜨는 드라마·예능', '📺', '방송·가요', array_merge($bySection['방송·가요'] ?? [], $bySection['아이돌24시'] ?? []));
-    $rankRow('지금 뜨는 영화', '🎬', '영화', $bySection['영화'] ?? []);
-    $rankRow('연예가 화제', '🔥', '연예가화제', array_merge($bySection['연예가화제'] ?? [], $bySection['해외연예'] ?? []));
     ?>
 
     <!-- 헤드라인 (시안: 좌 대표기사 이미지 위+제목 아래 / 우 헤드라인 리스트) -->
@@ -310,6 +308,12 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
         <?php endif; ?>
       </div>
     </div>
+
+    <?php
+    // 헤드라인 아래 순위 모듈 (드라마·예능은 헤드라인 위)
+    $rankRow('지금 뜨는 영화', '🎬', '영화', $bySection['영화'] ?? []);
+    $rankRow('연예가 화제', '🔥', '연예가화제', array_merge($bySection['연예가화제'] ?? [], $bySection['해외연예'] ?? []));
+    ?>
 
     <!-- 종목 이슈 위젯 제거(엔터 중심 개편) -->
     <?php if (false): ?>
@@ -667,48 +671,29 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
         <?php render_ad("home-sidebar"); ?>
 
         <?php
-        // 파트너스 추천 = 배너 관리 'home-partners' 슬롯으로 제어. 미설정이면 자동 매칭 상품(기존 동작),
-        // 설정되면 on/off·편집 이미지·링크를 따른다.
-        $ps = ad_slot('home-partners');
-        $pOn = ($ps === null) ? (bool) $partner : !empty($ps['enabled']);
-        $pImg = ($ps && !empty($ps['imageUrl'])) ? $ps['imageUrl'] : ($partner['imageUrl'] ?? '');
-        $pLink = ($ps && !empty($ps['linkUrl'])) ? $ps['linkUrl'] : ($partner['productUrl'] ?? '');
-        $pEdited = $ps && !empty($ps['imageUrl']);
-        $pName = $pEdited ? '' : ($partner['name'] ?? '');           // 편집 배너면 이미지에 정보가 담김
-        $pNew = ($ps && isset($ps['newTab'])) ? !empty($ps['newTab']) : true;
-        $pRel = ($ps && isset($ps['sponsored']) && empty($ps['sponsored'])) ? 'noopener' : 'sponsored nofollow noopener';
+        // 실시간 이슈 — 썸네일 기사 리스트(파트너스·FAQ 대체). 상단 위젯과 겹치지 않게 뒤쪽 기사 사용.
+        $sideIssue = [];
+        foreach (array_slice($articles, 6) as $a) { if (!empty($a['image'])) { $sideIssue[] = $a; if (count($sideIssue) >= 10) break; } }
         ?>
-        <?php if ($pOn && ($pImg || $pName) && $pLink): ?>
-        <a href="<?= nh($pLink) ?>" target="<?= $pNew ? '_blank' : '_self' ?>" rel="<?= $pRel ?>" class="block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex justify-between items-center mb-2.5"><span class="text-[13px] font-extrabold text-[<?= $P ?>]">파트너스 추천</span><span class="inline-flex items-center rounded border border-zinc-200 px-1.5 text-[10.5px] text-zinc-400">AD</span></div>
-          <?php if ($pImg): ?><div class="w-full <?= $pEdited ? '' : 'h-32 ' ?>rounded-md bg-white flex items-center justify-center overflow-hidden"><img src="<?= nh($pImg) ?>" alt="" referrerpolicy="no-referrer" class="<?= $pEdited ? 'w-full h-auto' : 'h-full object-contain' ?>"></div><?php endif; ?>
-          <?php if ($pName): ?><div class="mt-2.5 text-sm font-bold leading-normal line-clamp-2"><?= nh($pName) ?></div><?php endif; ?>
-          <div class="mt-1.5 flex items-center gap-1 text-[11px] text-zinc-400"><span class="material-symbols-outlined text-[13px]">info</span>구매 시 운영자가 수수료를 제공받을 수 있습니다</div>
-        </a>
-        <?php endif; ?>
-
-        <!-- 자주 묻는 질문 (시안) -->
+        <?php if ($sideIssue): ?>
         <div class="rounded-lg border border-zinc-200 bg-white shadow-sm">
           <div class="flex items-center gap-2 border-b border-zinc-100 px-4 pt-3.5 pb-2.5">
-            <span class="material-symbols-outlined text-[18px] text-[<?= $P ?>]">quiz</span>
-            <span class="text-[15px] font-extrabold">자주 묻는 질문</span>
+            <span class="h-[15px] w-[3px] rounded-full bg-[#e0392b]"></span>
+            <span class="text-[15.5px] font-extrabold">🔥 실시간 이슈</span>
           </div>
-          <div class="divide-y divide-zinc-50 px-1.5 py-1">
-            <?php $homeFaq = [
-                ['어떤 소식을 다루나요?', '연예가화제·방송·가요·영화·아이돌, 야구·축구 등 국내외 스포츠까지 지금 뜨는 엔터·스포츠 이슈를 실시간으로 정리합니다.'],
-                ['소식은 얼마나 자주 올라오나요?', '하루 종일 새 이슈가 올라옵니다. 원문 언론 보도를 요약·정리해 한눈에 보기 쉽게 제공합니다.'],
-                ['원문 기사는 어디서 보나요?', '각 소식 하단의 “원문 기사 전체 보기” 링크에서 해당 언론사의 전체 기사와 사진을 확인할 수 있습니다.'],
-            ]; foreach ($homeFaq as $f): ?>
-              <details class="group px-2.5">
-                <summary class="flex cursor-pointer list-none items-center gap-2 py-2.5 text-[13px] font-bold">
-                  <span class="text-[<?= $P ?>]">Q</span><span class="min-w-0 flex-1"><?= nh($f[0]) ?></span>
-                  <span class="material-symbols-outlined text-[18px] text-zinc-400 transition-transform group-open:rotate-180">expand_more</span>
-                </summary>
-                <div class="pb-3 pl-6 text-[12.5px] leading-relaxed text-zinc-500"><?= nh($f[1]) ?></div>
-              </details>
+          <div class="px-3 py-1">
+            <?php foreach ($sideIssue as $a): ?>
+            <a href="/article.php?id=<?= (int) $a['id'] ?>" class="flex items-center gap-3 border-b border-zinc-100 py-2.5 last:border-0 group">
+              <div class="h-[54px] w-[54px] flex-none rounded-md bg-cover bg-center bg-zinc-100" style="background-image:url('<?= nh($a['image']) ?>')"></div>
+              <div class="min-w-0 flex-1">
+                <div class="line-clamp-2 text-[13px] font-semibold leading-snug text-zinc-800 group-hover:text-[<?= $P ?>]"><?= nh($a['title']) ?></div>
+                <div class="mt-0.5 text-[11px] text-zinc-400"><?= nh($a['section']) ?></div>
+              </div>
+            </a>
             <?php endforeach; ?>
           </div>
         </div>
+        <?php endif; ?>
 
       </div>
     </div>
