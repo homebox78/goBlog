@@ -18,6 +18,8 @@ export const SETTING_DEFS: SettingDef[] = [
   // Claude
   { key: "anthropic.apiKey", group: "claude", label: "Anthropic API Key", secret: true },
   { key: "anthropic.model", group: "claude", label: "Claude 모델", secret: false, defaultValue: "claude-sonnet-5" },
+  // Claude(Anthropic) 사용 on/off — 꺼지면 모든 Claude API 호출이 차단된다(과금 방지). 기본 꺼짐.
+  { key: "anthropic.enabled", group: "claude", label: "Claude(Anthropic) 사용", secret: false, defaultValue: "false" },
   { key: "anthropic.defaultLength", group: "claude", label: "기본 글 길이", secret: false, defaultValue: "2000" },
   { key: "anthropic.minQualityScore", group: "claude", label: "자동발행 최소 품질 점수", secret: false, defaultValue: "85" },
   // 하루 자동 생성·자체 사이트 릴리즈 상한 — 자체 뉴스 사이트에 하루 몇 개를 노출/생성할지. (대량 생성 스팸 방지)
@@ -35,6 +37,8 @@ export const SETTING_DEFS: SettingDef[] = [
 
   // Gemini
   { key: "gemini.apiKey", group: "gemini", label: "Gemini API Key", secret: true },
+  // Gemini 사용 on/off — 꺼지면 모든 Gemini(이미지) 호출이 차단된다(과금 방지). 기본 꺼짐.
+  { key: "gemini.enabled", group: "gemini", label: "Gemini 사용", secret: false, defaultValue: "false" },
   { key: "gemini.imageModel", group: "gemini", label: "Gemini 이미지 모델", secret: false, defaultValue: "gemini-2.5-flash-image" },
   { key: "gemini.featuredImageCount", group: "gemini", label: "대표 이미지 수", secret: false, defaultValue: "1" },
   { key: "gemini.contentImageCount", group: "gemini", label: "본문 이미지 수", secret: false, defaultValue: "3" },

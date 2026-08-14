@@ -20,10 +20,14 @@ export async function callClaudeJson<T>(options: {
   maxTokens?: number;
   articleId?: number;
 }): Promise<T> {
-  const values = await getSettingValues(["anthropic.apiKey", "anthropic.model"]);
+  const values = await getSettingValues(["anthropic.apiKey", "anthropic.model", "anthropic.enabled"]);
   const apiKey = values["anthropic.apiKey"];
   const model = values["anthropic.model"] || "claude-sonnet-5";
 
+  // 과금 차단 게이트 — 설정에서 켜져("true") 있을 때만 API 호출. 기본 꺼짐(fail-closed).
+  if (values["anthropic.enabled"] !== "true") {
+    throw new HttpError(400, "Claude(Anthropic) API가 비활성화되어 있습니다. 설정 → Claude에서 켜주세요.");
+  }
   if (!apiKey) {
     throw new HttpError(400, "Anthropic API Key가 설정되지 않았습니다. 설정 → Claude에서 입력해주세요.");
   }

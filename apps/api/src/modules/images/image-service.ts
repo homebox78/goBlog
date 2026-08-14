@@ -56,9 +56,13 @@ async function generateOneImage(prompt: string, fileBase: string, characterKeys:
   height: number;
   bytes: number;
 }> {
-  const values = await getSettingValues(["gemini.apiKey", "gemini.imageModel"]);
+  const values = await getSettingValues(["gemini.apiKey", "gemini.imageModel", "gemini.enabled"]);
   const apiKey = values["gemini.apiKey"];
   const model = values["gemini.imageModel"] || "gemini-2.5-flash-image";
+  // 과금 차단 게이트 — 켜져("true") 있을 때만 호출. 기본 꺼짐(fail-closed).
+  if (values["gemini.enabled"] !== "true") {
+    throw new HttpError(400, "Gemini API가 비활성화되어 있습니다. 설정 → Gemini에서 켜주세요.");
+  }
   if (!apiKey) throw new HttpError(400, "Gemini API Key가 설정되지 않았습니다.");
 
   // 캐릭터 레퍼런스 기능 제거(2026-07-17, 사용자 지시): 고정 인물 참조를 쓰면 썸네일 인물이 다 같아
