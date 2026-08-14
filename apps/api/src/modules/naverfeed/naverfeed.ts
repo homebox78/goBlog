@@ -14,20 +14,32 @@ interface TopicGroup {
   category: string;
   weight: number;
   queries: string[];
+  match: string[]; // 제목/요약에 이 중 하나가 있어야만 발행(오분류·잡음 차단)
 }
 // 키워드 category = 섹션명(1:1). news_section이 in_array로 그대로 섹션 반환.
 const TOPIC_GROUPS: TopicGroup[] = [
-  { kw: "연예가화제", category: "연예가화제", weight: 3, queries: ["연예가 화제", "연예인 열애", "열애설", "결별", "연예인 논란", "스타 근황", "연예계 이슈", "셀럽"] },
-  { kw: "방송·가요", category: "방송·가요", weight: 3, queries: ["드라마", "예능", "방송", "가요", "음원차트", "시청률", "OST", "트로트"] },
-  { kw: "영화", category: "영화", weight: 2, queries: ["영화", "박스오피스", "개봉 영화", "넷플릭스 영화", "영화 예고편", "영화제"] },
-  { kw: "해외연예", category: "해외연예", weight: 2, queries: ["할리우드", "해외 스타", "빌보드", "팝스타", "해외 연예"] },
-  { kw: "아이돌24시", category: "아이돌24시", weight: 3, queries: ["아이돌", "걸그룹", "보이그룹", "방탄소년단", "블랙핑크", "컴백", "케이팝", "팬미팅"] },
-  { kw: "야구", category: "야구", weight: 2, queries: ["KBO", "프로야구", "야구", "한국시리즈"] },
-  { kw: "해외야구", category: "해외야구", weight: 1, queries: ["MLB", "메이저리그", "김하성", "이정후", "오타니"] },
-  { kw: "축구", category: "축구", weight: 2, queries: ["K리그", "축구 국가대표", "축구", "황선홍"] },
-  { kw: "해외축구", category: "해외축구", weight: 2, queries: ["손흥민", "이강인", "김민재", "프리미어리그", "챔피언스리그", "해외축구"] },
-  { kw: "농구·배구", category: "농구·배구", weight: 1, queries: ["KBL", "프로농구", "배구", "V리그", "여자배구"] },
-  { kw: "스포츠일반", category: "스포츠일반", weight: 1, queries: ["골프", "UFC", "올림픽", "e스포츠", "테니스"] },
+  { kw: "연예가화제", category: "연예가화제", weight: 3, queries: ["연예인 열애", "열애설", "연예인 결별", "연예인 논란", "배우 근황", "가수 근황"],
+    match: ["열애", "결별", "결혼", "이혼", "논란", "배우", "가수", "방송인", "개그맨", "아나운서", "셀럽"] },
+  { kw: "방송·가요", category: "방송·가요", weight: 3, queries: ["드라마", "예능", "가요", "음원차트", "시청률", "트로트"],
+    match: ["드라마", "예능", "방송", "가요", "음원", "시청률", "무대", "컴백", "OST", "출연", "MC", "트로트"] },
+  { kw: "영화", category: "영화", weight: 2, queries: ["영화 개봉", "박스오피스", "넷플릭스 영화", "영화 예고편", "영화제"],
+    match: ["영화", "박스오피스", "개봉", "감독", "관객", "시사회", "예고편", "주연", "스크린"] },
+  { kw: "해외연예", category: "해외연예", weight: 2, queries: ["할리우드", "빌보드", "팝스타", "해외 셀럽"],
+    match: ["할리우드", "빌보드", "그래미", "팝스타", "팝가수", "해외 스타", "해외스타", "미국 배우", "일본 배우"] },
+  { kw: "아이돌24시", category: "아이돌24시", weight: 3, queries: ["아이돌", "걸그룹", "보이그룹", "방탄소년단", "블랙핑크", "케이팝 컴백"],
+    match: ["아이돌", "걸그룹", "보이그룹", "그룹", "멤버", "컴백", "데뷔", "앨범", "케이팝", "팬미팅", "타이틀곡"] },
+  { kw: "야구", category: "야구", weight: 2, queries: ["KBO", "프로야구", "한국시리즈"],
+    match: ["야구", "KBO", "투수", "타자", "홈런", "구단", "선발", "타율", "이닝", "포수"] },
+  { kw: "해외야구", category: "해외야구", weight: 1, queries: ["MLB", "메이저리그", "오타니 야구"],
+    match: ["MLB", "메이저리그", "오타니", "김하성", "이정후", "다저스", "양키스", "빅리그"] },
+  { kw: "축구", category: "축구", weight: 2, queries: ["K리그", "축구 국가대표", "축구 대표팀"],
+    match: ["축구", "K리그", "국가대표", "대표팀", "월드컵", "A매치"] },
+  { kw: "해외축구", category: "해외축구", weight: 2, queries: ["손흥민", "이강인", "김민재", "프리미어리그", "챔피언스리그"],
+    match: ["손흥민", "이강인", "김민재", "프리미어리그", "챔피언스리그", "EPL", "토트넘", "PSG", "분데스", "라리가"] },
+  { kw: "농구·배구", category: "농구·배구", weight: 1, queries: ["KBL 농구", "프로농구", "프로배구", "V리그"],
+    match: ["농구", "배구", "KBL", "V리그", "리바운드", "세터", "스파이크"] },
+  { kw: "스포츠일반", category: "스포츠일반", weight: 1, queries: ["골프 대회", "UFC", "테니스", "e스포츠"],
+    match: ["골프", "UFC", "올림픽", "테니스", "격투", "e스포츠", "롤드컵", "메달"] },
 ];
 
 function decodeHtml(s: string): string {
@@ -136,6 +148,10 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
     select: { title: true },
   });
   const recentTitles = new Set(recent.map((r) => normTitle(r.title)));
+  // 엔티티 토큰 기반 근접중복(같은 사건·인물 다른 제목) 방지
+  const tokenize = (s: string): string[] =>
+    [...new Set((s.toLowerCase().match(/[가-힣a-z0-9]{2,}/g) ?? []).filter((t) => !["기자", "종합", "단독", "공식", "영상", "포토", "사진", "속보", "오늘"].includes(t)))];
+  const recentTokenSets: Set<string>[] = recent.map((r) => new Set(tokenize(r.title)));
 
   const totalWeight = TOPIC_GROUPS.reduce((s, g) => s + g.weight, 0);
   const titles: string[] = [];
@@ -166,6 +182,18 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       if (madeInGroup >= target || titles.length >= count) break;
       const nt = normTitle(item.title);
       if (nt.length < 6 || recentTitles.has(nt)) {
+        skipped++;
+        continue;
+      }
+      // 관련성 필터 — 제목/요약에 섹션 핵심어가 없으면 오분류 잡음이므로 제외
+      const relHay = `${item.title} ${item.description}`;
+      if (!group.match.some((m) => relHay.includes(m))) {
+        skipped++;
+        continue;
+      }
+      // 엔티티 토큰 2개 이상 겹치면 같은 사건 → 중복 제외
+      const toks = new Set(tokenize(item.title));
+      if (toks.size >= 2 && recentTokenSets.some((rs) => { let o = 0; for (const t of toks) if (rs.has(t)) o++; return o >= 2; })) {
         skipped++;
         continue;
       }
@@ -239,6 +267,7 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
         },
       });
       recentTitles.add(nt);
+      recentTokenSets.push(toks);
       titles.push(item.title);
       madeInGroup++;
     }

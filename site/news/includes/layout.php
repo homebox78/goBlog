@@ -463,6 +463,7 @@ function render_product_card(array $p): void
  */
 function render_section_subscribe(string $section): void
 {
+    return; // 구독 배너 제거(엔터 개편) — 빈 밴드/여백 방지
     static $topics = [
         '경제·금융' => ['물가·금리', '부동산', '증시·환율'],
         'IT·게임'   => ['AI·반도체', '스마트폰', '게임'],
