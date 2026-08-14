@@ -16,6 +16,7 @@ let welfareJob: Cron | null = null;
 let stockJob: Cron | null = null;
 let geoJob: Cron | null = null;
 let issuefeedJob: Cron | null = null;
+let naverfeedJob: Cron | null = null;
 
 function toProductInput(p: {
   source: string;
@@ -701,6 +702,24 @@ export async function scheduleFromSettings(): Promise<void> {
       }
     });
     console.log("[scheduler] 이슈피드 발행 08:00·20:00 KST");
+
+    // 네이버뉴스 기반 연예·스포츠 큐레이션 — 하루 여러 회로 나눠 발행(AI 미사용, 무과금).
+    // 하루 5회(07·11·14·17·20시)로 naverfeed.dailyCount(기본 50)을 나눠 발행 → 다양·신선.
+    naverfeedJob?.stop();
+    naverfeedJob = new Cron("0 7,11,14,17,20 * * *", { timezone: "Asia/Seoul", protect: true }, async () => {
+      try {
+        const { getSettingValues } = await import("../settings/settings.service.js");
+        const daily = Math.max(0, Number((await getSettingValues(["naverfeed.dailyCount"]))["naverfeed.dailyCount"] ?? 50) || 50);
+        if (daily <= 0) return; // 0이면 발행 중지
+        const perRun = Math.max(1, Math.round(daily / 5));
+        const { publishNaverFeed } = await import("../naverfeed/naverfeed.js");
+        const r = await publishNaverFeed(perRun);
+        console.log(`[scheduler] 네이버 큐레이션 발행: ${r.created}건 (스킵 ${r.skipped}, 목표 ${perRun})`);
+      } catch (error) {
+        console.error("[scheduler] 네이버 큐레이션 발행 실패:", (error as Error).message);
+      }
+    });
+    console.log("[scheduler] 네이버 큐레이션 발행 07·11·14·17·20 KST");
 
     // 통계 테이블(page_views/ip_geo)을 부팅 시 즉시 보장 — PHP가 배포 직후 바로 기록할 수 있게.
     try {

@@ -32,11 +32,12 @@ function news_section(?string $category): string
     if (preg_match('/금융|재테크|투자|증시|경제|부동산|보험|유통|주식|소비/u', $c)) return '경제·금융';
     if (preg_match('/IT|게임|테크|스마트폰|가전|웨어러블|미디어|크리에이터/iu', $c)) return 'IT·게임';
     if (preg_match('/생활|날씨|정책|건강|식품|음식|의약|외식|직업/u', $c)) return '생활·건강';
-    if (preg_match('/여행|교통|취미|카메라|패션|스포츠|문화|안전|자동차/u', $c)) return '여행·문화';
+    if (preg_match('/연예|드라마|영화|예능|아이돌|K-?팝|가수|배우|방송|축구|야구|농구|골프|KBO|스포츠/iu', $c)) return '연예·스포츠';
+    if (preg_match('/여행|교통|취미|카메라|패션|문화|안전|자동차/u', $c)) return '여행·문화';
     return '종합';
 }
 
-const NEWS_SECTIONS = ['경제·금융', 'IT·게임', '생활·건강', '여행·문화', '종합'];
+const NEWS_SECTIONS = ['연예·스포츠', '경제·금융', 'IT·게임', '생활·건강', '여행·문화', '종합'];
 
 // 발행처 뱃지 표기 (원문 링크용)
 const NEWS_PLATFORMS = [
@@ -65,7 +66,7 @@ function news_articles(): array
     // 홈박스 뉴스는 자체 발행 채널 — goBlog가 '릴리즈'(publishAt 설정, 품질 통과)한 글이면
     // 외부 플랫폼(WP·블로거) 발행 성공을 기다리지 않고 즉시 노출한다.
     $rows = $db->query(
-        "SELECT a.id, a.title, a.excerpt, a.qualityScore, a.publishAt, k.category kwCategory, k.text kwText,
+        "SELECT a.id, a.title, a.excerpt, a.qualityScore, a.publishAt, a.articleType, k.category kwCategory, k.text kwText,
                 pj.platform, pj.publishedUrl, pj.finishedAt
          FROM articles a
          LEFT JOIN keywords k ON k.id = a.keywordId
@@ -85,7 +86,7 @@ function news_articles(): array
                 'title' => $r['title'],
                 'excerpt' => $r['excerpt'],
                 'quality' => (int) ($r['qualityScore'] ?? 0),
-                'section' => news_section($r['kwCategory']),
+                'section' => ($r['articleType'] ?? '') === 'curation' ? '연예·스포츠' : news_section($r['kwCategory']),
                 'kwText' => $r['kwText'],
                 'publishedAt' => $r['finishedAt'] ?? $r['publishAt'],
                 'image' => null,

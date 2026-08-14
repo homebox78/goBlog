@@ -18,8 +18,11 @@ articlesRouter.get(
   asyncHandler(async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 15, 5), 400);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
-    // 디시이슈(issuefeed)에서 가져온 자체발행 기사는 글관리 목록에서 제외
-    const listWhere = { sources: { none: { url: { contains: "issuefeed" } } } };
+    // 자동 큐레이션(디시이슈·네이버 연예/스포츠)은 수동 발행 대상이 아니라 글관리 목록에서 제외
+    const listWhere = {
+      articleType: { not: "curation" },
+      sources: { none: { url: { contains: "issuefeed" } } },
+    };
     const total = await prisma.article.count({ where: listWhere });
     const articles = await prisma.article.findMany({
       where: listWhere,
