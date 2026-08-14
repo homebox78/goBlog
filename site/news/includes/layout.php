@@ -279,12 +279,15 @@ function render_foot(): void
  */
 function render_breaking_bar(): void
 {
-    if (!function_exists('news_breaking')) {
-        $f = __DIR__ . '/press-rss.php';
-        if (is_file($f)) require_once $f; else return;
-    }
+    // 속보 = 최신 연예·스포츠 큐레이션 기사(정치·일반 뉴스 소스 제거)
     $b = null;
-    try { $b = news_breaking(); } catch (Throwable) {}
+    try {
+        $arts = news_articles();
+        if ($arts) {
+            $a = $arts[0];
+            $b = ['key' => 'art' . (int) $a['id'], 'title' => $a['title'], 'link' => '/article.php?id=' . (int) $a['id']];
+        }
+    } catch (Throwable) {}
     if (!$b) return;
     ?>
 <div id="h2b-bk" data-k="<?= nh($b['key']) ?>" class="bg-[#16356e]">
