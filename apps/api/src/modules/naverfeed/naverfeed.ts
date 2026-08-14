@@ -175,6 +175,11 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
         continue;
       }
       const meta = await fetchMeta(item.link);
+      // 썸네일(대표이미지) 없는 기사는 발행하지 않는다
+      if (!meta.image) {
+        skipped++;
+        continue;
+      }
       const summary = (meta.description || item.description || "").slice(0, 600);
       if (summary.length < 40) {
         skipped++;
