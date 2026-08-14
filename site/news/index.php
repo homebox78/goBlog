@@ -229,7 +229,7 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
         <?php endif; ?>
         <h2 class="mt-4 mb-2 text-[22px] sm:text-[27px] font-extrabold leading-snug tracking-tight group-hover:text-[<?= $P ?>]"><?= nh($headline['title']) ?></h2>
         <?php if (!empty($headline['excerpt'])): ?><p class="mb-2 text-sm leading-relaxed text-zinc-500 line-clamp-3"><?= nh($headline['excerpt']) ?></p><?php endif; ?>
-        <div class="flex items-center gap-2 text-xs text-zinc-400"><span class="inline-flex items-center rounded-md bg-[<?= $P ?>] px-2 py-0.5 text-[10.5px] font-bold text-white">자체기사</span> <?= nh($headline['section']) ?> · <?= nh(news_date($headline['publishedAt'])) ?></div>
+        <div class="flex items-center gap-2 text-xs text-zinc-400"><?= nh($headline['section']) ?> · <?= nh(news_date($headline['publishedAt'])) ?></div>
       </a>
       <div class="flex flex-col pb-2">
         <?php foreach ($subLeads as $h): ?>

@@ -191,11 +191,6 @@ render_nav('문서도구', [], true);
         <span class="min-w-0 flex-1"><span class="flex items-center gap-1.5 text-[14.5px] font-extrabold group-hover:text-[<?= $P ?>]">계산기</span><span class="mt-0.5 block text-[12px] leading-snug text-zinc-500">연봉·세금·대출·환율 등 바로 계산</span></span>
         <span class="material-symbols-outlined flex-none text-[18px] text-zinc-300 group-hover:text-[<?= $P ?>]">chevron_right</span>
       </a>
-      <a href="/subscribe.php" class="block rounded-xl border border-[<?= $P ?>] bg-[<?= $P ?>] p-5 text-white transition-colors hover:bg-[#0f3d82]">
-        <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">mail</span>새 서식 알림 받기</div>
-        <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/80">구독하시면 새로 추가되는 문서 서식과 실무 가이드를 메일로 보내드립니다.</div>
-        <div class="mt-3 inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-[13px] font-bold text-[<?= $P ?>]">무료 구독하기<span class="material-symbols-outlined text-[16px]">arrow_forward</span></div>
-      </a>
       <div class="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div class="border-b border-zinc-100 px-4 pt-3.5 pb-2.5 text-[15px] font-bold">다른 문서 서식</div>
         <div class="px-2 py-2">

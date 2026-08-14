@@ -8,6 +8,13 @@ import { insertImageFromUrl } from "../images/image-service.js";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 
+// 연예·스포츠 사이트에 부적합한 기사 전역 차단(금융·증시·부동산·정치 등)
+const EXCLUDE_ALL = [
+  "주가", "증시", "코스피", "코스닥", "관리종목", "목표주가", "상장폐지", "증권사", "영업이익",
+  "시가총액", "배당금", "동전주", "연저점", "연고점", "급등주", "급락주", "매출액", "실적 부진",
+  "분양", "청약", "대출", "금리", "환율", "부동산", "국회", "대통령실", "여야", "장관",
+];
+
 // 토픽 그룹 — kw(키워드 텍스트, 섹션 분류용 category 겸용)·weight(발행 비중)·queries(네이버 검색어)
 interface TopicGroup {
   kw: string;
@@ -185,8 +192,13 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
         skipped++;
         continue;
       }
-      // 관련성 필터 — 제목/요약에 섹션 핵심어가 없으면 오분류 잡음이므로 제외
+      // 금융/증시/부동산 등 비연예 기사 전역 차단(연예 기업 언급으로 새는 것 방지)
       const relHay = `${item.title} ${item.description}`;
+      if (EXCLUDE_ALL.some((x) => relHay.includes(x))) {
+        skipped++;
+        continue;
+      }
+      // 관련성 필터 — 제목/요약에 섹션 핵심어가 없으면 오분류 잡음이므로 제외
       if (!group.match.some((m) => relHay.includes(m))) {
         skipped++;
         continue;

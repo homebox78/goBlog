@@ -72,14 +72,6 @@ render_nav('계산기', [], true);
       </div>
     <?php endforeach; ?>
 
-    <!-- 구독 CTA 밴드 -->
-    <a href="/subscribe.php" class="mt-8 flex flex-col gap-3 rounded-xl border border-[#134a9c] bg-[#134a9c] p-6 text-white transition-colors hover:bg-[#0f3d82] sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <div class="flex items-center gap-2 text-[17px] font-extrabold"><span class="material-symbols-outlined text-[22px]">mail</span>계산 결과를 이메일로 받아보시겠어요?</div>
-        <div class="mt-1.5 text-[13px] leading-relaxed text-white/80">구독하시면 기사와 계산 결과를 메일로 받아보실 수 있고, 유용한 생활·재테크 정보도 함께 보내드립니다.</div>
-      </div>
-      <span class="inline-flex flex-none items-center gap-1 self-start rounded-lg bg-white px-4 py-2 text-[14px] font-bold text-[#134a9c] sm:self-auto">무료 구독<span class="material-symbols-outlined text-[17px]">arrow_forward</span></span>
-    </a>
 
     <?php render_ad('home-infeed'); ?>
     <?php adsense_display(); ?>

@@ -317,7 +317,7 @@ html { scroll-behavior:smooth; }
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[<?= NEWS_PRIMARY ?>] text-sm font-extrabold text-white">H</div>
           <div>
-            <div class="text-[13.5px] font-bold">HOM2BOX 편집국 <span class="ml-1 inline-flex items-center rounded-md bg-[<?= NEWS_PRIMARY ?>] px-2 py-0.5 text-[10.5px] font-bold text-white">자체기사</span></div>
+            <div class="text-[13.5px] font-bold">HOM2BOX 편집국</div>
             <div class="mt-0.5 text-xs text-zinc-400">입력 <?= nh(news_date($publishedAt)) ?> · 읽기 <?= $readMin ?>분</div>
           </div>
         </div>
@@ -476,14 +476,6 @@ html { scroll-behavior:smooth; }
         <div class="mt-1.5 flex items-center gap-1 text-[11px] text-zinc-400"><span class="material-symbols-outlined text-[13px]">info</span>구매 시 운영자가 수수료를 제공받을 수 있습니다</div>
       </a>
       <?php endif; ?>
-      <a href="/welfare.php" class="block rounded-lg border border-[#134a9c] bg-[#134a9c] p-4 text-white hover:bg-[#0f3d82]">
-        <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">payments</span>정부 지원금 찾기</div>
-        <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/85">생애주기·지역별 신청 가능한 지원금을 한 번에.</div>
-      </a>
-      <a href="/subscribe.php" class="block rounded-lg border border-[<?= NEWS_PRIMARY ?>] bg-[<?= NEWS_PRIMARY ?>] p-4 text-white hover:bg-[#0f3d82]">
-        <div class="flex items-center gap-2 text-[15px] font-extrabold"><span class="material-symbols-outlined text-[20px]">mail</span>무료 뉴스레터 구독</div>
-        <div class="mt-1.5 text-[12.5px] leading-relaxed text-white/80">매일 아침·저녁 핵심 기사를 메일로.</div>
-      </a>
     </div>
   </div>
 
