@@ -177,8 +177,8 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
 
     <?php render_ad("home-top"); ?>
 
-    <!-- 언론사 헤드라인 — 카테고리 탭 + 2컬럼 리스트 (연합뉴스 분야별). 메인 마켓 바로 아래 배치 -->
-    <?php if ($press && !empty($press['yna']['boxes'])): $ynaBoxes = $press['yna']['boxes']; ?>
+    <!-- 언론사 헤드라인 제거(엔터 개편 — 정치·경제 off-brand) -->
+    <?php if (false): $ynaBoxes = $press['yna']['boxes'] ?? []; ?>
     <div class="pt-5 pb-2 mb-4">
       <div class="mb-3 flex items-center gap-3 border-b-2 border-zinc-900 pb-3">
         <span class="h-[19px] w-[3px] rounded-full bg-[#e0392b]"></span>
