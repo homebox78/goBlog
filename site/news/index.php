@@ -261,6 +261,38 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
       </div>
     </div>
 
+    <?php
+    // ── 네이버 연예 스타일 순위 카드 (포스터형 랭킹) — 우리 큐레이션 기사 ──
+    $rankRow = function (string $title, string $emoji, string $section, array $items) use ($P) {
+        $items = array_slice(array_values(array_filter($items, fn($a) => !empty($a['image']))), 0, 12);
+        if (count($items) < 3) return;
+        ?>
+      <section class="mt-9">
+        <div class="mb-3.5 flex items-center justify-between">
+          <h2 class="flex items-center gap-1.5 text-[19px] font-extrabold tracking-tight sm:text-[22px]"><span class="text-[22px]"><?= $emoji ?></span> <?= nh($title) ?></h2>
+          <a href="/category.php?cat=<?= urlencode($section) ?>" class="inline-flex items-center text-[13px] text-zinc-400 hover:text-[<?= $P ?>]">전체보기<span class="material-symbols-outlined text-[15px]">chevron_right</span></a>
+        </div>
+        <div class="flex gap-3.5 overflow-x-auto pb-2" style="scrollbar-width:none">
+          <?php $i = 1; foreach ($items as $a): ?>
+          <a href="/article.php?id=<?= (int) $a['id'] ?>" class="group block w-[148px] flex-none sm:w-[168px]">
+            <div class="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-zinc-200 shadow-sm">
+              <div class="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105" style="background-image:url('<?= nh($a['image']) ?>')"></div>
+              <div class="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/85 to-transparent"></div>
+              <span class="absolute bottom-0 left-2.5 text-[52px] font-black italic leading-none text-white" style="text-shadow:0 2px 6px rgba(0,0,0,.55)"><?= $i++ ?></span>
+            </div>
+            <div class="mt-2 line-clamp-2 text-[14px] font-bold leading-snug group-hover:text-[<?= $P ?>]"><?= nh($a['title']) ?></div>
+            <div class="mt-1 text-[11.5px] text-zinc-400"><?= nh($a['section']) ?> · <?= nh(news_date($a['publishedAt'])) ?></div>
+          </a>
+          <?php endforeach; ?>
+        </div>
+      </section>
+        <?php
+    };
+    $rankRow('지금 뜨는 드라마·예능', '📺', '방송·가요', array_merge($bySection['방송·가요'] ?? [], $bySection['아이돌24시'] ?? []));
+    $rankRow('지금 뜨는 영화', '🎬', '영화', $bySection['영화'] ?? []);
+    $rankRow('연예가 화제', '🔥', '연예가화제', array_merge($bySection['연예가화제'] ?? [], $bySection['해외연예'] ?? []));
+    ?>
+
     <!-- 종목 이슈 위젯 제거(엔터 중심 개편) -->
     <?php if (false): ?>
     <section class="mt-8">
