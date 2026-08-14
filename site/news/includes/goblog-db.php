@@ -84,8 +84,8 @@ function news_articles(): array
          LEFT JOIN publish_jobs pj
                 ON pj.articleId = a.id AND pj.status = 'SUCCEEDED' AND pj.publishedUrl IS NOT NULL
          WHERE a.contentHtml IS NOT NULL
-           AND (pj.id IS NOT NULL
-                OR (a.publishAt IS NOT NULL AND a.status IN ('SCHEDULED', 'PUBLISHED')))",
+           AND a.articleType = 'curation'
+           AND a.publishAt IS NOT NULL AND a.status IN ('SCHEDULED', 'PUBLISHED')",
     )->fetchAll();
 
     $byId = [];
