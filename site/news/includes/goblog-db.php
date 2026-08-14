@@ -128,7 +128,8 @@ function news_articles(): array
         }
     }
 
-    $list = array_values($byId);
+    // 썸네일(대표이미지) 없는 기사는 목록에서 제외 — 전역 규칙
+    $list = array_values(array_filter($byId, fn($a) => !empty($a['image'])));
     usort($list, fn($a, $b) => strcmp($b['publishedAt'], $a['publishedAt']));
 
     // 사실상 같은 제목(재생성 글 등)은 최신 1건만 노출
