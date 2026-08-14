@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSaveShortcut, useUnsavedGuard } from "@/hooks/use-editing";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,9 @@ const MODEL_SELECT_KEYS: Record<string, string> = {
   "anthropic.model": "/api/settings/models/anthropic",
   "gemini.imageModel": "/api/settings/models/gemini",
 };
+
+/** on/off 토글로 렌더할 설정 키 (값은 "true"/"false") */
+const BOOLEAN_KEYS = new Set<string>(["anthropic.enabled", "gemini.enabled"]);
 
 /** 고정 옵션 셀렉트 설정 키 */
 const STATIC_SELECT_KEYS: Record<string, Array<{ value: string; label: string }>> = {
@@ -266,6 +270,17 @@ export default function SettingsPage() {
             ))}
           </SelectContent>
         </Select>
+      ) : BOOLEAN_KEYS.has(setting.key) ? (
+        <div className="flex items-center gap-2">
+          <Switch
+            id={setting.key}
+            checked={(edited[setting.key] ?? setting.value) === "true"}
+            onCheckedChange={(v) => setEdited((prev) => ({ ...prev, [setting.key]: v ? "true" : "false" }))}
+          />
+          <span className="text-sm text-muted-foreground">
+            {(edited[setting.key] ?? setting.value) === "true" ? "사용 (API 호출됨 · 과금)" : "사용 안 함 (호출 차단)"}
+          </span>
+        </div>
       ) : (
         <Input
           id={setting.key}
