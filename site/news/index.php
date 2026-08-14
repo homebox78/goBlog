@@ -221,6 +221,56 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
       <div class="py-24 text-center text-zinc-400">아직 발행된 기사가 없습니다.</div>
     <?php else: ?>
 
+    <style>
+      .h2b-rk{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;}
+      .h2b-rk::-webkit-scrollbar{display:none;}
+      .h2b-rk-hd{display:flex;align-items:center;justify-content:space-between;margin:22px 0 14px;}
+      .h2b-rk-hd h2{display:flex;align-items:center;gap:7px;font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0;}
+      @media(min-width:640px){.h2b-rk-hd h2{font-size:22px;}}
+      .h2b-rk-more{font-size:13px;color:#a1a1aa;text-decoration:none;white-space:nowrap;}
+      .h2b-rk-more:hover{color:#134a9c;}
+      .h2b-rk-card{width:150px;flex:0 0 auto;text-decoration:none;color:inherit;}
+      @media(min-width:640px){.h2b-rk-card{width:172px;}}
+      .h2b-rk-poster{position:relative;width:100%;aspect-ratio:3/4;border-radius:13px;overflow:hidden;background:#e4e4e7 50%/cover no-repeat;box-shadow:0 1px 5px rgba(0,0,0,.13);}
+      .h2b-rk-poster::after{content:"";position:absolute;left:0;right:0;bottom:0;height:44%;background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,0));}
+      .h2b-rk-poster>img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease;}
+      .h2b-rk-card:hover .h2b-rk-poster>img{transform:scale(1.06);}
+      .h2b-rk-num{position:absolute;bottom:-4px;left:9px;z-index:2;font-size:56px;font-weight:900;font-style:italic;color:#fff;line-height:1;text-shadow:0 2px 7px rgba(0,0,0,.6);}
+      .h2b-rk-title{margin-top:9px;font-size:14.5px;font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+      .h2b-rk-card:hover .h2b-rk-title{color:#134a9c;}
+      .h2b-rk-meta{margin-top:5px;font-size:11.5px;color:#a1a1aa;}
+    </style>
+    <?php
+    // 네이버 연예 스타일 순위 카드 — 마켓 아래·헤드라인 위
+    $rankRow = function (string $title, string $emoji, string $section, array $items) {
+        $items = array_slice(array_values(array_filter($items, fn($a) => !empty($a['image']))), 0, 12);
+        if (count($items) < 3) return;
+        ?>
+      <section>
+        <div class="h2b-rk-hd">
+          <h2><span style="font-size:23px"><?= $emoji ?></span> <?= nh($title) ?></h2>
+          <a class="h2b-rk-more" href="/category.php?cat=<?= urlencode($section) ?>">전체보기 ›</a>
+        </div>
+        <div class="h2b-rk">
+          <?php $i = 1; foreach ($items as $a): ?>
+          <a class="h2b-rk-card" href="/article.php?id=<?= (int) $a['id'] ?>">
+            <div class="h2b-rk-poster">
+              <img src="<?= nh($a['image']) ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+              <span class="h2b-rk-num"><?= $i++ ?></span>
+            </div>
+            <div class="h2b-rk-title"><?= nh($a['title']) ?></div>
+            <div class="h2b-rk-meta"><?= nh($a['section']) ?> · <?= nh(news_date($a['publishedAt'])) ?></div>
+          </a>
+          <?php endforeach; ?>
+        </div>
+      </section>
+        <?php
+    };
+    $rankRow('지금 뜨는 드라마·예능', '📺', '방송·가요', array_merge($bySection['방송·가요'] ?? [], $bySection['아이돌24시'] ?? []));
+    $rankRow('지금 뜨는 영화', '🎬', '영화', $bySection['영화'] ?? []);
+    $rankRow('연예가 화제', '🔥', '연예가화제', array_merge($bySection['연예가화제'] ?? [], $bySection['해외연예'] ?? []));
+    ?>
+
     <!-- 헤드라인 (시안: 좌 대표기사 이미지 위+제목 아래 / 우 헤드라인 리스트) -->
     <div class="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 lg:gap-9 py-6 border-b border-zinc-200">
       <a href="/article.php?id=<?= (int) $headline['id'] ?>" class="block group">
@@ -260,56 +310,6 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
         <?php endif; ?>
       </div>
     </div>
-
-    <style>
-      .h2b-rk{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;}
-      .h2b-rk::-webkit-scrollbar{display:none;}
-      .h2b-rk-hd{display:flex;align-items:center;justify-content:space-between;margin:36px 0 14px;}
-      .h2b-rk-hd h2{display:flex;align-items:center;gap:7px;font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0;}
-      @media(min-width:640px){.h2b-rk-hd h2{font-size:22px;}}
-      .h2b-rk-more{font-size:13px;color:#a1a1aa;text-decoration:none;white-space:nowrap;}
-      .h2b-rk-more:hover{color:#134a9c;}
-      .h2b-rk-card{width:150px;flex:0 0 auto;text-decoration:none;color:inherit;}
-      @media(min-width:640px){.h2b-rk-card{width:172px;}}
-      .h2b-rk-poster{position:relative;width:100%;aspect-ratio:3/4;border-radius:13px;overflow:hidden;background:#e4e4e7 50%/cover no-repeat;box-shadow:0 1px 5px rgba(0,0,0,.13);}
-      .h2b-rk-poster::after{content:"";position:absolute;left:0;right:0;bottom:0;height:44%;background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,0));}
-      .h2b-rk-poster>img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease;}
-      .h2b-rk-card:hover .h2b-rk-poster>img{transform:scale(1.06);}
-      .h2b-rk-num{position:absolute;bottom:-4px;left:9px;z-index:2;font-size:56px;font-weight:900;font-style:italic;color:#fff;line-height:1;text-shadow:0 2px 7px rgba(0,0,0,.6);}
-      .h2b-rk-title{margin-top:9px;font-size:14.5px;font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-      .h2b-rk-card:hover .h2b-rk-title{color:#134a9c;}
-      .h2b-rk-meta{margin-top:5px;font-size:11.5px;color:#a1a1aa;}
-    </style>
-    <?php
-    // ── 네이버 연예 스타일 순위 카드 (포스터형 랭킹) — 인라인 CSS로 Tailwind purge 독립 ──
-    $rankRow = function (string $title, string $emoji, string $section, array $items) {
-        $items = array_slice(array_values(array_filter($items, fn($a) => !empty($a['image']))), 0, 12);
-        if (count($items) < 3) return;
-        ?>
-      <section>
-        <div class="h2b-rk-hd">
-          <h2><span style="font-size:23px"><?= $emoji ?></span> <?= nh($title) ?></h2>
-          <a class="h2b-rk-more" href="/category.php?cat=<?= urlencode($section) ?>">전체보기 ›</a>
-        </div>
-        <div class="h2b-rk">
-          <?php $i = 1; foreach ($items as $a): ?>
-          <a class="h2b-rk-card" href="/article.php?id=<?= (int) $a['id'] ?>">
-            <div class="h2b-rk-poster">
-              <img src="<?= nh($a['image']) ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
-              <span class="h2b-rk-num"><?= $i++ ?></span>
-            </div>
-            <div class="h2b-rk-title"><?= nh($a['title']) ?></div>
-            <div class="h2b-rk-meta"><?= nh($a['section']) ?> · <?= nh(news_date($a['publishedAt'])) ?></div>
-          </a>
-          <?php endforeach; ?>
-        </div>
-      </section>
-        <?php
-    };
-    $rankRow('지금 뜨는 드라마·예능', '📺', '방송·가요', array_merge($bySection['방송·가요'] ?? [], $bySection['아이돌24시'] ?? []));
-    $rankRow('지금 뜨는 영화', '🎬', '영화', $bySection['영화'] ?? []);
-    $rankRow('연예가 화제', '🔥', '연예가화제', array_merge($bySection['연예가화제'] ?? [], $bySection['해외연예'] ?? []));
-    ?>
 
     <!-- 종목 이슈 위젯 제거(엔터 중심 개편) -->
     <?php if (false): ?>
