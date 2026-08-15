@@ -33,7 +33,7 @@ const TOPIC_GROUPS: TopicGroup[] = [
     match: ["영화", "박스오피스", "개봉", "감독", "관객", "시사회", "예고편", "주연", "스크린"] },
   { kw: "해외연예", category: "해외연예", weight: 2, queries: ["할리우드", "빌보드", "팝스타", "해외 셀럽"],
     match: ["할리우드", "빌보드", "그래미", "팝스타", "팝가수", "해외 스타", "해외스타", "미국 배우", "일본 배우"] },
-  { kw: "아이돌24시", category: "아이돌24시", weight: 3, queries: ["아이돌", "걸그룹", "보이그룹", "방탄소년단", "블랙핑크", "케이팝 컴백"],
+  { kw: "아이돌365", category: "아이돌365", weight: 3, queries: ["아이돌", "걸그룹", "보이그룹", "방탄소년단", "블랙핑크", "케이팝 컴백"],
     match: ["아이돌", "걸그룹", "보이그룹", "그룹", "멤버", "컴백", "데뷔", "앨범", "케이팝", "팬미팅", "타이틀곡"] },
   { kw: "야구", category: "야구", weight: 2, queries: ["KBO", "프로야구", "한국시리즈"],
     match: ["야구", "KBO", "투수", "타자", "홈런", "구단", "선발", "타율", "이닝", "포수"] },
@@ -127,6 +127,49 @@ async function fetchMeta(url: string): Promise<{ description: string; image: str
   }
 }
 
+const SECTION_NAMES = [
+  "연예가화제", "방송·가요", "영화", "해외연예", "아이돌365",
+  "야구", "해외야구", "축구", "해외축구", "농구·배구", "스포츠일반",
+];
+
+/**
+ * Gemini(싼 텍스트 모델)로 기사 섹션을 정확 분류. 연예·스포츠가 아니면 "NONE".
+ * 생성이 아니라 '분류'라 매우 저렴(글당 ~0.0001원). 실패 시 null(키워드 방식 폴백).
+ */
+async function classifySection(title: string, summary: string, apiKey: string): Promise<string | null> {
+  try {
+    const prompt =
+      `아래 한국 뉴스가 어느 섹션인지 딱 하나만 골라 그 이름만 출력해.\n` +
+      `섹션 목록: ${SECTION_NAMES.join(", ")}, NONE\n` +
+      `규칙:\n` +
+      `- 해외연예 = 외국(할리우드·빌보드·미국/일본 등) 연예인/작품 그 자체 기사만. 한국 연예인이 '할리우드'를 언급만 해도 해외연예 아님.\n` +
+      `- 해외야구/해외축구 = 해외리그(MLB·프리미어리그 등) 또는 해외파 선수 기사.\n` +
+      `- 아이돌365 = 아이돌 그룹/멤버 본인 활동. 아이돌 소속사 '주가' 같은 증권 기사는 NONE.\n` +
+      `- 주식·증시·부동산·정치·경제·사회일반 등 연예/스포츠가 아니면 반드시 NONE.\n` +
+      `제목: ${title}\n요약: ${summary}\n답(섹션명 하나만):`;
+    const model = "gemini-2.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 12, temperature: 0 },
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const text = (data.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+    if (!text) return null;
+    const found = SECTION_NAMES.find((s) => text.includes(s));
+    if (found) return found;
+    return text.includes("NONE") ? "NONE" : null;
+  } catch {
+    return null;
+  }
+}
+
 /** 섹션 분류용 키워드 upsert(재사용). status=USED로 생성 파이프라인에서 제외. */
 async function ensureKeyword(text: string, category: string): Promise<number> {
   const k = await prisma.keyword.upsert({
@@ -142,10 +185,17 @@ async function ensureKeyword(text: string, category: string): Promise<number> {
  * URL·근접 제목 중복 제거. AI 미사용 → 과금 0.
  */
 export async function publishNaverFeed(count = 10): Promise<{ created: number; titles: string[]; skipped: number }> {
-  const values = await getSettingValues(["naver.datalabClientId", "naver.datalabClientSecret"]);
+  const values = await getSettingValues([
+    "naver.datalabClientId",
+    "naver.datalabClientSecret",
+    "gemini.apiKey",
+    "naverfeed.aiClassify",
+  ]);
   const clientId = values["naver.datalabClientId"];
   const clientSecret = values["naver.datalabClientSecret"];
   if (!clientId || !clientSecret) return { created: 0, titles: [], skipped: 0 };
+  const geminiKey = values["gemini.apiKey"] ?? "";
+  const aiClassify = values["naverfeed.aiClassify"] === "true" && geminiKey !== "";
 
   // 최근 발행 제목(근접 중복 방지)
   const recent = await prisma.article.findMany({
@@ -185,7 +235,6 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
     }
     pool.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
 
-    const keywordId = await ensureKeyword(group.kw, group.category);
     let madeInGroup = 0;
     for (const item of pool) {
       if (madeInGroup >= target || titles.length >= count) break;
@@ -201,7 +250,7 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
         continue;
       }
       // 관련성 필터 — 제목/요약에 섹션 핵심어가 없으면 오분류 잡음이므로 제외
-      if (!group.match.some((m) => relHay.includes(m))) {
+      if (!aiClassify && !group.match.some((m) => relHay.includes(m))) {
         skipped++;
         continue;
       }
@@ -232,6 +281,18 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       if (summary.length < 40) {
         skipped++;
         continue;
+      }
+      // 섹션 결정 — AI 분류(Gemini) 우선, 실패 시 그룹 키워드 폴백. NONE이면 발행 제외.
+      let keywordId: number;
+      if (aiClassify) {
+        const aiSec = await classifySection(item.title, summary, geminiKey);
+        if (aiSec === "NONE") {
+          skipped++;
+          continue;
+        }
+        keywordId = aiSec ? await ensureKeyword(aiSec, aiSec) : await ensureKeyword(group.kw, group.category);
+      } else {
+        keywordId = await ensureKeyword(group.kw, group.category);
       }
       let publisher = "네이버뉴스";
       try {

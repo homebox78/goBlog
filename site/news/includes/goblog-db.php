@@ -34,7 +34,7 @@ function news_section(?string $category): string
     // 구 기사/기타 category 매핑 (구체적인 것 먼저)
     if (preg_match('/영화|박스오피스|개봉/u', $c)) return '영화';
     if (preg_match('/해외.*연예|할리우드|빌보드|팝스타|해외스타/iu', $c)) return '해외연예';
-    if (preg_match('/아이돌|걸그룹|보이그룹|K-?팝|방탄|컴백/iu', $c)) return '아이돌24시';
+    if (preg_match('/아이돌|걸그룹|보이그룹|K-?팝|방탄|컴백/iu', $c)) return '아이돌365';
     if (preg_match('/방송|드라마|예능|가요|음악|음원|OST/u', $c)) return '방송·가요';
     if (preg_match('/해외.*야구|MLB|메이저리그/iu', $c)) return '해외야구';
     if (preg_match('/야구|KBO|프로야구/iu', $c)) return '야구';
@@ -46,9 +46,9 @@ function news_section(?string $category): string
 }
 
 // 연예 5 + 스포츠 6 — 프로 연예·스포츠 포털 구조
-const NEWS_SECTIONS = ['연예가화제', '방송·가요', '영화', '해외연예', '아이돌24시', '야구', '해외야구', '축구', '해외축구', '농구·배구', '스포츠일반'];
+const NEWS_SECTIONS = ['연예가화제', '방송·가요', '영화', '해외연예', '아이돌365', '야구', '해외야구', '축구', '해외축구', '농구·배구', '스포츠일반'];
 // 나브 2단 그룹(연예 / 스포츠) 구분용
-const NEWS_SECTION_GROUPS = ['연예' => ['연예가화제', '방송·가요', '영화', '해외연예', '아이돌24시'], '스포츠' => ['야구', '해외야구', '축구', '해외축구', '농구·배구', '스포츠일반']];
+const NEWS_SECTION_GROUPS = ['연예' => ['연예가화제', '방송·가요', '영화', '해외연예', '아이돌365'], '스포츠' => ['야구', '해외야구', '축구', '해외축구', '농구·배구', '스포츠일반']];
 
 // 발행처 뱃지 표기 (원문 링크용)
 const NEWS_PLATFORMS = [

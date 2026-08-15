@@ -64,6 +64,8 @@ export const SETTING_DEFS: SettingDef[] = [
   // 네이버
   // 네이버뉴스 기반 연예·스포츠 큐레이션 하루 발행 수(AI 미사용·무과금). 0=중지. 5회/일 나눠 발행.
   { key: "naverfeed.dailyCount", group: "naver", label: "연예·스포츠 큐레이션 하루 발행 수", secret: false, defaultValue: "50" },
+  // 기사 섹션 분류에 Gemini(싼 텍스트 모델) 사용 — 오분류·비연예 기사 차단. 글당 매우 저렴.
+  { key: "naverfeed.aiClassify", group: "naver", label: "AI 섹션 분류(Gemini) 사용", secret: false, defaultValue: "true" },
   { key: "naver.datalabClientId", group: "naver", label: "DataLab Client ID", secret: false },
   { key: "naver.datalabClientSecret", group: "naver", label: "DataLab Client Secret", secret: true },
   { key: "naver.searchAdApiKey", group: "naver", label: "검색광고 API Key", secret: true },

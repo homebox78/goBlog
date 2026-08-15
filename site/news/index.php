@@ -175,7 +175,6 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
   <div class="mx-auto max-w-[1399px] px-6">
     <h1 class="sr-only">HOM2BOX 핫이슈 — 매일 아침·저녁 발행하는 이슈·경제·IT·생활 뉴스</h1>
 
-    <?php render_ad("home-top"); ?>
 
     <!-- 언론사 헤드라인 제거(엔터 개편 — 정치·경제 off-brand) -->
     <?php if (false): $ynaBoxes = $press['yna']['boxes'] ?? []; ?>
@@ -266,7 +265,7 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
       </section>
         <?php
     };
-    $rankRow('지금 뜨는 드라마·예능', '📺', '방송·가요', array_merge($bySection['방송·가요'] ?? [], $bySection['아이돌24시'] ?? []));
+    $rankRow('지금 뜨는 드라마·예능', '📺', '방송·가요', array_merge($bySection['방송·가요'] ?? [], $bySection['아이돌365'] ?? []));
     ?>
 
     <!-- 헤드라인 (시안: 좌 대표기사 이미지 위+제목 아래 / 우 헤드라인 리스트) -->
