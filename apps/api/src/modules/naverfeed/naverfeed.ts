@@ -159,6 +159,8 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
   const tokenize = (s: string): string[] =>
     [...new Set((s.toLowerCase().match(/[가-힣a-z0-9]{2,}/g) ?? []).filter((t) => !["기자", "종합", "단독", "공식", "영상", "포토", "사진", "속보", "오늘"].includes(t)))];
   const recentTokenSets: Set<string>[] = recent.map((r) => new Set(tokenize(r.title)));
+  // 동일 주제/인물(제목 첫 토큰) 1건만 — 같은 인물 여러 기사 도배 방지
+  const recentPrimary = new Set<string>(recent.map((r) => tokenize(r.title)[0]).filter(Boolean));
 
   const totalWeight = TOPIC_GROUPS.reduce((s, g) => s + g.weight, 0);
   const titles: string[] = [];
@@ -206,6 +208,12 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       // 엔티티 토큰 2개 이상 겹치면 같은 사건 → 중복 제외
       const toks = new Set(tokenize(item.title));
       if (toks.size >= 2 && recentTokenSets.some((rs) => { let o = 0; for (const t of toks) if (rs.has(t)) o++; return o >= 2; })) {
+        skipped++;
+        continue;
+      }
+      // 동일 주제/인물(첫 토큰) 1건만 — 같은 인물 도배 방지
+      const primaryTok = [...toks][0] ?? "";
+      if (primaryTok && recentPrimary.has(primaryTok)) {
         skipped++;
         continue;
       }
@@ -280,6 +288,7 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       });
       recentTitles.add(nt);
       recentTokenSets.push(toks);
+      if (primaryTok) recentPrimary.add(primaryTok);
       titles.push(item.title);
       madeInGroup++;
     }
