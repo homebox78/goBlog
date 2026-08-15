@@ -209,8 +209,13 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
   const tokenize = (s: string): string[] =>
     [...new Set((s.toLowerCase().match(/[가-힣a-z0-9]{2,}/g) ?? []).filter((t) => !["기자", "종합", "단독", "공식", "영상", "포토", "사진", "속보", "오늘"].includes(t)))];
   const recentTokenSets: Set<string>[] = recent.map((r) => new Set(tokenize(r.title)));
-  // 동일 주제/인물(제목 첫 토큰) 1건만 — 같은 인물 여러 기사 도배 방지
-  const recentPrimary = new Set<string>(recent.map((r) => tokenize(r.title)[0]).filter(Boolean));
+  // 동일 인물/엔티티(제목의 3자+ 고유명사) 1건만 — 같은 인물 도배 방지(전현무 3건 등)
+  const ENTITY_STOP = new Set([
+    "열애설", "아니잖아", "근황", "공개", "소식", "논란", "화제", "인터뷰", "이유", "이번", "지난", "오늘",
+    "방송", "출연", "예정", "종영", "컴백", "활동", "연예인", "이야기", "프로그램", "스타일", "리메이크",
+  ]);
+  const entitiesOf = (s: string): string[] => (s.match(/[가-힣]{3,}/g) ?? []).filter((t) => !ENTITY_STOP.has(t));
+  const recentEntities = new Set<string>(recent.flatMap((r) => entitiesOf(r.title)));
 
   const totalWeight = TOPIC_GROUPS.reduce((s, g) => s + g.weight, 0);
   const titles: string[] = [];
@@ -260,9 +265,9 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
         skipped++;
         continue;
       }
-      // 동일 주제/인물(첫 토큰) 1건만 — 같은 인물 도배 방지
-      const primaryTok = [...toks][0] ?? "";
-      if (primaryTok && recentPrimary.has(primaryTok)) {
+      // 동일 인물/엔티티(3자+ 고유명사) 이미 발행됐으면 제외 — 도배 방지
+      const ents = entitiesOf(item.title);
+      if (ents.some((e) => recentEntities.has(e))) {
         skipped++;
         continue;
       }
@@ -349,7 +354,7 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       });
       recentTitles.add(nt);
       recentTokenSets.push(toks);
-      if (primaryTok) recentPrimary.add(primaryTok);
+      for (const e of ents) recentEntities.add(e);
       titles.push(item.title);
       madeInGroup++;
     }
