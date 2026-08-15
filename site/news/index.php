@@ -375,6 +375,7 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
     </section>
     <?php endif; ?>
 
+    <?php ob_start(); // 도구 위젯을 캡처해 페이지 최하단에 출력(엔터 개편 — 도구는 하단으로) ?>
     <!-- 문서도구·계산기 바로가기 (서식/계산기 선택 → 바로 이동) -->
     <?php
       $calcByCat = [];
@@ -566,6 +567,8 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
     </script>
     <?php endif; ?>
 
+    <?php $toolsHtml = ob_get_clean(); // 도구 위젯 캡처 끝 — 하단에서 출력 ?>
+
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-9 pt-7 pb-2">
       <!-- 분야별 섹션 -->
       <div>
@@ -718,6 +721,11 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
       <p class="mt-3 text-[11px] text-zinc-400">※ 제휴 마케팅 링크가 포함되어 있으며, 구매 시 일정액의 수수료를 제공받을 수 있습니다.</p>
     </div>
   </section>
+  <?php endif; ?>
+
+  <?php // 도구 위젯(문서도구·계산기·자주 쓰는 계산기)을 최하단에 출력 ?>
+  <?php if (!empty($toolsHtml)): ?>
+  <div class="mx-auto max-w-[1399px] px-4 sm:px-6 border-t border-zinc-100 pt-2"><?= $toolsHtml ?></div>
   <?php endif; ?>
 
   <?php render_footer(); ?>
