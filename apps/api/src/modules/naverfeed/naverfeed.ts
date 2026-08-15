@@ -291,11 +291,12 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       let keywordId: number;
       if (aiClassify) {
         const aiSec = await classifySection(item.title, summary, geminiKey);
-        if (aiSec === "NONE") {
+        // 분류 실패(null)·비연예(NONE)면 발행하지 않는다 — 잘못된 섹션 유입 방지(폴백 금지)
+        if (!aiSec || aiSec === "NONE") {
           skipped++;
           continue;
         }
-        keywordId = aiSec ? await ensureKeyword(aiSec, aiSec) : await ensureKeyword(group.kw, group.category);
+        keywordId = await ensureKeyword(aiSec, aiSec);
       } else {
         keywordId = await ensureKeyword(group.kw, group.category);
       }
