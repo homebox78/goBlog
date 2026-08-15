@@ -291,12 +291,20 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       let keywordId: number;
       if (aiClassify) {
         const aiSec = await classifySection(item.title, summary, geminiKey);
-        // 분류 실패(null)·비연예(NONE)면 발행하지 않는다 — 잘못된 섹션 유입 방지(폴백 금지)
-        if (!aiSec || aiSec === "NONE") {
+        if (aiSec === "NONE") {
           skipped++;
           continue;
         }
-        keywordId = await ensureKeyword(aiSec, aiSec);
+        if (aiSec) {
+          keywordId = await ensureKeyword(aiSec, aiSec);
+        } else {
+          // AI 분류 실패(rate limit 등) → 키워드 관련성 통과분만 그룹 섹션으로 폴백(관련 없으면 제외)
+          if (!group.match.some((m) => relHay.includes(m))) {
+            skipped++;
+            continue;
+          }
+          keywordId = await ensureKeyword(group.kw, group.category);
+        }
       } else {
         keywordId = await ensureKeyword(group.kw, group.category);
       }
