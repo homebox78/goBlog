@@ -473,6 +473,7 @@ export async function scheduleFromSettings(): Promise<void> {
       "0 6,12,18,0 * * *",
       { timezone: "Asia/Seoul", protect: true },
       async () => {
+        return; // 중단 — AI 키워드/글 생성 크론 (엔터 개편, 과금 방지)
         console.log("[scheduler] 정기 키워드 수집 시작");
         try {
           const result = await runDailyDiscovery("cron");
@@ -512,6 +513,7 @@ export async function scheduleFromSettings(): Promise<void> {
       "30 7 * * *",
       { timezone: "Asia/Seoul", protect: true },
       async () => {
+        return; // 중단 — AI 인용 수집/학습 크론 (과금 방지)
         try {
           const { collectBlogCitations } = await import("../keywords/citation.js");
           const result = await collectBlogCitations();
@@ -573,6 +575,7 @@ export async function scheduleFromSettings(): Promise<void> {
       "*/30 * * * *",
       { timezone: "Asia/Seoul", protect: true },
       async () => {
+        return; // 중단 — AI 이미지 생성 스윕 (과금 방지)
         try {
           const since = new Date(Date.now() - 3 * 24 * 3600 * 1000);
           const targets = await prisma.article.findMany({
@@ -631,6 +634,7 @@ export async function scheduleFromSettings(): Promise<void> {
     // (10시 = 06시 생성분이 이미지·보정까지 끝난 뒤라 준비된 글이 풀에 있다)
     dripJob?.stop();
     dripJob = new Cron("0 10 * * *", { timezone: "Asia/Seoul", protect: true }, async () => {
+      return; // 중단 — AI 드립 자동 발행 (과금 방지)
       try {
         const n = await dripPublishDaily();
         console.log(`[scheduler] 드립 발행 ${n}건 예약`);
