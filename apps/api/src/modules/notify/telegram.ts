@@ -189,23 +189,35 @@ export async function sendDailyReport(): Promise<boolean> {
       ? `노출 ${gsc._sum.impressions ?? 0} · 클릭 ${gsc._sum.clicks ?? 0} (최근 3일 수집분)`
       : "수집 대기 (표본 없음)";
 
-  const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
+  // 간략 큐레이션 리포트(현 콘텐츠 기준) — AI 생성 미사용·무과금
+  void created; void released; void avgQuality; void jobs; void extWaiting; void totalPublished;
+  void kwToday; void kwActive; void productTotal; void productMatched; void productMatchedToday;
+  void coupangLinked; void coupangTotal; void bcLinked; void bcTotal; void adArticlesToday;
+  void citationsToday; void insightsTotal; void gsc; void aiCost; void byPlatform; void failures;
+  void platformLine; void costLine; void gscLine;
+  const [curatedToday, curatedTotal] = await Promise.all([
+    prisma.article.count({ where: { articleType: "curation", status: "PUBLISHED", publishAt: { gte: since } } }),
+    prisma.article.count({ where: { articleType: "curation", status: "PUBLISHED" } }),
+  ]);
+  const viewsRows = await prisma.$queryRaw<Array<{ v: bigint }>>`SELECT COUNT(*) v FROM article_views WHERE viewedAt >= ${since}`.catch(() => [] as Array<{ v: bigint }>);
+  const viewsToday = Number(viewsRows[0]?.v ?? 0);
+  const secRows = await prisma.$queryRaw<Array<{ sec: string; c: bigint }>>`
+    SELECT k.text sec, COUNT(*) c FROM articles a JOIN keywords k ON k.id = a.keywordId
+    WHERE a.articleType = 'curation' AND a.status = 'PUBLISHED' AND a.publishAt >= ${since}
+    GROUP BY k.text ORDER BY c DESC LIMIT 6`.catch(() => [] as Array<{ sec: string; c: bigint }>);
+  const secLine = secRows.length ? secRows.map((s) => `${s.sec} ${Number(s.c)}`).join(" · ") : "없음";
   const dateStr = new Date(now.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
   const lines = [
-    `📰 <b>goBlog 전체 운영 보고 — ${dateStr}</b>`,
+    `📺 <b>HOM2BOX 핫이슈 — ${dateStr}</b>`,
     ``,
-    `✍️ <b>콘텐츠</b>: 오늘 생성 ${created}건(평균 품질 ${Math.round(avgQuality._avg.qualityScore ?? 0)}점) · 릴리즈 ${released}건`,
-    `🚀 <b>발행</b>: ${platformLine}`,
-    `⏳ 확장(네이버·티스토리) 수동 대기 ${extWaiting}건`,
-    `🏠 <b>홈박스 뉴스</b>: 노출 기사 누적 ${totalPublished}건`,
-    `🔑 <b>키워드</b>: 오늘 신규 ${kwToday}개 · 활성 풀 ${kwActive}개`,
-    `🛒 <b>제휴</b>: 상품 ${productTotal}개 · 매칭 ${productMatched}개(오늘 ${productMatchedToday}) · 오늘 광고 포함 글 ${adArticlesToday}건`,
-    `　└ 트래킹 링크: 쿠팡 ${coupangLinked}/${coupangTotal} (${pct(coupangLinked, coupangTotal)}%) · 커넥트 ${bcLinked}/${bcTotal} (${pct(bcLinked, bcTotal)}%)`,
-    `📚 <b>학습</b>: 오늘 인용 수집 ${citationsToday}건 · 누적 인사이트 ${insightsTotal}개`,
-    `📈 <b>성과(GSC)</b>: ${gscLine}`,
-    `💸 <b>AI 비용(오늘)</b>: ${costLine}`,
+    `• 오늘 발행: <b>${curatedToday}</b>건`,
+    `• 전체 노출: <b>${curatedTotal}</b>건`,
+    `• 오늘 조회수: <b>${viewsToday.toLocaleString()}</b>`,
+    ``,
+    `📂 ${secLine}`,
+    ``,
+    `※ 네이버 연예·스포츠 큐레이션 자동 발행 · AI 생성 미사용(무과금)`,
+    `홈 https://hom2box.com`,
   ];
-  if (failures.length) lines.push(``, `⚠️ <b>발행 실패</b>`, ...failures);
-  lines.push(``, `홈 https://hom2box.com · 관리 https://hom2box.com/goBlog`);
   return sendTelegram(lines.join("\n"));
 }
