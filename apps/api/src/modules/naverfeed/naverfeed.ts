@@ -94,7 +94,7 @@ interface NewsItem {
 
 async function fetchNaverNews(query: string, clientId: string, clientSecret: string): Promise<NewsItem[]> {
   try {
-    const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query)}&display=20&sort=date`;
+    const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query)}&display=100&sort=date`;
     const res = await fetch(url, {
       headers: { "X-Naver-Client-Id": clientId, "X-Naver-Client-Secret": clientSecret },
       signal: AbortSignal.timeout(10000),
