@@ -199,6 +199,45 @@ async function classifyGemini(title: string, summary: string, apiKey: string): P
   }
 }
 
+/** Groq 한 번의 호출로 섹션 분류 + 원본 요약(3~4문장)을 동시에. 실패 시 null. */
+async function classifyAndSummarize(
+  title: string,
+  snippet: string,
+  apiKey: string,
+): Promise<{ section: string; summary: string } | null> {
+  try {
+    const prompt =
+      `다음 한국 연예·스포츠 뉴스를 처리해 JSON으로만 답해.\n` +
+      `1) section: ${SECTION_NAMES.join(", ")}, NONE 중 하나(연예/스포츠 아니면 NONE).\n` +
+      `   - 해외연예/해외야구/해외축구 = 외국 스타·해외리그·해외파 기사만. 한국인이 해외를 언급만 하면 국내 섹션.\n` +
+      `   - 아이돌 소속사 '주가' 등 증권·여행·정치·경제는 NONE.\n` +
+      `2) summary: 이 소식을 독자가 이해하기 쉽게 3~4문장(200~350자) 한국어로 자연스럽게 정리. 원문 문장을 그대로 베끼지 말고 재구성하되, 없는 사실·수치는 지어내지 말 것.\n` +
+      `제목: ${title}\n원문요약: ${snippet}\n` +
+      `JSON만 출력: {"section":"...","summary":"..."}`;
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 500,
+        temperature: 0.3,
+        response_format: { type: "json_object" },
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = data.choices?.[0]?.message?.content ?? "";
+    const parsed = JSON.parse(raw) as { section?: string; summary?: string };
+    const section = parseSection(parsed.section ?? "");
+    if (!section) return null;
+    return { section, summary: (parsed.summary ?? "").trim() };
+  } catch {
+    return null;
+  }
+}
+
 /** Groq(무료) 우선, 실패 시 Gemini 폴백. 둘 다 실패면 null. */
 async function classifySection(title: string, summary: string, groqKey: string, geminiKey: string): Promise<string | null> {
   if (groqKey) {
@@ -328,23 +367,34 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
         skipped++;
         continue;
       }
-      // 섹션 결정 — AI 분류(Gemini) 우선, 실패 시 그룹 키워드 폴백. NONE이면 발행 제외.
+      // 섹션 분류 + 원본 요약 — Groq 한 번의 호출 우선. 실패 시 Gemini 분류(요약은 스니펫).
       let keywordId: number;
+      let bodyText = summary; // 기본: 원문 스니펫
       if (aiClassify) {
-        const aiSec = await classifySection(item.title, summary, groqKey, geminiKey);
-        if (aiSec === "NONE") {
-          skipped++;
-          continue;
-        }
-        if (aiSec) {
-          keywordId = await ensureKeyword(aiSec, aiSec);
-        } else {
-          // AI 실패 → '해외' 섹션은 폴백 금지(키워드로 국내/해외 구분 불가 → 한국 기사 유입). 그 외는 키워드 관련성 통과분만.
-          if (group.category.startsWith("해외") || !group.match.some((m) => relHay.includes(m))) {
+        const g = groqKey ? await classifyAndSummarize(item.title, summary, groqKey) : null;
+        if (g) {
+          if (g.section === "NONE") {
             skipped++;
             continue;
           }
-          keywordId = await ensureKeyword(group.kw, group.category);
+          keywordId = await ensureKeyword(g.section, g.section);
+          if (g.summary && g.summary.length >= 60) bodyText = g.summary.slice(0, 700);
+        } else {
+          const aiSec = geminiKey ? await classifyGemini(item.title, summary, geminiKey) : null;
+          if (aiSec === "NONE") {
+            skipped++;
+            continue;
+          }
+          if (aiSec) {
+            keywordId = await ensureKeyword(aiSec, aiSec);
+          } else {
+            // 둘 다 실패 → '해외' 섹션 폴백 금지(국내/해외 구분 불가), 그 외 키워드 관련성 통과분만.
+            if (group.category.startsWith("해외") || !group.match.some((m) => relHay.includes(m))) {
+              skipped++;
+              continue;
+            }
+            keywordId = await ensureKeyword(group.kw, group.category);
+          }
         }
       } else {
         keywordId = await ensureKeyword(group.kw, group.category);
@@ -357,8 +407,8 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       }
 
       const body =
-        `<p>${escapeHtml(summary)}</p>` +
-        `<p style="color:#71717a;font-size:14px">이 소식은 <b>${escapeHtml(publisher)}</b> 등 언론 보도를 요약·정리한 것입니다. ` +
+        `<p>${escapeHtml(bodyText)}</p>` +
+        `<p style="color:#71717a;font-size:14px">이 소식은 <b>${escapeHtml(publisher)}</b> 등 언론 보도를 바탕으로 정리한 것입니다. ` +
         `전체 내용과 사진은 아래 원문에서 확인하실 수 있습니다.</p>` +
         `<p><a href="${escapeHtml(item.link)}" target="_blank" rel="nofollow noopener">👉 원문 기사 전체 보기</a></p>`;
 
@@ -369,10 +419,10 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
           articleType: "curation",
           keywordId,
           status: "PUBLISHED",
-          excerpt: summary.slice(0, 300),
-          metaDescription: summary.slice(0, 300),
+          excerpt: bodyText.slice(0, 300),
+          metaDescription: bodyText.slice(0, 300),
           contentHtml: body,
-          contentMarkdown: summary,
+          contentMarkdown: bodyText,
           qualityScore: 80,
           publishAt: new Date(),
         },
