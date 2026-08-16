@@ -167,6 +167,10 @@ export default function StatsPage() {
     queryKey: ["stats-community"],
     queryFn: () => api.get<CommunityStat>(`/api/stats/community`),
   });
+  const sections = useQuery({
+    queryKey: ["stats-sections"],
+    queryFn: () => api.get<{ sections: Array<{ section: string; articles: number; views: number }> }>(`/api/stats/sections`),
+  });
 
   const [resolving, setResolving] = useState(false);
   const resolveGeo = async () => {
@@ -202,6 +206,7 @@ export default function StatsPage() {
           <TabsTrigger value="articles">기사</TabsTrigger>
           <TabsTrigger value="pages">메뉴·도구</TabsTrigger>
           <TabsTrigger value="geo">지역·방문자</TabsTrigger>
+          <TabsTrigger value="sections">카테고리별</TabsTrigger>
           <TabsTrigger value="community">커뮤니티·발행</TabsTrigger>
         </TabsList>
 
@@ -518,6 +523,45 @@ export default function StatsPage() {
         </TabsContent>
 
         {/* ── 커뮤니티·발행 ── */}
+        <TabsContent value="sections" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">
+                카테고리별 현황{" "}
+                <span className="text-xs font-normal text-muted-foreground">발행 기사 수 · 최근 7일 조회수</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sections.isPending ? (
+                <Skeleton className="h-64 w-full" />
+              ) : (sections.data?.sections ?? []).length === 0 ? (
+                <p className="py-16 text-center text-sm text-muted-foreground">아직 데이터가 없습니다.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {(() => {
+                    const secs = sections.data!.sections;
+                    const maxViews = Math.max(1, ...secs.map((s) => s.views));
+                    return secs.map((s) => (
+                      <div key={s.section} className="flex items-center gap-3">
+                        <div className="w-24 flex-none truncate text-sm font-semibold">{s.section}</div>
+                        <div className="h-5 flex-1 overflow-hidden rounded bg-muted">
+                          <div
+                            className="h-full rounded bg-[#e0392b]/70"
+                            style={{ width: `${Math.max(4, (s.views / maxViews) * 100)}%` }}
+                          />
+                        </div>
+                        <div className="w-32 flex-none text-right text-xs tabular-nums text-muted-foreground">
+                          기사 {s.articles} · 조회 {s.views.toLocaleString()}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="community" className="mt-4 space-y-4">
           {community.isPending ? (
             <Skeleton className="h-64 w-full" />

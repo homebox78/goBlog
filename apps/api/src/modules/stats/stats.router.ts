@@ -321,6 +321,26 @@ statsRouter.get(
   }),
 );
 
+// 카테고리(섹션)별 기사 수 + 최근 7일 조회수 — 엔터 대시보드용
+statsRouter.get(
+  "/sections",
+  asyncHandler(async (_req, res) => {
+    const rows = await prisma.$queryRaw<Array<{ section: string; articles: bigint; views: bigint }>>`
+      SELECT k.text section,
+             COUNT(DISTINCT a.id) articles,
+             COALESCE(SUM(CASE WHEN av.viewedAt >= NOW() - INTERVAL 7 DAY THEN 1 ELSE 0 END), 0) views
+      FROM articles a
+      JOIN keywords k ON k.id = a.keywordId
+      LEFT JOIN article_views av ON av.articleId = a.id
+      WHERE a.articleType = 'curation' AND a.status = 'PUBLISHED'
+      GROUP BY k.id, k.text
+      ORDER BY views DESC, articles DESC`;
+    res.json({
+      sections: rows.map((r) => ({ section: r.section, articles: num(r.articles), views: num(r.views) })),
+    });
+  }),
+);
+
 // 지역별 방문 — 국가·시/도 집계 (ip_geo 조인)
 statsRouter.get(
   "/geo",
