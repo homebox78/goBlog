@@ -39,6 +39,8 @@ export const SETTING_DEFS: SettingDef[] = [
 
   // Gemini
   { key: "gemini.apiKey", group: "gemini", label: "Gemini API Key", secret: true },
+  // Groq(무료·고한도) — 기사 섹션 분류 우선 사용. 미설정 시 Gemini로 폴백.
+  { key: "groq.apiKey", group: "gemini", label: "Groq API Key (무료 분류용)", secret: true },
   // Gemini 사용 on/off — 꺼지면 모든 Gemini(이미지) 호출이 차단된다(과금 방지). 기본 꺼짐.
   { key: "gemini.enabled", group: "gemini", label: "Gemini 사용", secret: false, defaultValue: "false" },
   { key: "gemini.imageModel", group: "gemini", label: "Gemini 이미지 모델", secret: false, defaultValue: "gemini-2.5-flash-image" },

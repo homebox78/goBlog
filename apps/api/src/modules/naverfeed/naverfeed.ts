@@ -136,55 +136,76 @@ const SECTION_NAMES = [
   "야구", "해외야구", "축구", "해외축구", "농구·배구", "스포츠일반",
 ];
 
-/**
- * Gemini(싼 텍스트 모델)로 기사 섹션을 정확 분류. 연예·스포츠가 아니면 "NONE".
- * 생성이 아니라 '분류'라 매우 저렴(글당 ~0.0001원). 실패 시 null(키워드 방식 폴백).
- */
-async function classifySection(title: string, summary: string, apiKey: string): Promise<string | null> {
-  const prompt =
+// AI 섹션 분류 — Groq(무료·고한도) 우선, 실패 시 Gemini 폴백. 연예·스포츠 아니면 "NONE".
+function classifyPrompt(title: string, summary: string): string {
+  return (
     `아래 한국 뉴스가 어느 섹션인지 딱 하나만 골라 그 이름만 출력해.\n` +
     `섹션 목록: ${SECTION_NAMES.join(", ")}, NONE\n` +
     `규칙:\n` +
     `- 해외연예 = 외국(할리우드·빌보드·미국/일본 등) 연예인/작품 그 자체 기사만. 한국 연예인이 '할리우드'를 언급만 해도 해외연예 아님.\n` +
     `- 해외야구/해외축구 = 해외리그(MLB·프리미어리그 등) 또는 해외파 선수 기사.\n` +
     `- 아이돌365 = 아이돌 그룹/멤버 본인 활동. 아이돌 소속사 '주가' 같은 증권 기사는 NONE.\n` +
-    `- 주식·증시·부동산·정치·경제·사회일반 등 연예/스포츠가 아니면 반드시 NONE.\n` +
-    `제목: ${title}\n요약: ${summary}\n답(섹션명 하나만):`;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { maxOutputTokens: 12, temperature: 0 },
-  });
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        signal: AbortSignal.timeout(15000),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-        const text = (data.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
-        if (!text) return null;
-        const found = SECTION_NAMES.find((s) => text.includes(s));
-        if (found) return found;
-        return text.includes("NONE") ? "NONE" : null;
-      }
-      // 429(rate limit) 등은 잠깐 대기 후 1회 재시도
-      if (attempt === 0) {
-        await new Promise((r) => setTimeout(r, res.status === 429 ? 2500 : 800));
-        continue;
-      }
-      return null;
-    } catch {
-      if (attempt === 0) {
-        await new Promise((r) => setTimeout(r, 800));
-        continue;
-      }
-      return null;
-    }
+    `- 여행·관광·생활정보·정치·경제·증시·부동산 등 연예/스포츠가 아니면 반드시 NONE.\n` +
+    `제목: ${title}\n요약: ${summary}\n답(섹션명 하나만):`
+  );
+}
+
+function parseSection(text: string): string | null {
+  const t = (text ?? "").trim();
+  if (!t) return null;
+  const found = SECTION_NAMES.find((s) => t.includes(s));
+  if (found) return found;
+  return t.includes("NONE") ? "NONE" : null;
+}
+
+async function classifyGroq(title: string, summary: string, apiKey: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: classifyPrompt(title, summary) }],
+        max_tokens: 12,
+        temperature: 0,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    return parseSection(data.choices?.[0]?.message?.content ?? "");
+  } catch {
+    return null;
   }
+}
+
+async function classifyGemini(title: string, summary: string, apiKey: string): Promise<string | null> {
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: classifyPrompt(title, summary) }] }],
+        generationConfig: { maxOutputTokens: 12, temperature: 0 },
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    return parseSection(data.candidates?.[0]?.content?.parts?.[0]?.text ?? "");
+  } catch {
+    return null;
+  }
+}
+
+/** Groq(무료) 우선, 실패 시 Gemini 폴백. 둘 다 실패면 null. */
+async function classifySection(title: string, summary: string, groqKey: string, geminiKey: string): Promise<string | null> {
+  if (groqKey) {
+    const r = await classifyGroq(title, summary, groqKey);
+    if (r) return r;
+  }
+  if (geminiKey) return classifyGemini(title, summary, geminiKey);
   return null;
 }
 
@@ -207,13 +228,15 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
     "naver.datalabClientId",
     "naver.datalabClientSecret",
     "gemini.apiKey",
+    "groq.apiKey",
     "naverfeed.aiClassify",
   ]);
   const clientId = values["naver.datalabClientId"];
   const clientSecret = values["naver.datalabClientSecret"];
   if (!clientId || !clientSecret) return { created: 0, titles: [], skipped: 0 };
   const geminiKey = values["gemini.apiKey"] ?? "";
-  const aiClassify = values["naverfeed.aiClassify"] === "true" && geminiKey !== "";
+  const groqKey = values["groq.apiKey"] ?? "";
+  const aiClassify = values["naverfeed.aiClassify"] === "true" && (groqKey !== "" || geminiKey !== "");
 
   // 최근 발행 제목(근접 중복 방지)
   const recent = await prisma.article.findMany({
@@ -308,7 +331,7 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
       // 섹션 결정 — AI 분류(Gemini) 우선, 실패 시 그룹 키워드 폴백. NONE이면 발행 제외.
       let keywordId: number;
       if (aiClassify) {
-        const aiSec = await classifySection(item.title, summary, geminiKey);
+        const aiSec = await classifySection(item.title, summary, groqKey, geminiKey);
         if (aiSec === "NONE") {
           skipped++;
           continue;
