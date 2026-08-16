@@ -207,13 +207,13 @@ async function classifyAndSummarize(
 ): Promise<{ section: string; summary: string } | null> {
   try {
     const prompt =
-      `다음 한국 연예·스포츠 뉴스를 처리해 JSON으로만 답해.\n` +
-      `1) section: ${SECTION_NAMES.join(", ")}, NONE 중 하나(연예/스포츠 아니면 NONE).\n` +
-      `   - 해외연예/해외야구/해외축구 = 외국 스타·해외리그·해외파 기사만. 한국인이 해외를 언급만 하면 국내 섹션.\n` +
-      `   - 아이돌 소속사 '주가' 등 증권·여행·정치·경제는 NONE.\n` +
-      `2) summary: 이 소식을 독자가 이해하기 쉽게 3~4문장(200~350자) 한국어로 자연스럽게 정리. 원문 문장을 그대로 베끼지 말고 재구성하되, 없는 사실·수치는 지어내지 말 것.\n` +
-      `제목: ${title}\n원문요약: ${snippet}\n` +
-      `JSON만 출력: {"section":"...","summary":"..."}`;
+      `다음 한국 연예·스포츠 뉴스를 정확히 아래 형식 두 부분으로만 답해.\n` +
+      `SECTION: (${SECTION_NAMES.join(" / ")} / NONE 중 하나)\n` +
+      `SUMMARY: (독자가 이해하기 쉽게 3~4문장, 200~350자 한국어 요약. 원문 문장을 그대로 베끼지 말고 재구성. 없는 사실·수치는 지어내지 말 것.)\n\n` +
+      `분류 규칙:\n` +
+      `- 해외연예/해외야구/해외축구 = 외국 스타·해외리그·해외파 선수 기사만. 한국인이 해외를 언급만 하면 국내 섹션.\n` +
+      `- 아이돌 소속사 '주가' 등 증권·여행·관광·정치·경제는 SECTION: NONE.\n\n` +
+      `제목: ${title}\n원문: ${snippet}`;
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -222,17 +222,18 @@ async function classifyAndSummarize(
         messages: [{ role: "user", content: prompt }],
         max_tokens: 500,
         temperature: 0.3,
-        response_format: { type: "json_object" },
       }),
       signal: AbortSignal.timeout(20000),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = data.choices?.[0]?.message?.content ?? "";
-    const parsed = JSON.parse(raw) as { section?: string; summary?: string };
-    const section = parseSection(parsed.section ?? "");
+    const secM = raw.match(/SECTION\s*[:：]\s*([^\n]+)/i);
+    const sumM = raw.match(/SUMMARY\s*[:：]\s*([\s\S]+)/i);
+    const section = parseSection(secM?.[1] ?? "");
     if (!section) return null;
-    return { section, summary: (parsed.summary ?? "").trim() };
+    const summary = (sumM?.[1] ?? "").replace(/^\(|\)$/g, "").trim();
+    return { section, summary };
   } catch {
     return null;
   }
