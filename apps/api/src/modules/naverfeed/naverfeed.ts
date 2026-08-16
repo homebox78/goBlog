@@ -17,6 +17,8 @@ const EXCLUDE_ALL = [
   // 여행·관광·생활정보(연예/스포츠 아님)
   "관광공사", "가볼 만한", "가볼만한", "명소", "나들이", "여행 코스", "여행코스", "축제 개막",
   "지자체", "시청", "군청", "행정", "채용 공고", "박람회", "설명회", "브리핑",
+  // 정치
+  "윤석열", "이재명", "대통령", "청와대", "대통령실", "검찰", "국정감사", "정당", "총선", "대선",
 ];
 
 // 토픽 그룹 — kw(키워드 텍스트, 섹션 분류용 category 겸용)·weight(발행 비중)·queries(네이버 검색어)
@@ -368,34 +370,24 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
         skipped++;
         continue;
       }
-      // 섹션 분류 + 원본 요약 — Groq 한 번의 호출 우선. 실패 시 Gemini 분류(요약은 스니펫).
+      // 섹션 분류 — Groq(무료) 우선, 실패 시 Gemini. NONE·해외폴백금지로 오유입 차단.
       let keywordId: number;
-      let bodyText = summary; // 기본: 원문 스니펫
+      let bodyText = summary; // 본문 = 원문 스니펫 (요약 확장은 별도 단계)
       if (aiClassify) {
-        const g = groqKey ? await classifyAndSummarize(item.title, summary, groqKey) : null;
-        if (g) {
-          if (g.section === "NONE") {
-            skipped++;
-            continue;
-          }
-          keywordId = await ensureKeyword(g.section, g.section);
-          if (g.summary && g.summary.length >= 60) bodyText = g.summary.slice(0, 700);
+        const aiSec = await classifySection(item.title, summary, groqKey, geminiKey);
+        if (aiSec === "NONE") {
+          skipped++;
+          continue;
+        }
+        if (aiSec) {
+          keywordId = await ensureKeyword(aiSec, aiSec);
         } else {
-          const aiSec = geminiKey ? await classifyGemini(item.title, summary, geminiKey) : null;
-          if (aiSec === "NONE") {
+          // AI 실패 → '해외' 섹션 폴백 금지(국내/해외 구분 불가), 그 외 키워드 관련성 통과분만.
+          if (group.category.startsWith("해외") || !group.match.some((m) => relHay.includes(m))) {
             skipped++;
             continue;
           }
-          if (aiSec) {
-            keywordId = await ensureKeyword(aiSec, aiSec);
-          } else {
-            // 둘 다 실패 → '해외' 섹션 폴백 금지(국내/해외 구분 불가), 그 외 키워드 관련성 통과분만.
-            if (group.category.startsWith("해외") || !group.match.some((m) => relHay.includes(m))) {
-              skipped++;
-              continue;
-            }
-            keywordId = await ensureKeyword(group.kw, group.category);
-          }
+          keywordId = await ensureKeyword(group.kw, group.category);
         }
       } else {
         keywordId = await ensureKeyword(group.kw, group.category);
