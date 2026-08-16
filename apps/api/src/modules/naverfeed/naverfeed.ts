@@ -137,37 +137,51 @@ const SECTION_NAMES = [
  * 생성이 아니라 '분류'라 매우 저렴(글당 ~0.0001원). 실패 시 null(키워드 방식 폴백).
  */
 async function classifySection(title: string, summary: string, apiKey: string): Promise<string | null> {
-  try {
-    const prompt =
-      `아래 한국 뉴스가 어느 섹션인지 딱 하나만 골라 그 이름만 출력해.\n` +
-      `섹션 목록: ${SECTION_NAMES.join(", ")}, NONE\n` +
-      `규칙:\n` +
-      `- 해외연예 = 외국(할리우드·빌보드·미국/일본 등) 연예인/작품 그 자체 기사만. 한국 연예인이 '할리우드'를 언급만 해도 해외연예 아님.\n` +
-      `- 해외야구/해외축구 = 해외리그(MLB·프리미어리그 등) 또는 해외파 선수 기사.\n` +
-      `- 아이돌365 = 아이돌 그룹/멤버 본인 활동. 아이돌 소속사 '주가' 같은 증권 기사는 NONE.\n` +
-      `- 주식·증시·부동산·정치·경제·사회일반 등 연예/스포츠가 아니면 반드시 NONE.\n` +
-      `제목: ${title}\n요약: ${summary}\n답(섹션명 하나만):`;
-    const model = "gemini-2.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 12, temperature: 0 },
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    const text = (data.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
-    if (!text) return null;
-    const found = SECTION_NAMES.find((s) => text.includes(s));
-    if (found) return found;
-    return text.includes("NONE") ? "NONE" : null;
-  } catch {
-    return null;
+  const prompt =
+    `아래 한국 뉴스가 어느 섹션인지 딱 하나만 골라 그 이름만 출력해.\n` +
+    `섹션 목록: ${SECTION_NAMES.join(", ")}, NONE\n` +
+    `규칙:\n` +
+    `- 해외연예 = 외국(할리우드·빌보드·미국/일본 등) 연예인/작품 그 자체 기사만. 한국 연예인이 '할리우드'를 언급만 해도 해외연예 아님.\n` +
+    `- 해외야구/해외축구 = 해외리그(MLB·프리미어리그 등) 또는 해외파 선수 기사.\n` +
+    `- 아이돌365 = 아이돌 그룹/멤버 본인 활동. 아이돌 소속사 '주가' 같은 증권 기사는 NONE.\n` +
+    `- 주식·증시·부동산·정치·경제·사회일반 등 연예/스포츠가 아니면 반드시 NONE.\n` +
+    `제목: ${title}\n요약: ${summary}\n답(섹션명 하나만):`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { maxOutputTokens: 12, temperature: 0 },
+  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+        const text = (data.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+        if (!text) return null;
+        const found = SECTION_NAMES.find((s) => text.includes(s));
+        if (found) return found;
+        return text.includes("NONE") ? "NONE" : null;
+      }
+      // 429(rate limit) 등은 잠깐 대기 후 1회 재시도
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, res.status === 429 ? 2500 : 800));
+        continue;
+      }
+      return null;
+    } catch {
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 800));
+        continue;
+      }
+      return null;
+    }
   }
+  return null;
 }
 
 /** 섹션 분류용 키워드 upsert(재사용). status=USED로 생성 파이프라인에서 제외. */
@@ -298,8 +312,8 @@ export async function publishNaverFeed(count = 10): Promise<{ created: number; t
         if (aiSec) {
           keywordId = await ensureKeyword(aiSec, aiSec);
         } else {
-          // AI 분류 실패(rate limit 등) → 키워드 관련성 통과분만 그룹 섹션으로 폴백(관련 없으면 제외)
-          if (!group.match.some((m) => relHay.includes(m))) {
+          // AI 실패 → '해외' 섹션은 폴백 금지(키워드로 국내/해외 구분 불가 → 한국 기사 유입). 그 외는 키워드 관련성 통과분만.
+          if (group.category.startsWith("해외") || !group.match.some((m) => relHay.includes(m))) {
             skipped++;
             continue;
           }
