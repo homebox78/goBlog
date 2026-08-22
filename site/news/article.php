@@ -479,6 +479,8 @@ html { scroll-behavior:smooth; }
     </div>
   </div>
 
+  <?php render_newsletter_inline(); ?>
+
   <?php render_footer(); ?>
 </div>
 <div id="h2bToast" class="hidden fixed bottom-20 left-1/2 z-[60] -translate-x-1/2 items-center gap-1.5 rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg"><span class="material-symbols-outlined text-[16px]">check</span><span id="h2bToastMsg">링크가 복사되었습니다</span></div>

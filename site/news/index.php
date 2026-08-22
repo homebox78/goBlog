@@ -726,6 +726,8 @@ render_head('HOM2BOX 핫이슈 — 연예·드라마·영화·스포츠 실시�
   <div class="mx-auto max-w-[1399px] px-4 sm:px-6 border-t border-zinc-100 pt-2"><?= $toolsHtml ?></div>
   <?php endif; ?>
 
+  <?php render_newsletter_inline(); ?>
+
   <?php render_footer(); ?>
 </div>
 <?php render_foot(); ?>

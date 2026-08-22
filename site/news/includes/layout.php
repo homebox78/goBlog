@@ -9,7 +9,7 @@ require_once __DIR__ . '/market.php';
 
 const NEWS_PRIMARY = '#134a9c';
 // 정적 Tailwind CSS 캐시버전 — tailwind/dist 재빌드 시 갱신(브라우저 캐시 무효화)
-const TW_CSS_VER = '20260723c';
+const TW_CSS_VER = '20260723d';
 
 /** 현재 요청 경로로 canonical URL 생성 — 추적/캐시버스트 파라미터(v, ajax, utm_*)는 제거 */
 function news_canonical(): string
@@ -647,6 +647,67 @@ function ad_enabled(string $position): bool
         }
     }
     return !empty($cache[$position]);
+}
+
+/**
+ * 인라인 뉴스레터 가입 위젯 — 홈·기사 등 트래픽 많은 곳에 직접 배치해 발견율을 높인다.
+ * 이메일만 입력하면 subscribe.php(AJAX)로 즉시 구독. 분야는 대표 섹션 기본값으로 채운다.
+ * JS는 요청당 1회만 출력(같은 페이지에 여러 개 있어도 모두 바인딩).
+ */
+function render_newsletter_inline(): void
+{
+    static $jsOnce = false;
+    ?>
+<section class="mx-auto my-8 max-w-[1399px] px-4 sm:px-6">
+  <div class="overflow-hidden rounded-2xl border border-[#0f3d82] bg-gradient-to-br from-[#134a9c] to-[#0f3d82] px-6 py-7 text-white shadow-sm sm:px-9 sm:py-8">
+    <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+      <div class="min-w-0">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold"><span class="material-symbols-outlined text-[14px]">mail</span>무료 뉴스레터</span>
+        <h3 class="mt-2 text-[19px] font-extrabold leading-tight sm:text-[22px]">아침·저녁, 편집국이 고른 뉴스를 메일로</h3>
+        <p class="mt-1 text-[13px] text-white/70">분야별 핵심 기사만 골라 하루 2회. 광고성 스팸 없이, 해지는 한 번의 클릭.</p>
+      </div>
+      <form class="h2b-nl-form flex w-full flex-none flex-col gap-2 sm:w-[380px]" novalidate>
+        <div class="flex gap-2">
+          <input type="email" name="email" required placeholder="you@example.com" class="h2b-nl-email h-11 min-w-0 flex-1 rounded-lg border-0 px-3.5 text-[15px] text-zinc-900 outline-none placeholder:text-zinc-400">
+          <button type="submit" class="h2b-nl-btn h-11 flex-none whitespace-nowrap rounded-lg bg-white px-4 text-[14px] font-bold text-[#134a9c] hover:bg-white/90 disabled:opacity-70">구독</button>
+        </div>
+        <label class="flex cursor-pointer items-center gap-1.5 text-[11px] text-white/70">
+          <input type="checkbox" class="h2b-nl-agree size-3.5 accent-white" checked>
+          <span>개인정보 수집·이용 및 뉴스레터 수신에 동의 (<a href="/privacy.php" class="underline hover:text-white">방침</a>)</span>
+        </label>
+        <div class="h2b-nl-msg hidden text-[12px] font-semibold"></div>
+      </form>
+    </div>
+  </div>
+</section>
+<?php if (!$jsOnce): $jsOnce = true; ?>
+<script>
+(function(){
+  // subscribe.php는 유효 분야(NEWS_SECTIONS) 최소 1개를 요구한다 → 대표 섹션으로 기본 구독.
+  var DEFAULT_TOPICS='연예가화제,방송·가요,야구,축구,영화';
+  document.querySelectorAll('.h2b-nl-form').forEach(function(f){
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      var emailEl=f.querySelector('.h2b-nl-email'), email=emailEl.value.trim();
+      var agree=f.querySelector('.h2b-nl-agree').checked;
+      var msg=f.querySelector('.h2b-nl-msg'), btn=f.querySelector('.h2b-nl-btn');
+      function say(t,ok){ msg.textContent=t; msg.className='h2b-nl-msg text-[12px] font-semibold '+(ok?'text-emerald-200':'text-amber-200'); }
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ say('이메일 주소를 확인해 주세요.',false); return; }
+      if(!agree){ say('개인정보 동의가 필요합니다.',false); return; }
+      btn.disabled=true; btn.textContent='...';
+      var fd=new FormData();
+      fd.append('email',email); fd.append('topics',DEFAULT_TOPICS); fd.append('sendTime','both'); fd.append('agree','1'); fd.append('ajax','1'); fd.append('source','inline');
+      fetch('/subscribe.php',{method:'POST',body:fd,headers:{'X-Requested-With':'fetch'}})
+        .then(function(r){return r.json();})
+        .then(function(d){ btn.disabled=false; btn.textContent='구독';
+          if(d.ok){ emailEl.value=''; say('구독 완료! 다음 발송분부터 받아보세요.',true); }
+          else { say(d.msg||'잠시 후 다시 시도해 주세요.',false); } })
+        .catch(function(){ btn.disabled=false; btn.textContent='구독'; say('잠시 후 다시 시도해 주세요.',false); });
+    });
+  });
+})();
+</script>
+<?php endif;
 }
 
 function render_footer(): void
