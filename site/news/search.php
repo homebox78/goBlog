@@ -7,6 +7,15 @@ require_once __DIR__ . '/includes/layout.php';
 
 $P = NEWS_PRIMARY;
 
+// 스톡사진 스크래퍼 차단 — 우리 검색은 q(+page)만 쓴다. per_page·nav·style·free 등 외부 사이트
+// 파라미터를 달고 오는 요청(하루 수백 회, 통계·서버 부하 오염원)은 404로 즉시 끊는다.
+foreach (['per_page', 'nav', 'style', 'free', 'orientation', 'color'] as $badParam) {
+    if (isset($_GET[$badParam])) {
+        http_response_code(404);
+        exit;
+    }
+}
+
 $q = trim((string) ($_GET['q'] ?? ''));
 
 /** 검색어를 결과 제목·요약에서 파랑으로 하이라이트(서울경제식). HTML 이스케이프 후 매칭이라 안전, 원문 대소문자 보존. */

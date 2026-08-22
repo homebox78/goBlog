@@ -257,10 +257,14 @@ function record_page_view(?string $type = null, ?string $key = null, ?string $ti
 {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') return;
     $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
-    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|monitor|curl|wget|python-requests|headless|lighthouse|Googlebot|AdsBot|PetalBot|YandexBot|Bytespider|libredtail|go-http|scan|masscan|zgrab|nmap/i', $ua)) return;
+    // "bot"이 없는 크롤러(Mediapartners-Google 등)는 개별 명시. AI 크롤러·SEO 봇도 통계에서 뺀다.
+    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|monitor|curl|wget|python-requests|python|headless|lighthouse|Googlebot|AdsBot|PetalBot|YandexBot|Bytespider|libredtail|go-http|scan|masscan|zgrab|nmap|Mediapartners-Google|Google-InspectionTool|GoogleOther|meta-externalagent|dataforseo|SerpApi|GPTBot|ClaudeBot|Amazonbot|CCBot/i', $ua)) return;
     // 해킹 스캐너 경로(.env·.git·wp-login·wp-admin 등)는 정상 브라우저 UA로 위장해 들어와도 통계에 안 남긴다.
     $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
     if (preg_match('#(^|/)\.(env|git|aws)|wp-(login|admin|content|includes)|/SDK/|\.well-known|/vendor/|/laravel/|/backend/|phpunit|/cgi-bin/|\.php\.|/\.\w#i', $uri)) return;
+    // 우리 사이트에 없는 검색 파라미터(스톡사진 스크래퍼가 엉뚱하게 두들김)는 통계 오염원이라 제외.
+    // search.php는 q만 쓴다 — style/per_page/nav=category/free 등은 100% 외부 스크래퍼 지문.
+    if (preg_match('#[?&](per_page|nav|style|free|orientation|color)=#i', $uri)) return;
     if ($type === null) {
         [$type, $key] = pageview_identify();
     }
