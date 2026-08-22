@@ -132,6 +132,40 @@ statsRouter.get(
   }),
 );
 
+// 한국·사람 방문 — page_views를 ip_geo와 조인해 country='South Korea'만 집계(봇·해외 제외).
+// 원시 조회수엔 스크래퍼·해외 일회성 봇이 섞여 실체가 부풀려진다. 이 지표가 '진짜 한국 사람' 바닥값.
+statsRouter.get(
+  "/human",
+  asyncHandler(async (_req, res) => {
+    await ensureStatsSchema();
+    const D = `(pv.viewedAt + ${KST})`;
+    const NOW = `(NOW() + ${KST})`;
+    const cond = (period: string) =>
+      period === "today"
+        ? `DATE(${D}) = DATE(${NOW})`
+        : period === "month"
+          ? `YEAR(${D}) = YEAR(${NOW}) AND MONTH(${D}) = MONTH(${NOW})`
+          : `YEAR(${D}) = YEAR(${NOW})`;
+    const one = async (period: string) => {
+      const [r] = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT COUNT(*) totalV, COUNT(DISTINCT pv.ip) totalU,
+                SUM(g.country = 'South Korea') koV,
+                COUNT(DISTINCT CASE WHEN g.country = 'South Korea' THEN pv.ip END) koU
+         FROM page_views pv LEFT JOIN ip_geo g ON g.ip = pv.ip
+         WHERE ${cond(period)}`,
+      );
+      return {
+        totalViews: num(r.totalV),
+        totalUniques: num(r.totalU),
+        koViews: num(r.koV),
+        koUniques: num(r.koU),
+      };
+    };
+    const [today, month, year] = await Promise.all([one("today"), one("month"), one("year")]);
+    res.json({ today, month, year });
+  }),
+);
+
 // 시계열 — granularity: day(최근 N일) | month(최근 N개월) | year
 statsRouter.get(
   "/timeseries",

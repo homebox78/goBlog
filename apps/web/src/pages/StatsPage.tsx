@@ -15,6 +15,7 @@ import {
   Globe,
   RefreshCw,
   Loader2,
+  UserCheck,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,17 @@ interface Overview {
   year: Metric;
   all: Metric;
   subscribers: { active: number; total: number };
+}
+interface HumanPeriod {
+  totalViews: number;
+  totalUniques: number;
+  koViews: number;
+  koUniques: number;
+}
+interface Human {
+  today: HumanPeriod;
+  month: HumanPeriod;
+  year: HumanPeriod;
 }
 interface Series {
   series: { key: string; views: number; uniques: number }[];
@@ -135,6 +147,7 @@ export default function StatsPage() {
   const [pp, setPp] = useState<PPeriod>("month");
 
   const overview = useQuery({ queryKey: ["stats-overview"], queryFn: () => api.get<Overview>("/api/stats/overview") });
+  const human = useQuery({ queryKey: ["stats-human"], queryFn: () => api.get<Human>("/api/stats/human") });
   const series = useQuery({
     queryKey: ["stats-series", gran],
     queryFn: () => api.get<Series>(`/api/stats/timeseries?granularity=${gran}&n=${gran === "day" ? 30 : 12}`),
@@ -199,6 +212,9 @@ export default function StatsPage() {
         <MetricCard label="올해 조회수" icon={Eye} m={o?.year} loading={overview.isPending} />
         <SubscriberCard subs={o?.subscribers} loading={overview.isPending} />
       </div>
+
+      {/* 한국·사람 방문 — 봇·해외 제외 실체 지표 */}
+      <KoreanPanel data={human.data} loading={human.isPending} />
 
       <Tabs defaultValue="trend">
         <TabsList>
@@ -632,6 +648,50 @@ function PPtabs({ pp, setPp }: { pp: PPeriod; setPp: (v: PPeriod) => void }) {
         <TabsTrigger value="year">올해</TabsTrigger>
       </TabsList>
     </Tabs>
+  );
+}
+
+// 한국·사람 방문 패널 — 지역 확인된 국내 순방문(IP). 봇·해외·미확인 제외한 '진짜 사람' 바닥값.
+function KoreanPanel({ data, loading }: { data?: Human; loading: boolean }) {
+  const cols: { label: string; p?: HumanPeriod }[] = [
+    { label: "오늘", p: data?.today },
+    { label: "이번 달", p: data?.month },
+    { label: "올해", p: data?.year },
+  ];
+  return (
+    <Card className="gap-0 border-primary/30 bg-primary/5 py-0">
+      <CardContent className="p-3.5">
+        <div className="mb-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-semibold">
+          <UserCheck className="size-3.5 text-primary" /> 한국 · 사람 방문
+          <span className="font-normal text-muted-foreground">봇·해외 제외 · 지역 확인된 국내 순방문(IP)</span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {cols.map((c) => {
+            const ko = c.p?.koUniques ?? 0;
+            const tot = c.p?.totalUniques ?? 0;
+            const pct = tot > 0 ? Math.round((ko / tot) * 100) : 0;
+            return (
+              <div key={c.label}>
+                <div className="text-[11px] text-muted-foreground">{c.label}</div>
+                <div className="mt-0.5 flex items-end gap-1">
+                  {loading ? (
+                    <Skeleton className="h-7 w-14" />
+                  ) : (
+                    <>
+                      <span className="text-2xl font-bold tabular-nums text-primary">{ko.toLocaleString()}</span>
+                      <span className="pb-0.5 text-[11px] text-muted-foreground">명</span>
+                    </>
+                  )}
+                </div>
+                <div className="mt-0.5 text-[11px] text-muted-foreground">
+                  조회 {(c.p?.koViews ?? 0).toLocaleString()} · 전체의 {pct}%
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
