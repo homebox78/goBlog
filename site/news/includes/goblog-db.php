@@ -3,6 +3,17 @@
 // goBlog 파이프라인이 발행에 성공한 글(publish_jobs.publishedUrl)만 기사로 노출한다.
 declare(strict_types=1);
 
+// ── 상습 남용 IP 하드 차단 ──────────────────────────────────────────
+// 모든 공개 페이지가 이 파일을 가장 먼저 include 하므로 여기서 막으면 사이트 전역 차단이 된다.
+// 스톡사진 스크래퍼(61.249.93.222·전남 나주)가 하루 수백 회 search.php를 두들겨 통계·서버를 오염.
+// 웹 요청만 403으로 즉시 끊는다(CLI/크론은 통과). 새 남용 IP는 이 배열에 추가.
+const GOBLOG_BLOCKED_IPS = ['61.249.93.222'];
+if (PHP_SAPI !== 'cli' && in_array(client_ip(), GOBLOG_BLOCKED_IPS, true)) {
+    http_response_code(403);
+    header('Cache-Control: no-store');
+    exit;
+}
+
 function goblog_db(): PDO
 {
     static $pdo = null;

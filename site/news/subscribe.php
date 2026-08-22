@@ -74,7 +74,9 @@ try {
 } catch (Throwable) {
 }
 
-$defaultTopics = ['경제·금융', 'IT·게임'];
+// 기본 선택 분야는 반드시 NEWS_SECTIONS 안의 실제 값이어야 한다(아니면 칩이 하나도 선택 안 돼
+// 사용자가 그냥 제출 시 "분야 선택" 오류가 난다). 대중적인 상위 섹션을 기본 선택해 즉시 제출 가능하게.
+$defaultTopics = array_values(array_intersect(['연예가화제', '야구'], $allTopics)) ?: array_slice($allTopics, 0, 2);
 $schedCards = [
     ['key' => 'morning', 'label' => '아침',       'sub' => '매일 07:00', 'icon' => 'wb_twilight'],
     ['key' => 'evening', 'label' => '저녁',       'sub' => '매일 18:00', 'icon' => 'bedtime'],
